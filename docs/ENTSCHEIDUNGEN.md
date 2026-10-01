@@ -20,3 +20,12 @@ Verbindlich für PRD, Architektur und Code, bis neue Daten etwas anderes zeigen.
 
 - Entscheidung 5: Wie genau werden Schlaf/Ernährung als Störfaktor gewichtet? (Schwellen, z. B. Schlaf unter X Stunden)
 - Entscheidung 8: Welche Zusatz-Logs braucht die Engine je Sonderfall? Schwangerschaft: Engine sollte aus Sicherheitsgründen eher pausieren und auf ärztliche Beratung verweisen – bitte bestätigen
+
+## Schema-Entscheidungen (Phase 2)
+
+- Zyklusphase wird nicht am Training gespeichert, sondern aus `cycles` abgeleitet (View `workout_cycle_context`), damit nachträgliche Korrekturen nichts veralten lassen.
+- Training: `workouts` → `workout_exercises` → `sets`; Ernährung pro Lebensmittel (`nutrition_entries`, Tagessummen per View).
+- Schwangerschaft/Postpartum setzt `engine_mode = paused` per DB-Trigger (Sicherheitsnetz, Annahme aus dem Plan – bei Bedarf ändern).
+- Kinder-Tabellen erzwingen per zusammengesetztem Fremdschlüssel denselben Besitzer wie der Parent.
+- RLS ist aktiviert, aber nicht `force`d (Supabase-Owner-Rolle `postgres` umgeht RLS ohnehin; `force` würde Migrationen/Trigger unnötig erschweren).
+- Engine-Schwellenwerte (2 Zyklen, 5 %, 2 widersprechende) leben als Konstanten in `src/engine`, nicht im Schema.

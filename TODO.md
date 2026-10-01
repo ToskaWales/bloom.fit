@@ -45,14 +45,14 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 
 ## Phase 2 – Datenmodell & Auth (Plan Mode!)
 
-- [ ] Schema-Vorschlag: User, CycleLog, TrainingLog, NutritionLog, DailyCheckin, PhaseAdjustment (+ Review durch dich vor dem Anlegen)
-- [ ] Verbesserung prüfen: `TrainingLog` in Workout → Exercise → Set normalisieren (statt eine Zeile mit „Sätze, Wdh, Gewicht"), da pro Satz RPE/Gewicht variiert
-- [ ] Übungs-Stammdatenliste (deutsche Namen, Aliase) als Seed – nötig für übungsbasierte Normalisierung in der Engine
-- [ ] Constraint: ein DailyCheckin pro Nutzerin/Tag (Upsert)
-- [ ] **Row-Level-Security** auf allen Tabellen + automatisierte RLS-Tests (Nutzerin A sieht nie Daten von B)
-- [ ] Supabase Auth (E-Mail + Passwort), E-Mail-Verifizierung, Passwort-Reset
-- [ ] Account- und Datenlöschung (Pflicht: DSGVO + App-Store-Regel) inkl. Datenexport
-- [ ] Migrationen versioniert im Repo
+- [x] Schema-Vorschlag: User, CycleLog, TrainingLog, NutritionLog, DailyCheckin, PhaseAdjustment (+ Review durch dich vor dem Anlegen)
+- [x] Verbesserung prüfen: `TrainingLog` in Workout → Exercise → Set normalisieren (statt eine Zeile mit „Sätze, Wdh, Gewicht"), da pro Satz RPE/Gewicht variiert
+- [x] Übungs-Stammdatenliste (deutsche Namen, Aliase) als Seed – nötig für übungsbasierte Normalisierung in der Engine
+- [x] Constraint: ein DailyCheckin pro Nutzerin/Tag (Upsert)
+- [x] **Row-Level-Security** auf allen Tabellen + automatisierte RLS-Tests (Nutzerin A sieht nie Daten von B)
+- [x] Supabase Auth (E-Mail + Passwort), E-Mail-Verifizierung, Passwort-Reset
+- [x] Account- und Datenlöschung (Pflicht: DSGVO + App-Store-Regel) inkl. Datenexport
+- [x] Migrationen versioniert im Repo
 
 ## Phase 3 – Kern-Logging (Muss-Features)
 

@@ -20,6 +20,8 @@ export default function RootLayout() {
         <Stack.Protected guard={!session}>
           <Stack.Screen name="login" />
         </Stack.Protected>
+        {/* Immer erreichbar: der Link aus der Passwort-Reset-Mail öffnet die App abgemeldet */}
+        <Stack.Screen name="reset-password" />
       </Stack>
     </>
   );
