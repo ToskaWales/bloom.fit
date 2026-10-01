@@ -6,6 +6,7 @@ import { de } from '@/i18n/de';
 import { useCheckinStore } from '@/store/checkin';
 import { useCycleStore } from '@/store/cycle';
 import { useProfileStore } from '@/store/profile';
+import { useTrainingStore } from '@/store/training';
 import { useSessionStore } from '@/store/session';
 
 export default function RootLayout() {
@@ -26,8 +27,15 @@ export default function RootLayout() {
       reset();
       useCycleStore.getState().reset();
       useCheckinStore.getState().reset();
+      useTrainingStore.getState().dispose();
     }
   }, [userId, load, reset]);
+
+  // Lokalen Trainingsspeicher erst nach dem Onboarding öffnen und synchronisieren
+  const onboardedAt = profile?.onboarded_at;
+  useEffect(() => {
+    if (userId && onboardedAt) void useTrainingStore.getState().init(userId);
+  }, [userId, onboardedAt]);
 
   if (!ready) return null;
 
@@ -60,6 +68,23 @@ export default function RootLayout() {
             options={{
               headerShown: true,
               title: de.checkin.title,
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="training"
+            options={{
+              headerShown: true,
+              title: de.training.title,
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="training-pick"
+            options={{
+              headerShown: true,
+              title: de.training.pick.title,
+              presentation: 'modal',
               headerBackTitle: de.common.back,
             }}
           />

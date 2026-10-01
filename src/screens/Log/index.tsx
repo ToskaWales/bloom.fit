@@ -3,10 +3,19 @@ import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { de } from '@/i18n/de';
 import { useCheckinStore } from '@/store/checkin';
+import { useTrainingStore } from '@/store/training';
 
 const t = de.logHub;
 
-function Card({ href, title, hint }: { href: '/checkin' | '/cycle'; title: string; hint: string }) {
+function Card({
+  href,
+  title,
+  hint,
+}: {
+  href: '/checkin' | '/cycle' | '/training';
+  title: string;
+  hint: string;
+}) {
   return (
     <Link href={href} asChild>
       <Pressable accessibilityRole="button" style={styles.card}>
@@ -19,6 +28,7 @@ function Card({ href, title, hint }: { href: '/checkin' | '/cycle'; title: strin
 
 export default function LogScreen() {
   const { today, load } = useCheckinStore();
+  const trainingActive = useTrainingStore((s) => s.active !== null);
 
   useEffect(() => {
     load().catch(() => {});
@@ -31,6 +41,11 @@ export default function LogScreen() {
         <Card href="/checkin" title={t.checkinDone} hint={t.checkinDoneHint} />
       ) : (
         <Card href="/checkin" title={t.checkinOpen} hint={t.checkinOpenHint} />
+      )}
+      {trainingActive ? (
+        <Card href="/training" title={t.trainingRunning} hint={t.trainingRunningHint} />
+      ) : (
+        <Card href="/training" title={t.training} hint={t.trainingHint} />
       )}
       <Card href="/cycle" title={t.cycle} hint={t.cycleHint} />
     </ScrollView>

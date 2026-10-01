@@ -3,8 +3,10 @@ import { deleteAccount, exportMyData } from '@/api/account';
 import { supabase } from '@/api/supabase';
 import { Screen } from '@/components/Screen';
 import { de } from '@/i18n/de';
+import { useSessionStore } from '@/store/session';
 
 export default function ProfileScreen() {
+  const userId = useSessionStore((s) => s.session?.user.id);
   async function exportData() {
     try {
       const data = await exportMyData();
@@ -15,13 +17,16 @@ export default function ProfileScreen() {
   }
 
   function confirmDelete() {
+    if (!userId) return;
     Alert.alert(de.profile.deleteTitle, de.profile.deleteMessage, [
       { text: de.profile.cancel, style: 'cancel' },
       {
         text: de.profile.deleteConfirm,
         style: 'destructive',
         onPress: () =>
-          deleteAccount().catch((e) => Alert.alert(e instanceof Error ? e.message : String(e))),
+          deleteAccount(userId).catch((e) =>
+            Alert.alert(e instanceof Error ? e.message : String(e)),
+          ),
       },
     ]);
   }
