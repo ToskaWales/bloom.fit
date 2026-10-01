@@ -32,15 +32,15 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 ## Phase 1 – Projekt-Fundament
 
 - [ ] 🔴 PRD/Architektur-Änderungen aus Phase 0 in die Dokumente zurückschreiben (Single Source of Truth) und als `/docs` ins Repo legen
-- [ ] `CLAUDE.md` im Repo-Root aus der Vorlage anlegen (inkl. Korrekturen: Health Connect, Offline-Regel, verbotene Formulierungen)
-- [ ] Expo-Projekt (TypeScript) initialisieren, Ordnerstruktur `/src/{screens,components,engine,api,store,navigation}`
-- [ ] Zustand-Setup, Supabase-Client mit Env-Variablen (`.env.example`, keine Secrets im Repo)
+- [x] `CLAUDE.md` im Repo-Root aus der Vorlage anlegen (inkl. Korrekturen: Health Connect, Offline-Regel, verbotene Formulierungen)
+- [x] Expo-Projekt (TypeScript) initialisieren, Ordnerstruktur `/src/{screens,components,engine,api,store,navigation}`
+- [x] Zustand-Setup, Supabase-Client mit Env-Variablen (`.env.example`, keine Secrets im Repo)
 - [ ] Supabase-Projekt in **EU-Region (Frankfurt)** anlegen
-- [ ] Linting/Formatting (ESLint, Prettier), `tsc --noEmit`, Jest/Vitest
-- [ ] CI (GitHub Actions): Lint + Typecheck + Tests auf jedem PR
-- [ ] Navigation: Tabs (Log, Insights, Profil) + Auth-Flow
-- [ ] i18n-Grundgerüst, UI-Sprache Deutsch (Texte zentral, nicht hartkodiert)
-- [ ] **Copy-Lint:** automatischer Test, der verbotene Formulierungen in UI-Texten findet („optimal in der Follikelphase", „Cycle Syncing", „science-backed" ohne Beleg …)
+- [x] Linting/Formatting (ESLint, Prettier), `tsc --noEmit`, Jest/Vitest
+- [x] CI (GitHub Actions): Lint + Typecheck + Tests auf jedem PR
+- [x] Navigation: Tabs (Log, Insights, Profil) + Auth-Flow
+- [x] i18n-Grundgerüst, UI-Sprache Deutsch (Texte zentral, nicht hartkodiert)
+- [x] **Copy-Lint:** automatischer Test, der verbotene Formulierungen in UI-Texten findet („optimal in der Follikelphase", „Cycle Syncing", „science-backed" ohne Beleg …)
 - [ ] Crash-Reporting (Sentry, EU) und datensparsames Produkt-Analytics (z. B. PostHog EU) – nur mit Einwilligung
 
 ## Phase 2 – Datenmodell & Auth (Plan Mode!)
