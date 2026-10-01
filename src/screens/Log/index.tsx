@@ -12,7 +12,7 @@ function Card({
   title,
   hint,
 }: {
-  href: '/checkin' | '/cycle' | '/training';
+  href: '/checkin' | '/cycle' | '/training' | '/nutrition';
   title: string;
   hint: string;
 }) {
@@ -47,6 +47,7 @@ export default function LogScreen() {
       ) : (
         <Card href="/training" title={t.training} hint={t.trainingHint} />
       )}
+      <Card href="/nutrition" title={t.nutrition} hint={t.nutritionHint} />
       <Card href="/cycle" title={t.cycle} hint={t.cycleHint} />
     </ScrollView>
   );

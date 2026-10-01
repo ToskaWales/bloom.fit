@@ -5,6 +5,7 @@ import { ActivityIndicator, Button, Text, View } from 'react-native';
 import { de } from '@/i18n/de';
 import { useCheckinStore } from '@/store/checkin';
 import { useCycleStore } from '@/store/cycle';
+import { useNutritionStore } from '@/store/nutrition';
 import { useProfileStore } from '@/store/profile';
 import { useTrainingStore } from '@/store/training';
 import { useSessionStore } from '@/store/session';
@@ -28,6 +29,7 @@ export default function RootLayout() {
       useCycleStore.getState().reset();
       useCheckinStore.getState().reset();
       useTrainingStore.getState().dispose();
+      useNutritionStore.getState().reset();
     }
   }, [userId, load, reset]);
 
@@ -85,6 +87,30 @@ export default function RootLayout() {
               headerShown: true,
               title: de.training.pick.title,
               presentation: 'modal',
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="nutrition"
+            options={{
+              headerShown: true,
+              title: de.nutrition.title,
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="nutrition-scan"
+            options={{
+              headerShown: true,
+              title: de.nutrition.scan.title,
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="nutrition-entry"
+            options={{
+              headerShown: true,
+              title: de.nutrition.form.titleNew,
               headerBackTitle: de.common.back,
             }}
           />

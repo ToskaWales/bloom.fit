@@ -58,8 +58,8 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 
 - [x] Onboarding (Zykluslänge, Erfahrung, Ziel, Erwartungsmanagement „Insights brauchen 1–2 Zyklen", optionaler Health-Sync, Einwilligung Gesundheitsdaten)
 - [x] Trainings-Log (Übung, Sätze, Gewicht, Wdh, RPE; Prefill vom letzten Training; Rest-Timer als Hygiene-Feature)
-- [ ] Ernährungs-Log (Kalorien/Makros, manuell, Favoriten/Zuletzt-gegessen)
-- [ ] Barcode-Scan + Open-Food-Facts-Anbindung (mit manuellem Fallback)
+- [x] Ernährungs-Log (Kalorien/Makros, manuell, Favoriten/Zuletzt-gegessen)
+- [x] Barcode-Scan + Open-Food-Facts-Anbindung (mit manuellem Fallback)
 - [x] Zyklus-Log (Periodenstart/-ende manuell, Korrektur nachträglich möglich)
 - [ ] Health-Sync Zyklus: HealthKit (iOS) + Health Connect (Android), lesend
 - [x] Tägliches Check-in (3 Fragen, <15 Sek.) – _Erinnerung (optional, standardmäßig aus) noch offen_
