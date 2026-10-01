@@ -64,7 +64,7 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 - [ ] Health-Sync Zyklus: HealthKit (iOS) + Health Connect (Android), lesend
 - [ ] Tägliches Check-in (3 Fragen, <15 Sek.), freundliche Erinnerung (Push optional, kein Druck)
 - [ ] Offline-Queue für Training-Log (laut Entscheidung Phase 0)
-- [ ] `cyclePhase.ts`: Phasenberechnung + Vorhersage nächste Phase (Unit-Tests: variable Länge, fehlende Daten, Retro-Korrektur)
+- [x] `cyclePhase.ts`: Phasenberechnung + Vorhersage nächste Phase (Unit-Tests: variable Länge, fehlende Daten, Retro-Korrektur)
 
 ## Phase 4 – Adaptive Engine (Kern, Plan Mode + Review-Subagent)
 
