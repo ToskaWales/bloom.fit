@@ -60,9 +60,9 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 - [ ] Trainings-Log (Übung, Sätze, Gewicht, Wdh, RPE; Prefill vom letzten Training; Rest-Timer als Hygiene-Feature)
 - [ ] Ernährungs-Log (Kalorien/Makros, manuell, Favoriten/Zuletzt-gegessen)
 - [ ] Barcode-Scan + Open-Food-Facts-Anbindung (mit manuellem Fallback)
-- [ ] Zyklus-Log (Periodenstart/-ende manuell, Korrektur nachträglich möglich)
+- [x] Zyklus-Log (Periodenstart/-ende manuell, Korrektur nachträglich möglich)
 - [ ] Health-Sync Zyklus: HealthKit (iOS) + Health Connect (Android), lesend
-- [ ] Tägliches Check-in (3 Fragen, <15 Sek.), freundliche Erinnerung (Push optional, kein Druck)
+- [x] Tägliches Check-in (3 Fragen, <15 Sek.) – _Erinnerung (optional, standardmäßig aus) noch offen_
 - [ ] Offline-Queue für Training-Log (laut Entscheidung Phase 0)
 - [x] `cyclePhase.ts`: Phasenberechnung + Vorhersage nächste Phase (Unit-Tests: variable Länge, fehlende Daten, Retro-Korrektur)
 

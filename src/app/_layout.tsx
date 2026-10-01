@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, Button, Text, View } from 'react-native';
 import { de } from '@/i18n/de';
+import { useCheckinStore } from '@/store/checkin';
+import { useCycleStore } from '@/store/cycle';
 import { useProfileStore } from '@/store/profile';
 import { useSessionStore } from '@/store/session';
 
@@ -19,7 +21,12 @@ export default function RootLayout() {
   // Profil laden, sobald eine Session da ist; beim Abmelden zurücksetzen.
   useEffect(() => {
     if (userId) void load(userId);
-    else reset();
+    else {
+      // Beim Abmelden alle nutzerbezogenen Daten aus dem Speicher entfernen
+      reset();
+      useCycleStore.getState().reset();
+      useCheckinStore.getState().reset();
+    }
   }, [userId, load, reset]);
 
   if (!ready) return null;
@@ -48,6 +55,18 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={!!session && onboarded}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="checkin"
+            options={{
+              headerShown: true,
+              title: de.checkin.title,
+              headerBackTitle: de.common.back,
+            }}
+          />
+          <Stack.Screen
+            name="cycle"
+            options={{ headerShown: true, title: de.cycle.title, headerBackTitle: de.common.back }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={!!session && !onboarded}>
           <Stack.Screen name="onboarding" />
