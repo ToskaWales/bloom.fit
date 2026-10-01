@@ -12,18 +12,18 @@ Leitprinzip: **Kleinster Build, der die Kernschleife beweist** – Loggen → Ch
 Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuerst klären, sonst wird später teuer umgebaut.
 
 - [x] Alle vier Dokumente gelesen (PRD, Architektur, Prompt-Bibliothek, Projektnotizen)
-- [ ] 🔴 **Widerspruch Projektstand:** Notizen sagen „Functioning app with all core features built", Repo ist leer, PRD/Prompt-Bibliothek gehen von Greenfield aus → klären, ob es existierenden Code/Prototyp gibt (anderes Repo?) oder ob die Notiz veraltet ist
-- [ ] 🔴 **Scope Ernährung-Adaption:** Notizen/Positionierung versprechen „adapts training AND nutrition", PRD v1 passt nur Training an (Ernährung = Tracking + deskriptive Insights). Entscheiden: Versprechen in Hooks/Landingpage anpassen oder Ernährungs-Adaption in v1 aufnehmen
-- [ ] 🔴 **Schwellenwert „erste Anpassung":** PRD sagt „1–2 Zyklen", Architektur/Prompt sagen „mind. 2 vollständige Zyklen" → verbindlich auf 2 festlegen und im PRD vereinheitlichen
-- [ ] 🔴 **Schwellenwert „aufgehoben":** 2 widersprechende Zyklen in Folge (Vorschlag aus Architektur) – als konfigurierbare Konstante/Remote-Config festlegen
-- [ ] Definition **„widersprechender Zyklus"** präzisieren (aktuell undefiniert): z. B. Ist-Last weicht um >X % von `f_phase`-Vorhersage ab; X festlegen (Rauschtoleranz)
-- [ ] Definition **Zyklusphasen** festlegen: Fensterung relativ zu Periodenstart (nicht starrer 28-Tage-Kalender), Umgang mit variabler Zykluslänge, Vorhersage der nächsten Periode (gleitender Median der letzten N Zyklen)
-- [ ] ⚠️ **Methodik-Check `f_phase = L_phase / L_gesamt`:** Rohlast (Gewicht×Wdh) ist durch Progressive Overload, Übungsauswahl, Deloads und Trainingshäufigkeit verzerrt. Vorschlag: pro Übung gegen gleitende Baseline normalisieren (z. B. e1RM bzw. Last relativ zum 4-Wochen-Trend), dann über Übungen mitteln; Mindest-Satzzahl pro Phase; Mindest-Effekt (z. B. ≥3–5 %) bevor etwas angepasst wird
-- [ ] Wer ist **nicht** Zielgruppe der Engine? Hormonelle Verhütung, unregelmäßige Zyklen/PCOS, Schwangerschaft/Postpartum, Menopause → Fallback „nur deskriptiv, keine Zyklus-Anpassung" definieren
-- [ ] **Offline-Entscheidung:** Gym-Keller ohne Empfang ist Alltag → Empfehlung: Training-Logging offline-first (lokale Queue, Sync später); Entscheidung treffen
+- [x] 🔴 **Widerspruch Projektstand:** Notizen sagen „Functioning app with all core features built", Repo ist leer, PRD/Prompt-Bibliothek gehen von Greenfield aus → klären, ob es existierenden Code/Prototyp gibt (anderes Repo?) oder ob die Notiz veraltet ist
+- [x] 🔴 **Scope Ernährung-Adaption:** Notizen/Positionierung versprechen „adapts training AND nutrition", PRD v1 passt nur Training an (Ernährung = Tracking + deskriptive Insights). Entscheiden: Versprechen in Hooks/Landingpage anpassen oder Ernährungs-Adaption in v1 aufnehmen
+- [x] 🔴 **Schwellenwert „erste Anpassung":** PRD sagt „1–2 Zyklen", Architektur/Prompt sagen „mind. 2 vollständige Zyklen" → verbindlich auf 2 festlegen und im PRD vereinheitlichen
+- [x] 🔴 **Schwellenwert „aufgehoben":** 2 widersprechende Zyklen in Folge (Vorschlag aus Architektur) – als konfigurierbare Konstante/Remote-Config festlegen
+- [x] Definition **„widersprechender Zyklus"** präzisieren (aktuell undefiniert): z. B. Ist-Last weicht um >X % von `f_phase`-Vorhersage ab; X festlegen (Rauschtoleranz)
+- [x] Definition **Zyklusphasen** festlegen: Fensterung relativ zu Periodenstart (nicht starrer 28-Tage-Kalender), Umgang mit variabler Zykluslänge, Vorhersage der nächsten Periode (gleitender Median der letzten N Zyklen)
+- [x] ⚠️ **Methodik-Check `f_phase = L_phase / L_gesamt`:** Rohlast (Gewicht×Wdh) ist durch Progressive Overload, Übungsauswahl, Deloads und Trainingshäufigkeit verzerrt. Vorschlag: pro Übung gegen gleitende Baseline normalisieren (z. B. e1RM bzw. Last relativ zum 4-Wochen-Trend), dann über Übungen mitteln; Mindest-Satzzahl pro Phase; Mindest-Effekt (z. B. ≥3–5 %) bevor etwas angepasst wird
+- [x] Wer ist **nicht** Zielgruppe der Engine? Hormonelle Verhütung, unregelmäßige Zyklen/PCOS, Schwangerschaft/Postpartum, Menopause → Fallback „nur deskriptiv, keine Zyklus-Anpassung" definieren
+- [x] **Offline-Entscheidung:** Gym-Keller ohne Empfang ist Alltag → Empfehlung: Training-Logging offline-first (lokale Queue, Sync später); Entscheidung treffen
 - [ ] **Tech-Stack bestätigen:** React Native + Expo (Empfehlung: ja, kein natives Muss-Feature in v1). Konsequenz: HealthKit braucht Expo Dev Build (kein Expo Go)
 - [ ] ⚠️ **Google Fit ist veraltet/abgekündigt** → stattdessen **Android Health Connect** einplanen; PRD/Architektur/CLAUDE.md anpassen
-- [ ] Zyklus-Input im Onboarding: Default = manuell, Health-Sync optional (Empfehlung; reduziert Abhängigkeit/Datenschutzfläche)
+- [x] Zyklus-Input im Onboarding: Default = manuell, Health-Sync optional (Empfehlung; reduziert Abhängigkeit/Datenschutzfläche)
 - [ ] Barcode-DB: Open Food Facts Stichprobe mit ~50 typischen DACH-Produkten (dm, Rewe, Lidl, Aldi, Billa, Migros), danach Entscheidung
 - [ ] Platzhalter-Inhalte für die Wartezeit bis zum ersten Insight festlegen (siehe Phase 5)
 - [ ] Preis/Zahlungsweg für Vorbesteller:innen klären (6,99 €/Monat; Stripe/Payment-Link vs. In-App-Kauf; Store-Gebühren einkalkulieren)
@@ -35,7 +35,7 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 - [x] `CLAUDE.md` im Repo-Root aus der Vorlage anlegen (inkl. Korrekturen: Health Connect, Offline-Regel, verbotene Formulierungen)
 - [x] Expo-Projekt (TypeScript) initialisieren, Ordnerstruktur `/src/{screens,components,engine,api,store,navigation}`
 - [x] Zustand-Setup, Supabase-Client mit Env-Variablen (`.env.example`, keine Secrets im Repo)
-- [ ] Supabase-Projekt in **EU-Region (Frankfurt)** anlegen
+- [x] Supabase-Projekt in **EU-Region (Frankfurt)** anlegen
 - [x] Linting/Formatting (ESLint, Prettier), `tsc --noEmit`, Jest/Vitest
 - [x] CI (GitHub Actions): Lint + Typecheck + Tests auf jedem PR
 - [x] Navigation: Tabs (Log, Insights, Profil) + Auth-Flow

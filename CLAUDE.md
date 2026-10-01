@@ -31,6 +31,8 @@ nicht an einen starren Phasenkalender. Siehe PRD für Details. Roadmap: `TODO.md
   historischen Daten der Nutzerin an, nie auf Basis eines allgemeinen Phasen-Modells.
 - Kein Feature, das wie Gamification wirkt (Badges, Zwangs-Streaks).
 - Keine aggressiven Paywalls oder Upsell-Pop-ups.
+- Entscheidungen stehen in `docs/ENTSCHEIDUNGEN.md` (verbindlich).
+- Training-Logging ist offline-first (lokale Queue, Sync später).
 - Gesundheitsdaten: nur mit ausdrücklicher Einwilligung, RLS auf jeder Tabelle, keine Secrets im Repo.
 
 ## Konventionen
