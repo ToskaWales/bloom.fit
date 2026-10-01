@@ -16,7 +16,7 @@ nicht an einen starren Phasenkalender. Siehe PRD für Details. Roadmap: `TODO.md
 ## Ordnerstruktur
 
 - `src/app/` – **nur dünne Expo-Router-Routen**, die Screens aus `src/screens` re-exportieren
-- `src/screens/<Name>/index.tsx`, `src/components`, `src/engine`, `src/api`, `src/store`, `src/navigation`, `src/i18n`
+- `src/screens/<Name>/index.tsx`, `src/components`, `src/engine`, `src/api`, `src/store`, `src/navigation`, `src/i18n`, `src/lib` (reine Helfer: Datum, Validierung)
 - Import-Alias: `@/` → `src/`
 
 ## Wichtige Regeln

@@ -56,7 +56,7 @@ Beim Lesen der vier Dokumente sind Widersprüche/Lücken aufgefallen. Diese zuer
 
 ## Phase 3 – Kern-Logging (Muss-Features)
 
-- [ ] Onboarding (Zykluslänge, Erfahrung, Ziel, Erwartungsmanagement „Insights brauchen 1–2 Zyklen", optionaler Health-Sync, Einwilligung Gesundheitsdaten)
+- [x] Onboarding (Zykluslänge, Erfahrung, Ziel, Erwartungsmanagement „Insights brauchen 1–2 Zyklen", optionaler Health-Sync, Einwilligung Gesundheitsdaten)
 - [ ] Trainings-Log (Übung, Sätze, Gewicht, Wdh, RPE; Prefill vom letzten Training; Rest-Timer als Hygiene-Feature)
 - [ ] Ernährungs-Log (Kalorien/Makros, manuell, Favoriten/Zuletzt-gegessen)
 - [ ] Barcode-Scan + Open-Food-Facts-Anbindung (mit manuellem Fallback)
