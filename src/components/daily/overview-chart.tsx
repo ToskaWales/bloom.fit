@@ -56,12 +56,18 @@ function tooltipStyle(fraction: number) {
 // Push direct labels apart so they never overlap.
 function spread(
   labels: { y: number; text: string; color: string }[],
+  top: number,
+  bottom: number,
   min = 13,
 ) {
-  const sorted = [...labels].sort((a, b) => a.y - b.y);
+  const sorted = labels.map((l) => ({ ...l })).sort((a, b) => a.y - b.y);
   for (let i = 1; i < sorted.length; i++)
     if (sorted[i].y - sorted[i - 1].y < min)
       sorted[i].y = sorted[i - 1].y + min;
+  // never leave the panel: if the stack was pushed past the bottom, move it back up
+  const overflow = (sorted.at(-1)?.y ?? 0) - bottom;
+  if (overflow > 0) for (const l of sorted) l.y -= overflow;
+  for (const l of sorted) l.y = Math.max(top, l.y);
   return sorted;
 }
 
@@ -108,6 +114,8 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
           return [{ y: moodY(rows[i][m.key]!), text: m.label, color: m.color }];
       return [];
     }),
+    moodTop + 4,
+    moodTop + PANELS.mood,
   );
 
   function onMove(e: React.PointerEvent<SVGRectElement>) {
@@ -116,7 +124,9 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
     setActive(Math.max(0, Math.min(n - 1, Math.round(px / (step || 1)))));
   }
 
-  const tick = (i: number) => i % 7 === 0 || i === lastIdx;
+  // weekly ticks, but not right next to the last day's label
+  const tick = (i: number) =>
+    i === lastIdx || (i % 7 === 0 && lastIdx - i >= 4);
   const a = active !== null ? rows[active] : null;
 
   return (
@@ -124,7 +134,7 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
       <svg
         viewBox={`0 0 ${W} ${height}`}
         role="img"
-        aria-label="Verlauf von Energie, Motivation, Schlaf, Gewichtstrend und Trainingsvolumen. Eine Tabelle mit allen Werten steht darunter zur Verfügung."
+        aria-label={`Verlauf von Energie, Motivation, Schlaf${showWeight ? ", Gewichtstrend" : ""} und Trainingsvolumen. Eine Tabelle mit allen Werten steht darunter zur Verfügung.`}
         className="w-full"
       >
         <defs>
@@ -158,9 +168,12 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
           r.period ? (
             <rect
               key={r.day}
-              x={x(i) - step / 2}
+              x={Math.max(PAD.left, x(i) - step / 2)}
               y={moodTop}
-              width={step}
+              width={
+                Math.min(W - PAD.right, x(i) + step / 2) -
+                Math.max(PAD.left, x(i) - step / 2)
+              }
               height={height - moodTop - AXIS_H}
               fill={`url(#${uid}-hatch)`}
             />
@@ -393,13 +406,13 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
           fill="transparent"
           onPointerMove={onMove}
           onPointerDown={onMove}
-          onPointerLeave={() => setActive(null)}
+          onPointerLeave={(e) => e.pointerType === "mouse" && setActive(null)}
+          style={{ touchAction: "pan-y" }}
         />
       </svg>
 
       {a && (
         <div
-          role="status"
           className="pointer-events-none absolute top-2 whitespace-nowrap rounded-xl border border-neutral-200 bg-white p-2 text-xs shadow"
           style={tooltipStyle(x(active!) / W)}
         >

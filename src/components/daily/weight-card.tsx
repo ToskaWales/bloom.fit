@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { useWeights } from "@/components/daily/use-daily-data";
 import { buttonClass, inputClass } from "@/components/ui";
+import { daysBetween } from "@/lib/daily/day";
 import { isValidWeightKg } from "@/lib/daily/validate";
 import { weightTrend } from "@/lib/daily/weight";
 import { getWeight, removeWeight, saveWeight } from "@/lib/local/daily";
@@ -25,7 +26,13 @@ export function WeightCard({ today }: { today: string }) {
   const [error, setError] = useState<string | null>(null);
 
   if (hideWeight) return null;
-  const trend = weights ? weightTrend(weights).at(-1) : undefined;
+  // A trend needs a few weigh-ins and a recent one; otherwise it would present old data as current.
+  const points = weights ? weightTrend(weights) : [];
+  const last = points.at(-1);
+  const trend =
+    last && points.length >= 3 && daysBetween(last.day, today) <= 14
+      ? last
+      : undefined;
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,7 +62,7 @@ export function WeightCard({ today }: { today: string }) {
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
           Heute ({weightLabel(units)})
           <input
-            key={todays?.updated_at ?? "none"}
+            key={todays ? todays.weight_kg : "none"}
             name="weight"
             inputMode="decimal"
             autoComplete="off"

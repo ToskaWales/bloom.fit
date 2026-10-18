@@ -70,4 +70,23 @@ describe("buildOverview", () => {
       hidden.every((r) => r.weightKg === null && r.weightTrend === null),
     ).toBe(true);
   });
+
+  it("stops carrying the weight trend forward when the last weigh-in is old", () => {
+    const rows = buildOverview({
+      from: "2026-10-01",
+      to: "2026-10-31",
+      checkins: [],
+      weights: [
+        { day: "2026-10-01", kg: 62 },
+        { day: "2026-10-02", kg: 62.2 },
+        { day: "2026-10-03", kg: 62.1 },
+      ],
+      workouts: [],
+      periodDays: new Set(),
+    });
+    expect(
+      rows.find((r) => r.day === "2026-10-10")!.weightTrend,
+    ).not.toBeNull(); // 7 days after
+    expect(rows.find((r) => r.day === "2026-10-30")!.weightTrend).toBeNull(); // weeks without data
+  });
 });

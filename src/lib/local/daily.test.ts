@@ -4,6 +4,7 @@ import { pushSchemas } from "@/lib/sync/tables";
 import { createLocalDb, type LocalDb } from "./db";
 import {
   getCheckin,
+  patchCheckin,
   removeCycleEvent,
   removeWeight,
   saveCheckin,
@@ -114,5 +115,68 @@ describe("cycle events", () => {
     expect(
       (await db.cycle_events.toArray()).filter((r) => !r.deleted_at),
     ).toHaveLength(2);
+  });
+});
+
+describe("patchCheckin (quick taps must not overwrite each other)", () => {
+  it("keeps every change when several partial updates run at once", async () => {
+    await Promise.all([
+      patchCheckin(db, USER, "2026-10-02", { energy: 4 }),
+      patchCheckin(db, USER, "2026-10-02", { motivation: 5 }),
+      patchCheckin(db, USER, "2026-10-02", { note: "müde" }),
+      patchCheckin(db, USER, "2026-10-02", { sleepHours: 7 }),
+    ]);
+    expect(await getCheckin(db, USER, "2026-10-02")).toMatchObject({
+      energy: 4,
+      motivation: 5,
+      note: "müde",
+      sleep_hours: 7,
+    });
+    expect(await db.checkins.count()).toBe(1);
+  });
+
+  it("applies toggles on the stored value, so two quick symptom taps both count", async () => {
+    const toggle =
+      (s: "cramps" | "headache") =>
+      (cur: { symptoms: ("cramps" | "headache" | string)[] }) => ({
+        symptoms: (cur.symptoms.includes(s)
+          ? cur.symptoms.filter((x) => x !== s)
+          : [...cur.symptoms, s]) as never,
+      });
+    await Promise.all([
+      patchCheckin(db, USER, "2026-10-02", toggle("cramps")),
+      patchCheckin(db, USER, "2026-10-02", toggle("headache")),
+    ]);
+    expect(
+      (
+        (await getCheckin(db, USER, "2026-10-02")) as CheckinRow
+      ).symptoms.sort(),
+    ).toEqual(["cramps", "headache"]);
+    await patchCheckin(db, USER, "2026-10-02", toggle("cramps"));
+    expect(
+      ((await getCheckin(db, USER, "2026-10-02")) as CheckinRow).symptoms,
+    ).toEqual(["headache"]);
+  });
+
+  it("starts from an empty check-in after a delete and revives the same row", async () => {
+    await patchCheckin(db, USER, "2026-10-02", { energy: 3, note: "alt" });
+    const row = (await db.checkins.toArray())[0];
+    await db.checkins.put({ ...row, deleted_at: "2026-10-03T00:00:00.000Z" });
+    await patchCheckin(db, USER, "2026-10-02", { motivation: 2 });
+    const revived = (await db.checkins.get(row.id)) as CheckinRow;
+    expect(revived).toMatchObject({
+      motivation: 2,
+      energy: null,
+      note: null,
+      deleted_at: null,
+    });
+  });
+
+  it("queues each change for sync and passes the sync schema", async () => {
+    await patchCheckin(db, USER, "2026-10-02", { energy: 4 });
+    expect(await db.outbox.count()).toBe(1);
+    expect(
+      pushSchemas.checkins.safeParse((await db.checkins.toArray())[0]).success,
+    ).toBe(true);
   });
 });

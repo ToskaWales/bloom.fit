@@ -141,3 +141,35 @@ export async function syncWithLock(
   );
   return result ?? { status: "ok", pushed: 0, pulled: 0 };
 }
+
+// Rows the *database* refused (not ones that failed validation) may succeed
+// later, e.g. after a device clock was corrected. Put them back in the outbox;
+// if they are refused again they are listed again. Called when the app starts.
+export async function requeueRejected(db: LocalDb): Promise<number> {
+  const raw = (await db.meta.get(REJECTED_KEY))?.value;
+  const list: RejectedRow[] = raw ? JSON.parse(raw) : [];
+  const retry = list.filter((r) => r.reason === "db" && r.id);
+  let queued = 0;
+  await db.transaction(
+    "rw",
+    [...TABLES.map((t) => db[t]), db.outbox, db.meta],
+    async () => {
+      for (const r of retry) {
+        const exists = await db[r.table].get(r.id!);
+        const pending = await db.outbox
+          .where("[table+id]")
+          .equals([r.table, r.id!])
+          .count();
+        if (exists && !pending) {
+          await db.outbox.add({ table: r.table, id: r.id! });
+          queued++;
+        }
+      }
+      const rest = list.filter((r) => !retry.includes(r));
+      if (rest.length)
+        await db.meta.put({ key: REJECTED_KEY, value: JSON.stringify(rest) });
+      else await db.meta.delete(REJECTED_KEY);
+    },
+  );
+  return queued;
+}

@@ -17,7 +17,8 @@ begin
 end $$;
 
 create table public.custom_exercises (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null check (char_length(name) between 1 and 80),
   muscle_group text check (char_length(muscle_group) <= 40),
@@ -29,7 +30,8 @@ create table public.custom_exercises (
 );
 
 create table public.workouts (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   title text check (char_length(title) <= 80),
   started_at timestamptz not null,
@@ -43,7 +45,8 @@ create table public.workouts (
 );
 
 create table public.workout_exercises (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   workout_id uuid not null,
   exercise_id text not null check (char_length(exercise_id) between 1 and 64),
@@ -58,7 +61,8 @@ create table public.workout_exercises (
 );
 
 create table public.workout_sets (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   workout_exercise_id uuid not null,
   position integer not null check (position >= 0),

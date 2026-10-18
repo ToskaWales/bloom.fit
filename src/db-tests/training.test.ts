@@ -101,21 +101,29 @@ describe("training tables", () => {
     ).rejects.toThrow(/foreign key/);
   });
 
-  it("cannot hijack another user's row id via upsert", async () => {
+  it("ids are per user: the same id under another user is a separate row and never touches the victim's", async () => {
     const a = await member("a@example.com");
     const b = await member("b@example.com");
     await seedWorkout(a);
-    await expect(
-      asUser(db, b, () =>
-        q(
-          "insert into workouts (id, user_id, title, started_at) values ($1, $2, 'mine', now()) on conflict (id) do update set title = excluded.title",
-          [W1, b],
-        ),
+    await asUser(db, b, () =>
+      q(
+        "insert into workouts (id, user_id, title, started_at) values ($1, $2, 'mine', now()) on conflict (user_id, id) do update set title = excluded.title",
+        [W1, b],
       ),
-    ).rejects.toThrow(/row-level security/);
+    );
+    const rows = (
+      await q(
+        "select user_id, title from workouts where id = $1 order by title",
+        [W1],
+      )
+    ).rows;
+    expect(rows.map((r) => r.title)).toEqual(["Push", "mine"]);
     expect(
-      (await q("select title from workouts where id = $1", [W1])).rows[0].title,
-    ).toBe("Push");
+      (await asUser(db, a, () => q("select title from workouts"))).rows,
+    ).toEqual([{ title: "Push" }]);
+    expect(
+      (await asUser(db, b, () => q("select title from workouts"))).rows,
+    ).toEqual([{ title: "mine" }]);
   });
 
   it("is idempotent: upserting the same id twice keeps one row", async () => {
@@ -123,7 +131,7 @@ describe("training tables", () => {
     const upsert = () =>
       asUser(db, u, () =>
         q(
-          "insert into workouts (id, user_id, title, started_at) values ($1, $2, 'Pull', now()) on conflict (id) do update set title = excluded.title",
+          "insert into workouts (id, user_id, title, started_at) values ($1, $2, 'Pull', now()) on conflict (user_id, id) do update set title = excluded.title",
           [W1, u],
         ),
       );

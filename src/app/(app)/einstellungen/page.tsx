@@ -1,9 +1,10 @@
 import { DeleteAccountForm } from "@/components/delete-account-form";
+import { HideWeightForm } from "@/components/hide-weight-form";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page, secondaryButtonClass } from "@/components/ui";
 import { requireOnboarded } from "@/lib/auth/dal";
 import { berlinDay } from "@/lib/onboarding/schema";
-import { setHideWeight, setProductMail, updateCycle } from "./actions";
+import { setProductMail, updateCycle } from "./actions";
 
 export const metadata = {
   title: "Einstellungen – Bloom",
@@ -62,23 +63,7 @@ export default async function Settings() {
 
       <section className="flex max-w-md flex-col gap-3">
         <h2 className="text-lg font-semibold">Gewicht</h2>
-        <form action={setHideWeight} className="flex flex-col gap-3">
-          <label className={radio}>
-            <input
-              type="checkbox"
-              name="hideWeight"
-              value="on"
-              defaultChecked={profile.hide_weight}
-              className="mt-1"
-            />
-            <span>
-              Gewicht ausblenden: keine Eingabe, kein Trend und keine
-              Gewichtskurve in Bloom. Bereits gespeicherte Werte bleiben
-              erhalten.
-            </span>
-          </label>
-          <button className={secondaryButtonClass}>Speichern</button>
-        </form>
+        <HideWeightForm initial={profile.hide_weight} />
       </section>
 
       <section className="flex max-w-md flex-col gap-3">

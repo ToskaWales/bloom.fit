@@ -10,7 +10,7 @@ export function supabaseSyncDb(supabase: SupabaseClient): SyncDb {
     async upsert(table, userId, rows) {
       const { error } = await supabase.from(table).upsert(
         rows.map((r) => ({ ...r, user_id: userId })),
-        { onConflict: "id" },
+        { onConflict: "user_id,id" },
       );
       if (error) throw new Error(`upsert ${table}: ${error.message}`);
     },

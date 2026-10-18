@@ -251,3 +251,25 @@ describe("hide_weight preference", () => {
     expect(other.rows).toHaveLength(0);
   });
 });
+
+describe("per-user ids", () => {
+  it("the same id can exist for two users without interfering (no probing or squatting)", async () => {
+    const a = await member("a@example.com");
+    const b = await member("b@example.com");
+    await asUser(db, b, () => insertCheckin(b, C1, "2026-10-02"));
+    // a pushes the very same id for the same day: it is simply her own row
+    await asUser(db, a, () =>
+      q(
+        `insert into checkins (id, user_id, day, energy) values ($1, $2, '2026-10-02', 5)
+         on conflict (user_id, id) do update set energy = excluded.energy`,
+        [C1, a],
+      ),
+    );
+    expect(
+      (await asUser(db, a, () => q("select energy from checkins"))).rows,
+    ).toEqual([{ energy: 5 }]);
+    expect(
+      (await asUser(db, b, () => q("select energy from checkins"))).rows,
+    ).toEqual([{ energy: 3 }]);
+  });
+});

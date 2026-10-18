@@ -2,7 +2,8 @@
 -- training log (client ids, server-stamped updated_at, soft delete).
 
 create table public.templates (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null check (char_length(name) between 1 and 80),
   created_at timestamptz not null default clock_timestamp(),
@@ -12,7 +13,8 @@ create table public.templates (
 );
 
 create table public.template_exercises (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   template_id uuid not null,
   exercise_id text not null check (char_length(exercise_id) between 1 and 64),

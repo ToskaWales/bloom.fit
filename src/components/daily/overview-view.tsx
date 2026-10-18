@@ -29,6 +29,10 @@ export function OverviewView() {
       r.energy !== null ||
       r.motivation !== null ||
       r.sleepQuality !== null ||
+      r.sleepHours !== null ||
+      r.hunger !== null ||
+      r.symptoms.length > 0 ||
+      r.period ||
       r.weightKg !== null ||
       r.volumeKg > 0,
   );
@@ -40,9 +44,10 @@ export function OverviewView() {
         <SyncStatus />
       </div>
       <p className="text-neutral-700">
-        Alles an einem Ort: wie du dich fühlst, wie sich dein Gewicht entwickelt
-        und was du trainierst, mit deinen Periodentagen markiert. So erkennst du
-        eigene Muster, ohne selbst zwischen Apps zu vergleichen.
+        {hideWeight
+          ? "Alles an einem Ort: wie du dich fühlst und was du trainierst, mit deinen Periodentagen markiert."
+          : "Alles an einem Ort: wie du dich fühlst, wie sich dein Gewicht entwickelt und was du trainierst, mit deinen Periodentagen markiert."}{" "}
+        So erkennst du eigene Muster, ohne selbst zwischen Apps zu vergleichen.
       </p>
 
       <div role="group" aria-label="Zeitraum" className="flex gap-2">

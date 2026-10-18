@@ -8,7 +8,7 @@ import { SyncStatus } from "@/components/training/sync-status";
 import { inputClass, Notice, secondaryButtonClass } from "@/components/ui";
 import { summarizeCycle, type CycleEvent } from "@/lib/daily/cycle";
 import { useToday } from "@/components/daily/use-today";
-import { addDays } from "@/lib/daily/day";
+import { addDays, daysBetween } from "@/lib/daily/day";
 import { isValidCycleDay, isValidPeriodEnd } from "@/lib/daily/validate";
 import { removeCycleEvent, saveCycleEvent } from "@/lib/local/daily";
 
@@ -66,6 +66,18 @@ export function CycleView() {
       if (!start || !isValidPeriodEnd(start, day))
         return setError(
           "Das Ende muss nach dem Beginn einer Periode liegen (höchstens 14 Tage danach).",
+        );
+    }
+    if (kind === "period_start") {
+      const near = (events ?? []).some(
+        (e) =>
+          e.kind === "period_start" &&
+          e.day !== day &&
+          Math.abs(daysBetween(e.day, day)) < 14,
+      );
+      if (near)
+        return setError(
+          "In den 14 Tagen um dieses Datum gibt es schon einen Periodenbeginn. Lösche ihn zuerst, wenn er falsch war.",
         );
     }
     setError(null);

@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 interface Props {
   label: string;
   low: string;
@@ -10,11 +12,17 @@ interface Props {
 
 // Five tap targets; tapping the selected value again clears it. Saved immediately by the caller.
 export function ScaleInput({ label, low, high, value, onChange }: Props) {
+  const hintId = useId();
   return (
-    <div role="radiogroup" aria-label={label} className="flex flex-col gap-1">
+    <div
+      role="group"
+      aria-label={label}
+      aria-describedby={`${hintId}`}
+      className="flex flex-col gap-1"
+    >
       <div className="flex items-baseline justify-between">
         <span className="text-sm font-medium">{label}</span>
-        <span className="text-xs text-neutral-500">
+        <span id={hintId} className="text-xs text-neutral-500">
           {low} – {high}
         </span>
       </div>
@@ -25,8 +33,7 @@ export function ScaleInput({ label, low, high, value, onChange }: Props) {
             <button
               key={n}
               type="button"
-              role="radio"
-              aria-checked={selected}
+              aria-pressed={selected}
               aria-label={`${label}: ${n} von 5`}
               onClick={() => onChange(selected ? null : n)}
               className={`h-11 rounded-xl border text-base font-medium ${

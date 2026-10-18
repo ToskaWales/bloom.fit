@@ -24,6 +24,12 @@ export function CycleCard({ today }: { today: string }) {
   if (s.status === "no_data")
     line =
       "Trage den Beginn deiner letzten Periode ein, dann zeigt Bloom dir deinen Zyklustag.";
+  else if (s.status === "stale")
+    line =
+      "Dein letzter eingetragener Periodenbeginn ist schon länger her. Trage den aktuellen ein, damit Bloom deinen Zyklustag zeigen kann.";
+  else if (s.status === "overdue")
+    line =
+      "Deine Periode ist später als sonst. Das kann viele Gründe haben, zum Beispiel Stress, wenig Schlaf oder zu wenig Energie bei viel Training. Wenn sie länger ausbleibt, sprich bitte mit einer Ärztin oder einem Arzt.";
   else if (s.status === "not_enough_data")
     line = "Nach drei erfassten Zyklen schätzt Bloom deine nächste Periode.";
   else if (s.status === "irregular")
@@ -31,6 +37,8 @@ export function CycleCard({ today }: { today: string }) {
       "Dein Zyklus schwankt stark, deshalb gibt Bloom keine Vorhersage. Das Protokoll hilft dir trotzdem, Muster zu erkennen.";
   else
     line = `Nächste Periode voraussichtlich zwischen ${fmt(s.prediction!.earliest)} und ${fmt(s.prediction!.latest)} (Schätzung).`;
+  // Within two weeks of the last start another "started" entry would only be a duplicate.
+  const canLogStart = s.cycleDay === null || s.cycleDay > 14;
 
   return (
     <section
@@ -42,14 +50,16 @@ export function CycleCard({ today }: { today: string }) {
       </h2>
       <p className="text-sm text-neutral-700">{line}</p>
       <div className="flex flex-wrap gap-2">
-        <button
-          className={secondaryButtonClass}
-          onClick={() =>
-            db && saveCycleEvent(db, userId, "period_start", today)
-          }
-        >
-          Periode hat heute begonnen
-        </button>
+        {canLogStart && (
+          <button
+            className={secondaryButtonClass}
+            onClick={() =>
+              db && saveCycleEvent(db, userId, "period_start", today)
+            }
+          >
+            Periode hat heute begonnen
+          </button>
+        )}
         <Link href="/zyklus" className="self-center text-sm underline">
           Zyklus-Protokoll
         </Link>

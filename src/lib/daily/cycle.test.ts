@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeCycle, type CycleEvent } from "./cycle";
+import { periodDaySet, summarizeCycle, type CycleEvent } from "./cycle";
 
 const start = (day: string): CycleEvent => ({ kind: "period_start", day });
 const end = (day: string): CycleEvent => ({ kind: "period_end", day });
@@ -117,5 +117,112 @@ describe("summarizeCycle", () => {
     expect(summarizeCycle(shuffled, "2026-10-01").lengths).toEqual([
       28, 28, 28, 28,
     ]);
+  });
+});
+
+describe("summarizeCycle: review fixes", () => {
+  const starts = (...days: string[]) => days.map(start);
+
+  it("flags an overdue period instead of showing a prediction window in the past", () => {
+    const s = summarizeCycle(regular, "2026-10-30"); // expected ~Oct 19, window ends Oct 23
+    expect(s.status).toBe("overdue");
+    expect(s.prediction).toBeNull();
+    expect(s.cycleDay).toBe(40);
+  });
+
+  it("calls an old last start stale (no cycle day, no prediction)", () => {
+    const s = summarizeCycle(regular, "2026-12-20");
+    expect(s.status).toBe("stale");
+    expect(s.cycleDay).toBeNull();
+    expect(s.prediction).toBeNull();
+  });
+
+  it("merges a second start within two weeks into the first (re-tapped button)", () => {
+    const s = summarizeCycle(
+      starts(
+        "2026-06-01",
+        "2026-06-04",
+        "2026-06-29",
+        "2026-07-27",
+        "2026-08-24",
+      ),
+      "2026-09-01",
+    );
+    expect(s.lengths).toEqual([28, 28, 28]);
+    expect(s.lastStart).toBe("2026-08-24");
+  });
+
+  it("does not treat one missed log (about twice the usual length) as a very long cycle", () => {
+    const s = summarizeCycle(
+      starts(
+        "2026-01-01",
+        "2026-01-29",
+        "2026-02-26",
+        "2026-04-23",
+        "2026-05-21",
+      ),
+      "2026-06-01",
+    ); // 28, 28, 56, 28
+    expect(s.lengths).toEqual([28, 28, 28]);
+    expect(s.status).toBe("regular");
+  });
+
+  it("keeps genuinely long cycles when no gap is an outlier", () => {
+    const s = summarizeCycle(
+      starts(
+        "2026-01-01",
+        "2026-02-10",
+        "2026-03-22",
+        "2026-05-01",
+        "2026-06-10",
+      ),
+      "2026-06-20",
+    ); // 40 x4
+    expect(s.lengths).toEqual([40, 40, 40, 40]);
+  });
+
+  it("includes cycle lengths of exactly 18 and 60 days and excludes 17 and 61", () => {
+    const add = (n: number) =>
+      new Date(Date.UTC(2026, 0, 1 + n)).toISOString().slice(0, 10);
+    const lengths = (n: number) =>
+      summarizeCycle(starts("2026-01-01", add(n)), "2026-12-31").lengths;
+    expect([lengths(17), lengths(18), lengths(60), lengths(61)]).toEqual([
+      [],
+      [18],
+      [60],
+      [],
+    ]);
+  });
+
+  it("does not let one end event count for two starts", () => {
+    const s = summarizeCycle(
+      [...starts("2026-06-01", "2026-06-20"), end("2026-06-24")],
+      "2026-07-01",
+    );
+    expect(s.periodLengths).toEqual([5]); // only the second period (Jun 20-24) has an end
+  });
+});
+
+describe("periodDaySet", () => {
+  it("shades start..end, only the start day without an end, and ignores orphans and far ends", () => {
+    const days = periodDaySet([
+      start("2026-10-01"),
+      end("2026-10-04"),
+      start("2026-11-01"),
+      end("2026-11-30"),
+      end("2026-01-01"),
+    ]);
+    expect([...days].sort()).toEqual([
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-03",
+      "2026-10-04",
+      "2026-11-01",
+    ]);
+  });
+  it("handles duplicate starts", () => {
+    expect(periodDaySet([start("2026-10-01"), start("2026-10-01")]).size).toBe(
+      1,
+    );
   });
 });

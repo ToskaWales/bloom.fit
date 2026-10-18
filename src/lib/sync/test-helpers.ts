@@ -9,8 +9,10 @@ export function memoryDb() {
     async upsert(table, userId, incoming) {
       const list = (rows[table] ??= []);
       for (const r of incoming) {
-        const idx = list.findIndex((x) => x.id === r.id);
-        if (idx >= 0 && list[idx].user_id !== userId) throw new Error("rls");
+        // ids are unique per user (primary key is (user_id, id))
+        const idx = list.findIndex(
+          (x) => x.id === r.id && x.user_id === userId,
+        );
         const stamped = {
           ...r,
           user_id: userId,

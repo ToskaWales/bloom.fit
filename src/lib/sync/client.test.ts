@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";
 import { saveRow, softDeleteWorkout } from "@/lib/local/repo";
-import { syncOnce, type Fetcher } from "./client";
+import { requeueRejected, syncOnce, type Fetcher } from "./client";
 import { runSync } from "./server";
 import { syncRequestSchema } from "./tables";
 import { memoryDb } from "./test-helpers";
@@ -202,5 +202,44 @@ describe("syncOnce", () => {
     await saveRow(dbA, "workout_sets", set({ weight_kg: 60 }));
     await syncOnce(dbA, fetcherFor());
     expect(await dbA.meta.get("rejected")).toBeUndefined();
+  });
+
+  it("retries rows the database refused once the cause is gone, but not invalid ones", async () => {
+    await saveRow(dbA, "workouts", workout());
+    await saveRow(dbA, "workout_exercises", exercise());
+    await saveRow(dbA, "workout_sets", set({ weight_kg: 5000 })); // invalid: never retried
+    // first sync: the server refuses the workout in the database (simulated)
+    const refusing: Fetcher = async (_u, init) => {
+      const body = syncRequestSchema.parse(JSON.parse(init.body as string));
+      const flaky = {
+        pull: server.db.pull,
+        upsert: async (
+          t: never,
+          u: string,
+          rows: Record<string, unknown>[],
+        ) => {
+          if (rows.some((r) => r.id === W)) throw new Error("db says no");
+          return server.db.upsert(t, u, rows);
+        },
+      };
+      return new Response(
+        JSON.stringify(await runSync(flaky as never, USER, body)),
+        { status: 200 },
+      );
+    };
+    await syncOnce(dbA, refusing);
+    const rejected = JSON.parse((await dbA.meta.get("rejected"))!.value!);
+    expect(rejected.map((r: { reason: string }) => r.reason).sort()).toEqual([
+      "db",
+      "invalid",
+    ]);
+    expect(server.rows.workouts ?? []).toHaveLength(0);
+
+    expect(await requeueRejected(dbA)).toBe(1); // only the db-refused one
+    await syncOnce(dbA, fetcherFor());
+    expect(server.rows.workouts).toHaveLength(1);
+    expect(JSON.parse((await dbA.meta.get("rejected"))!.value!)).toHaveLength(
+      1,
+    ); // the invalid set stays listed
   });
 });

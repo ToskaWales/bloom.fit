@@ -5,7 +5,8 @@
 -- row id from user + day, so two offline devices converge on the same row.
 
 create table public.checkins (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   day date not null check (day <= current_date + 1), -- +1: device may be ahead of UTC
   sleep_quality smallint check (sleep_quality between 1 and 5),
@@ -27,7 +28,8 @@ create table public.checkins (
 create unique index checkins_one_per_day on public.checkins (user_id, day) where deleted_at is null;
 
 create table public.bodyweight_entries (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   day date not null check (day <= current_date + 1),
   weight_kg numeric(5, 2) not null check (weight_kg between 30 and 300),
@@ -38,7 +40,8 @@ create table public.bodyweight_entries (
 create unique index bodyweight_one_per_day on public.bodyweight_entries (user_id, day) where deleted_at is null;
 
 create table public.cycle_events (
-  id uuid primary key,
+  id uuid not null,
+  primary key (user_id, id), -- ids are only unique per user: nobody can squat or probe another user's ids
   user_id uuid not null references auth.users (id) on delete cascade,
   kind text not null check (kind in ('period_start', 'period_end', 'ovulation_test_positive')),
   day date not null check (day <= current_date + 1),

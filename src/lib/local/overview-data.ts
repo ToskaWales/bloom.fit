@@ -76,24 +76,36 @@ export async function loadOverview(
     .map((w) => ({ id: w.id, day: localDay(new Date(w.started_at)) }))
     .filter((w) => w.day >= from && w.day <= to);
 
-  const volumes: { day: string; volumeKg: number }[] = [];
-  for (const w of workouts) {
-    const exercises = await db.workout_exercises
-      .where("workout_id")
-      .equals(w.id)
-      .filter((e) => !e.deleted_at)
-      .toArray();
-    const sets = exercises.length
-      ? ((await db.workout_sets
-          .where("workout_exercise_id")
-          .anyOf(exercises.map((e) => e.id))
-          .toArray()) as SetRow[])
-      : [];
-    volumes.push({
-      day: w.day,
-      volumeKg: sets.reduce((sum, s) => sum + setVolume(s), 0),
-    });
+  // Two queries for all workouts of the window instead of two per workout.
+  const exercises = workouts.length
+    ? await db.workout_exercises
+        .where("workout_id")
+        .anyOf(workouts.map((w) => w.id))
+        .filter((e) => !e.deleted_at)
+        .toArray()
+    : [];
+  const workoutOfExercise = new Map(
+    exercises.map((e) => [e.id, e.workout_id as string]),
+  );
+  const sets = exercises.length
+    ? ((await db.workout_sets
+        .where("workout_exercise_id")
+        .anyOf([...workoutOfExercise.keys()])
+        .toArray()) as SetRow[])
+    : [];
+  const volumeByWorkout = new Map<string, number>();
+  for (const set of sets) {
+    const workoutId = workoutOfExercise.get(set.workout_exercise_id);
+    if (workoutId)
+      volumeByWorkout.set(
+        workoutId,
+        (volumeByWorkout.get(workoutId) ?? 0) + setVolume(set),
+      );
   }
+  const volumes = workouts.map((w) => ({
+    day: w.day,
+    volumeKg: volumeByWorkout.get(w.id) ?? 0,
+  }));
 
   return buildOverview({
     from,

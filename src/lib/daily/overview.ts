@@ -1,4 +1,4 @@
-import { dayRange } from "./day";
+import { dayRange, daysBetween } from "./day";
 import { weightTrend, type WeightPoint } from "./weight";
 
 export interface CheckinPoint {
@@ -35,6 +35,8 @@ interface Input {
   periodDays: Set<string>;
 }
 
+const TREND_FRESH_DAYS = 14;
+
 // One row per day in the window, joining everything the overview chart shows.
 export function buildOverview({
   from,
@@ -51,14 +53,20 @@ export function buildOverview({
 
   const trend = weightTrend(weights);
   const trendByDay = new Map(trend.map((p) => [p.day, p]));
-  let carried: number | null = null;
+  let carried: { trend: number; day: string } | null = null;
   // trend values from before the window carry into it
-  for (const p of trend) if (p.day < from) carried = p.trend;
+  for (const p of trend)
+    if (p.day < from) carried = { trend: p.trend, day: p.day };
 
   return dayRange(from, to).map((day) => {
     const c = checkinByDay.get(day);
     const w = trendByDay.get(day);
-    if (w) carried = w.trend;
+    if (w) carried = { trend: w.trend, day };
+    // A trend is only meaningful while there are recent weigh-ins behind it.
+    const fresh =
+      carried !== null && daysBetween(carried.day, day) <= TREND_FRESH_DAYS
+        ? carried.trend
+        : null;
     return {
       day,
       period: periodDays.has(day),
@@ -69,7 +77,7 @@ export function buildOverview({
       hunger: c?.hunger ?? null,
       symptoms: c?.symptoms ?? [],
       weightKg: w?.kg ?? null,
-      weightTrend: carried,
+      weightTrend: fresh,
       volumeKg: volumeByDay.get(day) ?? 0,
     };
   });

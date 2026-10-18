@@ -27,14 +27,54 @@ export async function getCheckin(
   return row && !row.deleted_at ? row : undefined;
 }
 
-export async function saveCheckin(
+const EMPTY: CheckinValues = {
+  sleepQuality: null,
+  sleepHours: null,
+  energy: null,
+  motivation: null,
+  hunger: null,
+  symptoms: [],
+  note: null,
+};
+
+const toValues = (r: CheckinRow): CheckinValues => ({
+  sleepQuality: r.sleep_quality,
+  sleepHours: r.sleep_hours,
+  energy: r.energy,
+  motivation: r.motivation,
+  hunger: r.hunger,
+  symptoms: r.symptoms as Symptom[],
+  note: r.note,
+});
+
+type CheckinPatch =
+  Partial<CheckinValues> | ((current: CheckinValues) => Partial<CheckinValues>);
+
+// Read-modify-write inside one transaction: quick consecutive taps, or a note
+// blurring while a button is tapped, all land on the stored value instead of a
+// stale copy from the last render. A deleted day starts again from empty.
+export async function patchCheckin(
   db: LocalDb,
   userId: string,
   day: string,
-  v: CheckinValues,
+  patch: CheckinPatch,
 ): Promise<void> {
-  await saveRow(db, "checkins", {
-    id: await dailyId(userId, "checkin", day),
+  const id = await dailyId(userId, "checkin", day); // before the transaction (async crypto)
+  await db.transaction("rw", db.checkins, db.outbox, async () => {
+    const existing = (await db.checkins.get(id)) as CheckinRow | undefined;
+    const current =
+      existing && !existing.deleted_at ? toValues(existing) : EMPTY;
+    const next = {
+      ...current,
+      ...(typeof patch === "function" ? patch(current) : patch),
+    };
+    await writeCheckin(db, id, day, next); // no awaits on anything but the database in here
+  });
+}
+
+function writeCheckin(db: LocalDb, id: string, day: string, v: CheckinValues) {
+  return saveRow(db, "checkins", {
+    id,
     day,
     sleep_quality: v.sleepQuality,
     sleep_hours: v.sleepHours,
@@ -45,6 +85,15 @@ export async function saveCheckin(
     note: v.note,
     deleted_at: null,
   } satisfies CheckinRow);
+}
+
+export async function saveCheckin(
+  db: LocalDb,
+  userId: string,
+  day: string,
+  v: CheckinValues,
+): Promise<void> {
+  await writeCheckin(db, await dailyId(userId, "checkin", day), day, v);
 }
 
 export async function getWeight(

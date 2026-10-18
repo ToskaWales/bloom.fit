@@ -6,7 +6,11 @@ import { useLocal } from "@/components/local-provider";
 import { ScaleInput } from "@/components/daily/scale-input";
 import { addDays } from "@/lib/daily/day";
 import { SYMPTOMS, SYMPTOM_LABELS, type Symptom } from "@/lib/daily/symptoms";
-import { getCheckin, saveCheckin, type CheckinValues } from "@/lib/local/daily";
+import {
+  getCheckin,
+  patchCheckin,
+  type CheckinValues,
+} from "@/lib/local/daily";
 
 const EMPTY: CheckinValues = {
   sleepQuality: null,
@@ -21,8 +25,10 @@ const SLEEP_HOURS = Array.from({ length: 17 }, (_, i) => 4 + i * 0.5); // 4 – 
 
 export function CheckinCard({ today }: { today: string }) {
   const { db, userId, cycleMode } = useLocal();
-  const [offset, setOffset] = useState<0 | -1>(0);
-  const day = addDays(today, offset);
+  // The chosen day is stored, not an offset: an app left open past midnight must not silently switch days.
+  const [backfillDay, setBackfillDay] = useState<string | null>(null);
+  const day = backfillDay ?? today;
+  const isToday = backfillDay === null;
 
   const row = useLiveQuery(
     async () =>
@@ -42,8 +48,10 @@ export function CheckinCard({ today }: { today: string }) {
     : EMPTY;
 
   // Each tap is saved straight away (offline-first); there is no submit step.
-  const update = (patch: Partial<CheckinValues>) => {
-    if (db) void saveCheckin(db, userId, day, { ...value, ...patch });
+  // The patch is applied to the stored value inside one transaction, so quick
+  // consecutive taps (or a note blurring while a button is tapped) never overwrite each other.
+  const update = (patch: Parameters<typeof patchCheckin>[3]) => {
+    if (db) void patchCheckin(db, userId, day, patch);
   };
   const showCycleSymptoms = cycleMode !== "none";
 
@@ -54,13 +62,13 @@ export function CheckinCard({ today }: { today: string }) {
     >
       <div className="flex items-center justify-between">
         <h2 id="checkin-title" className="text-lg font-semibold">
-          {offset === 0 ? "Wie geht es dir heute?" : "Check-in für gestern"}
+          {isToday ? "Wie geht es dir heute?" : "Check-in für gestern"}
         </h2>
         <button
           className="text-sm underline"
-          onClick={() => setOffset(offset === 0 ? -1 : 0)}
+          onClick={() => setBackfillDay(isToday ? addDays(today, -1) : null)}
         >
-          {offset === 0 ? "Gestern nachtragen" : "Zurück zu heute"}
+          {isToday ? "Gestern nachtragen" : "Zurück zu heute"}
         </button>
       </div>
 
@@ -131,11 +139,11 @@ export function CheckinCard({ today }: { today: string }) {
                       type="button"
                       aria-pressed={on}
                       onClick={() =>
-                        update({
-                          symptoms: on
-                            ? value.symptoms.filter((x) => x !== s)
-                            : [...value.symptoms, s],
-                        })
+                        update((cur) => ({
+                          symptoms: cur.symptoms.includes(s)
+                            ? cur.symptoms.filter((x) => x !== s)
+                            : [...cur.symptoms, s],
+                        }))
                       }
                       className={`rounded-full border px-3 py-1.5 ${on ? "border-rose-600 bg-rose-50 text-rose-800" : "border-neutral-300 bg-white"}`}
                     >
@@ -149,7 +157,7 @@ export function CheckinCard({ today }: { today: string }) {
           <label className="flex flex-col gap-1">
             Notiz
             <textarea
-              key={row?.updated_at}
+              key={`${day}:${value.note ?? ""}`}
               defaultValue={value.note ?? ""}
               maxLength={1000}
               rows={2}

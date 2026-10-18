@@ -14,7 +14,7 @@ import {
 } from "react";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";
 import { clearPageCache } from "@/lib/local/wipe";
-import { syncWithLock } from "@/lib/sync/client";
+import { requeueRejected, syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
 
 export type CycleMode = "natural" | "hormonal" | "irregular" | "none" | null;
@@ -118,7 +118,10 @@ export function LocalProvider({
     const visible = () => document.visibilityState === "visible" && syncNow();
     window.addEventListener("online", up);
     document.addEventListener("visibilitychange", visible);
-    const first = setTimeout(syncNow, 0);
+    const first = setTimeout(() => {
+      if (db) void requeueRejected(db).catch(() => {});
+      syncNow();
+    }, 0);
     const timer = setInterval(syncNow, SYNC_INTERVAL_MS);
     return () => {
       window.removeEventListener("online", up);
@@ -126,7 +129,7 @@ export function LocalProvider({
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, [syncNow]);
+  }, [syncNow, db]);
 
   // Push soon after local changes instead of waiting for the interval.
   useEffect(() => {
