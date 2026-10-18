@@ -2,6 +2,8 @@
 
 Trainings- und Ernährungs-App für Frauen, die ernsthaft Krafttraining machen (3x+/Woche, Muskelaufbau/Recomp), Markt DACH, Solo-Gründer (Tech). Preis 6,99 €/Monat. Ziel jetzt: **Validierung** (zahlen DACH-Lifterinnen dafür?), kein Full Launch.
 
+**Status: Greenfield – es existiert noch kein Code.** Stack: Next.js (PWA, offline-first) + Supabase (EU-Region, Postgres, Auth, RLS) + TypeScript.
+
 ## Kernmechanismus
 Intensität und Ernährungsziele passen sich an die **eigenen geloggten Daten** an (Gewicht, Energie, Schlaf, Motivation, Trainingsleistung, Skip-Rate) über den Zyklus – **kein fixer Phasenkalender**. Zyklusphase ist nur *ein* Input unter mehreren.
 
