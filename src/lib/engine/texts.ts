@@ -155,7 +155,7 @@ export function renderSuggestion(
       );
     }
     because.push(
-      "Der Unterschied ging in jedem dieser Zyklen in dieselbe Richtung und ist größer, als Zufall erwarten lässt",
+      "Der Unterschied ging in jedem dieser Zyklen in dieselbe Richtung und ist kaum durch Zufall zu erklären",
     );
     return {
       title: `${metric.label}: meist ${direction} in ${window}`,

@@ -30,7 +30,7 @@ import type {
 
 const HISTORY_DAYS = 40; // check-ins the engine looks at (baseline is 28 days)
 const PAST_DAYS = 30; // earlier suggestions, for cooldowns
-const SESSION_DAYS = 180; // plateau looks 56 + 84 days back, patterns need a few earlier sessions
+const SESSION_DAYS = 200; // plateau looks 56 + 84 days back, patterns need a few earlier sessions
 const PATTERN_DAYS = 200; // check-ins for pattern detection: a handful of cycles
 const WEIGHT_DAYS = 60;
 
@@ -156,6 +156,7 @@ export interface EngineData {
 export async function loadEngineData(
   db: LocalDb,
   today: string,
+  hideWeight = false,
 ): Promise<EngineData> {
   const checkins = (
     (await db.checkins
@@ -166,14 +167,16 @@ export async function loadEngineData(
   const cycleEvents = (
     (await db.cycle_events.toArray()) as CycleEventRow[]
   ).filter((e) => !e.deleted_at);
-  const weights = (
-    (await db.bodyweight_entries
-      .where("day")
-      .between(addDays(today, -WEIGHT_DAYS), today, true, true)
-      .toArray()) as WeightRow[]
-  )
-    .filter((w) => !w.deleted_at)
-    .map((w) => ({ day: w.day, kg: w.weight_kg }));
+  const weights = hideWeight
+    ? []
+    : (
+        (await db.bodyweight_entries
+          .where("day")
+          .between(addDays(today, -WEIGHT_DAYS), today, true, true)
+          .toArray()) as WeightRow[]
+      )
+        .filter((w) => !w.deleted_at)
+        .map((w) => ({ day: w.day, kg: w.weight_kg }));
   return {
     checkins,
     cycleEvents,
@@ -204,30 +207,22 @@ export function patternsFrom(data: EngineData, today: string): PatternAnalysis {
 export async function engineSignature(
   db: LocalDb,
   today: string,
+  hideWeight = false,
 ): Promise<string> {
-  const latest = async (
-    table:
-      | "workouts"
-      | "workout_exercises"
-      | "workout_sets"
-      | "checkins"
-      | "cycle_events"
-      | "bodyweight_entries",
-  ) => {
-    const rows = (await db[table].toArray()) as { updated_at: string }[];
-    return `${rows.length}:${rows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), "")}`;
-  };
+  const tables = [
+    "workouts",
+    "workout_exercises",
+    "workout_sets",
+    "checkins",
+    "cycle_events",
+    ...(hideWeight ? [] : (["bodyweight_entries"] as const)),
+  ] as const;
+  // count + newest write, both from the updated_at index: no table scans
   const parts = await Promise.all(
-    (
-      [
-        "workouts",
-        "workout_exercises",
-        "workout_sets",
-        "checkins",
-        "cycle_events",
-        "bodyweight_entries",
-      ] as const
-    ).map(latest),
+    tables.map(async (t) => {
+      const last = await db[t].orderBy("updated_at").last();
+      return `${await db[t].count()}:${(last as { updated_at?: string } | undefined)?.updated_at ?? ""}`;
+    }),
   );
   return `${today}|${parts.join("|")}`;
 }
@@ -236,7 +231,7 @@ async function doRefresh(
   db: LocalDb,
   { userId, today, cycleMode = null, hideWeight = false }: RefreshOptions,
 ): Promise<void> {
-  const data = await loadEngineData(db, today);
+  const data = await loadEngineData(db, today, hideWeight);
   const tracksCycle = cycleMode === "natural" || cycleMode === "irregular";
   const safety = tracksCycle
     ? evaluateSafety({

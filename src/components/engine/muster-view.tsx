@@ -20,16 +20,16 @@ const fmtDay = (day: string) =>
   });
 
 export function MusterView() {
-  const { db, cycleMode } = useLocal();
+  const { db, cycleMode, hideWeight } = useLocal();
   const today = useToday();
   const tracksCycle = cycleMode === "natural" || cycleMode === "irregular";
 
   const analysis = useLiveQuery(async (): Promise<
-    PatternAnalysis | null | undefined
+    PatternAnalysis | undefined
   > => {
     if (!db || !today || !tracksCycle) return undefined;
-    return patternsFrom(await loadEngineData(db, today), today);
-  }, [db, today, tracksCycle]);
+    return patternsFrom(await loadEngineData(db, today, hideWeight), today);
+  }, [db, today, tracksCycle, hideWeight]);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
@@ -54,7 +54,7 @@ export function MusterView() {
         </p>
       ) : analysis === undefined ? (
         <p className="text-neutral-600">Lädt …</p>
-      ) : analysis === null ? null : (
+      ) : (
         <Result analysis={analysis} />
       )}
 
@@ -111,7 +111,7 @@ function Result({ analysis }: { analysis: PatternAnalysis }) {
           In {analysis.usableCycles} Zyklen hat Bloom {analysis.tested}{" "}
           Vergleiche gemacht und keinen deutlichen, wiederkehrenden Unterschied
           rund um deine Periode gefunden. Das ist ein normales Ergebnis: Bei
-          vielen Frauen ist der Einfluss klein oder wechselt von Zyklus zu
+          manchen Frauen ist der Einfluss klein oder wechselt von Zyklus zu
           Zyklus. Bloom orientiert sich deshalb weiter an deinem Tag, nicht an
           deinem Zyklus.
         </p>

@@ -131,6 +131,34 @@ describe("suggestions", () => {
     );
   });
 
+  it("a stale device cannot delete or rewrite a reacted hint by sending it back as shown", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () =>
+      insert(a, S1, "readiness", "2026-10-02", "lower", '{"level":"lower"}'),
+    );
+    await asUser(db, a, () =>
+      q(
+        "update suggestions set status = 'accepted', reacted_at = now() where id = $1",
+        [S1],
+      ),
+    );
+    await asUser(db, a, () =>
+      q(
+        "update suggestions set status = 'shown', reacted_at = null, deleted_at = now(), params = '{\"level\":\"x\"}' where id = $1",
+        [S1],
+      ),
+    );
+    const row = (
+      await q(
+        "select status, deleted_at, params from suggestions where id = $1",
+        [S1],
+      )
+    ).rows[0];
+    expect(row.status).toBe("accepted");
+    expect(row.deleted_at).toBeNull();
+    expect(row.params).toEqual({ level: "lower" });
+  });
+
   it("never lets a stale device set a reacted hint back to shown", async () => {
     const a = await member("a@example.com");
     await asUser(db, a, () => insert(a));
@@ -154,8 +182,7 @@ describe("suggestions", () => {
     ).rows[0];
     expect(row.status).toBe("dismissed");
     expect(row.reacted_at).not.toBeNull();
-    // other changes (new numbers) still go through, and she can change her mind
-    expect(row.params).toEqual({ level: "lower" });
+    // she can still change her mind
     await asUser(db, a, () =>
       q("update suggestions set status = 'accepted' where id = $1", [S1]),
     );

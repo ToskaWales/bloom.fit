@@ -15,23 +15,27 @@ import type { CheckinRow, SuggestionRow } from "@/lib/local/types";
 // Re-runs the on-device engine whenever the data it reads changes (check-ins,
 // workouts, cycle events, weight) and returns today's hints (undefined while
 // the database opens).
-export function useSuggestions(today: string): SuggestionRow[] | undefined {
+export function useSuggestions(
+  today: string,
+  { refresh = true }: { refresh?: boolean } = {},
+): SuggestionRow[] | undefined {
   const { db, userId, cycleMode, hideWeight } = useLocal();
 
   const signature = useLiveQuery(
-    async () => (db && today ? await engineSignature(db, today) : undefined),
-    [db, today],
+    async () =>
+      db && today ? await engineSignature(db, today, hideWeight) : undefined,
+    [db, today, hideWeight],
   );
 
   useEffect(() => {
-    if (db && today && signature !== undefined)
+    if (refresh && db && today && signature !== undefined)
       void refreshSuggestions(db, {
         userId,
         today,
         cycleMode,
         hideWeight,
       }).catch(() => {});
-  }, [db, userId, today, signature, cycleMode, hideWeight]);
+  }, [refresh, db, userId, today, signature, cycleMode, hideWeight]);
 
   return useLiveQuery(
     async () => (db && today ? await suggestionsForDay(db, today) : undefined),

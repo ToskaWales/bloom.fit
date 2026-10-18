@@ -38,6 +38,8 @@ begin
   if old.status <> 'shown' and new.status = 'shown' then
     new.status = old.status;
     new.reacted_at = old.reacted_at;
+    new.deleted_at = old.deleted_at; -- a stale device must not delete a reacted hint either
+    new.params = old.params;
   end if;
   return new;
 end $$;
@@ -47,7 +49,7 @@ create trigger suggestions_keep_reaction before update on public.suggestions
 -- Replaces the purge function from 20261106 so that the daily-tracking tables
 -- and suggestions are purged as well (migrations stay append-only).
 create or replace function public.purge_deleted_rows(older_than_days integer default 30) returns integer
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = '' as $$
 declare
   cutoff timestamptz := now() - make_interval(days => older_than_days);
   removed integer := 0;

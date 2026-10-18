@@ -142,3 +142,78 @@ describe("evaluateSafety", () => {
     ).toBe(false);
   });
 });
+
+describe("evaluateSafety: cycles without a prediction window", () => {
+  const wild = [
+    "2026-03-01",
+    "2026-03-24",
+    "2026-05-02",
+    "2026-05-25",
+    "2026-07-05",
+  ].map(start);
+  it("still notices a long-missing period when cycles are irregular", () => {
+    const day = "2026-08-30"; // 56 days after the last start
+    const cycle = summarizeCycle(wild, day);
+    expect(cycle.status).toBe("irregular");
+    expect(
+      evaluateSafety({
+        today: day,
+        cycle,
+        checkins: energy(1).map((c, i) => ({ ...c, day: addDays(day, -i) })),
+        weights: null,
+      }).active,
+    ).toBe(true);
+  });
+  it("still notices it when the last logged start is very old (stale)", () => {
+    const day = "2026-12-30"; // far beyond 60 days
+    const cycle = summarizeCycle(regular, day);
+    expect(cycle.status).toBe("stale");
+    expect(
+      evaluateSafety({
+        today: day,
+        cycle,
+        checkins: energy(1).map((c, i) => ({ ...c, day: addDays(day, -i) })),
+        weights: null,
+      }).active,
+    ).toBe(true);
+  });
+  it("stays quiet with irregular cycles that are within a long but normal gap", () => {
+    const day = "2026-08-05"; // 31 days after the last start
+    const cycle = summarizeCycle(wild, day);
+    expect(
+      evaluateSafety({
+        today: day,
+        cycle,
+        checkins: energy(1).map((c, i) => ({ ...c, day: addDays(day, -i) })),
+        weights: null,
+      }).active,
+    ).toBe(false);
+  });
+  it("stays quiet without any logged period", () => {
+    expect(
+      evaluateSafety({
+        today,
+        cycle: summarizeCycle([], today),
+        checkins: energy(1),
+        weights: null,
+      }).active,
+    ).toBe(false);
+  });
+});
+
+describe("evaluateSafety: weight window", () => {
+  it("does not call a fall over seven weeks a fall in the last two weeks", () => {
+    const old = { day: addDays(today, -50), kg: 70 };
+    const recent = [0, 2, 4, 6].map((o) => ({
+      day: addDays(today, -o),
+      kg: 66,
+    }));
+    const r = evaluateSafety({
+      today: "2026-10-30",
+      cycle: summarizeCycle(regular, today),
+      checkins: [],
+      weights: [old, ...recent],
+    });
+    expect(r.weightFall).toBe(false);
+  });
+});

@@ -111,7 +111,7 @@ export const pushSchemas = {
       .record(
         z.string().max(40),
         z.union([
-          z.number(),
+          z.number().min(-1e6).max(1e6),
           z.string().max(80),
           z.boolean(),
           z.array(z.string().max(40)).max(10),

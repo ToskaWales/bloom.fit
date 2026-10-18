@@ -20,7 +20,15 @@ Die Mustererkennung (`src/lib/engine/patterns.ts`) wird in `patterns.test.ts` du
 
 Der erste Versuch mit α = 0,01 ergab 6,7 % Fehlalarme; deshalb Bonferroni (α = 0,005) und der Ausschluss von Zyklen über 45 Tage. Kleine Effekte (unter etwa 1 Punkt) werden bewusst oft nicht gemeldet: lieber ein fehlendes Muster als ein erfundenes.
 
+## Bekannte Grenzen
+
+- Der Zufallstest mischt einzelne Tage innerhalb eines Zyklus und behandelt sie als unabhängig. Echte Einträge kommen in Serien (z. B. eine schlechte Woche); die Fehlalarmrate gilt streng nur für unabhängiges Rauschen und kann real höher liegen. Deshalb sagt Bloom „kaum durch Zufall zu erklären“ und nie „bewiesen“.
+- Trainingsleistung hat pro Zyklus nur wenige Einheiten; mit 2 Zyklen kann sie das strenge Signifikanzniveau praktisch nicht erreichen und wird meist erst mit 3 oder mehr Zyklen gefunden.
+- Sicherheitsregel: bei unregelmäßigen Zyklen oder altem letztem Eintrag gilt die Periode als deutlich überfällig, wenn der letzte Beginn mehr als 35 + 7 Tage zurückliegt.
+
 ## Offene Punkte
+
+- Simulation um serielle Abhängigkeit und fehlende Tage erweitern.
 
 - Mit echten Daten prüfen, wie oft Nutzerinnen Hinweise ablehnen („Passt nicht“).
 - Zeitliche Abhängigkeit der Tageswerte (aufeinanderfolgende Tage ähneln sich) ist in der Simulation nur grob abgebildet.

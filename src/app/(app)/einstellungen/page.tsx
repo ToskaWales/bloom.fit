@@ -1,4 +1,5 @@
 import { DeleteAccountForm } from "@/components/delete-account-form";
+import { ClearCacheOnSubmit } from "@/components/clear-cache-on-submit";
 import { HideWeightForm } from "@/components/hide-weight-form";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page, secondaryButtonClass } from "@/components/ui";
@@ -34,31 +35,33 @@ export default async function Settings() {
 
       <section className="flex max-w-md flex-col gap-3">
         <h2 className="text-lg font-semibold">Zyklus</h2>
-        <StepForm action={updateCycle} label="Speichern">
-          <fieldset className="flex flex-col gap-2">
-            {modes.map(([value, label]) => (
-              <label key={value} className={radio}>
-                <input
-                  type="radio"
-                  name="cycleMode"
-                  value={value}
-                  defaultChecked={profile.cycle_mode === value}
-                  className="mt-1"
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-          <Field label="Beginn deiner letzten Periode (optional)">
-            <input
-              type="date"
-              name="lastPeriodStart"
-              max={berlinDay(new Date())}
-              defaultValue={profile.last_period_start ?? ""}
-              className={inputClass}
-            />
-          </Field>
-        </StepForm>
+        <ClearCacheOnSubmit>
+          <StepForm action={updateCycle} label="Speichern">
+            <fieldset className="flex flex-col gap-2">
+              {modes.map(([value, label]) => (
+                <label key={value} className={radio}>
+                  <input
+                    type="radio"
+                    name="cycleMode"
+                    value={value}
+                    defaultChecked={profile.cycle_mode === value}
+                    className="mt-1"
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+            <Field label="Beginn deiner letzten Periode (optional)">
+              <input
+                type="date"
+                name="lastPeriodStart"
+                max={berlinDay(new Date())}
+                defaultValue={profile.last_period_start ?? ""}
+                className={inputClass}
+              />
+            </Field>
+          </StepForm>
+        </ClearCacheOnSubmit>
       </section>
 
       <section className="flex max-w-md flex-col gap-3">

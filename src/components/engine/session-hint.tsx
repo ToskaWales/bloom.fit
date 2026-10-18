@@ -12,7 +12,7 @@ import { renderSuggestion } from "@/lib/engine/texts";
 export function SessionHint() {
   const today = useToday();
   const { units } = useLocal();
-  const rows = useSuggestions(today);
+  const rows = useSuggestions(today, { refresh: false }); // the home card refreshes; not mid-workout
   const parts = useReadinessParts(today);
   const safetyActive = (rows ?? []).some(
     (r) => r.kind === "safety" && r.status !== "dismissed",

@@ -27,6 +27,23 @@ export const WEIGHT_WINDOW_DAYS = 14;
 export const MIN_WEIGHINS = 4;
 export const WEIGHT_FALL = 0.02; // trend down by 2 % or more within two weeks
 
+// Without a prediction window (irregular cycles, an old last start) a period
+// counts as clearly late once it is a week past the longest ordinary cycle.
+export const LONG_CYCLE_DAYS = 35;
+
+function overdueFor(cycle: CycleSummary, today: string): number {
+  if (cycle.status === "overdue" && cycle.overdueDays !== null)
+    return cycle.overdueDays;
+  if (
+    cycle.lastStart &&
+    (cycle.status === "irregular" ||
+      cycle.status === "stale" ||
+      cycle.status === "not_enough_data")
+  )
+    return Math.max(0, daysBetween(cycle.lastStart, today) - LONG_CYCLE_DAYS);
+  return 0;
+}
+
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
@@ -39,10 +56,7 @@ export function evaluateSafety({
   checkins,
   weights,
 }: SafetyInput): SafetyResult {
-  const overdueDays =
-    cycle.status === "overdue" && cycle.overdueDays !== null
-      ? cycle.overdueDays
-      : 0;
+  const overdueDays = overdueFor(cycle, today);
 
   const recentEnergy = checkins
     .filter(
@@ -70,7 +84,8 @@ export function evaluateSafety({
       inMonth.length >= MIN_WEIGHINS &&
       now &&
       before &&
-      daysBetween(now.day, today) <= 7
+      daysBetween(now.day, today) <= 7 &&
+      daysBetween(before.day, today) <= 21
     ) {
       weightFall = now.trend <= before.trend * (1 - WEIGHT_FALL);
     }

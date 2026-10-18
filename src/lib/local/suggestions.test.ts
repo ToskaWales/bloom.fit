@@ -267,3 +267,29 @@ describe("reactToSuggestion", () => {
     expect(await db.outbox.count()).toBe(before + 1);
   });
 });
+
+describe("refreshSuggestions: cycle mode", () => {
+  it("produces no safety notice or pattern for hormonal or no cycle, and removes an old unreacted one", async () => {
+    for (const d of [
+      "2026-06-01",
+      "2026-06-29",
+      "2026-07-27",
+      "2026-08-24",
+      "2026-09-21",
+    ])
+      await saveCycleEvent(db, USER, "period_start", d);
+    for (let i = 1; i <= 12; i++)
+      await saveCheckin(db, USER, addDays(today, -i), values(1, 3, 3));
+    await saveCheckin(db, USER, today, values(3, 3, 3));
+    await refreshSuggestions(db, { userId: USER, today, cycleMode: "natural" });
+    expect((await suggestionsForDay(db, today)).map((r) => r.kind)).toContain(
+      "safety",
+    );
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "hormonal",
+    });
+    expect(await suggestionsForDay(db, today)).toHaveLength(0);
+  });
+});
