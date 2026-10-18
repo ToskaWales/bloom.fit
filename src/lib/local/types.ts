@@ -62,3 +62,20 @@ export interface CycleEventRow extends WireRow {
   kind: "period_start" | "period_end" | "ovulation_test_positive";
   day: string;
 }
+
+export type SuggestionKind =
+  "readiness" | "plateau" | "pattern" | "safety" | "hunger_note";
+export type SuggestionStatus = "shown" | "accepted" | "dismissed";
+export type SuggestionParams = Record<
+  string,
+  number | string | boolean | string[]
+>;
+
+export interface SuggestionRow extends WireRow {
+  kind: SuggestionKind;
+  day: string;
+  subject: string;
+  params: SuggestionParams;
+  status: SuggestionStatus;
+  reacted_at: string | null;
+}

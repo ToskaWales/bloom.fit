@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckinCard } from "@/components/daily/checkin-card";
 import { CycleCard } from "@/components/daily/cycle-card";
 import { WeightCard } from "@/components/daily/weight-card";
+import { SuggestionsCard } from "@/components/engine/suggestions-card";
 import { SyncStatus } from "@/components/training/sync-status";
 import { buttonClass } from "@/components/ui";
 import { useToday } from "@/components/daily/use-today";
@@ -19,6 +20,7 @@ export function TodayView() {
       {today && (
         <>
           <CheckinCard today={today} />
+          <SuggestionsCard today={today} />
           <CycleCard today={today} />
           <WeightCard today={today} />
         </>

@@ -12,6 +12,7 @@ const TRAINING_TABLES = [
   "checkins",
   "bodyweight_entries",
   "cycle_events",
+  "suggestions",
 ] as const;
 
 async function fetchAll(

@@ -12,6 +12,7 @@ export const TABLES = [
   "checkins",
   "bodyweight_entries",
   "cycle_events",
+  "suggestions",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
@@ -99,6 +100,28 @@ export const pushSchemas = {
     id,
     kind: z.enum(["period_start", "period_end", "ovulation_test_positive"]),
     day: z.iso.date(),
+    deleted_at: ts.nullable(),
+  }),
+  suggestions: z.object({
+    id,
+    kind: z.enum(["readiness", "plateau", "pattern", "safety", "hunger_note"]),
+    day: z.iso.date(),
+    subject: z.string().max(64),
+    params: z
+      .record(
+        z.string().max(40),
+        z.union([
+          z.number(),
+          z.string().max(80),
+          z.boolean(),
+          z.array(z.string().max(40)).max(10),
+        ]),
+      )
+      .refine(
+        (p) => Object.keys(p).length <= 20 && JSON.stringify(p).length <= 2000,
+      ),
+    status: z.enum(["shown", "accepted", "dismissed"]),
+    reacted_at: ts.nullable(),
     deleted_at: ts.nullable(),
   }),
 } satisfies Record<TableName, z.ZodType>;

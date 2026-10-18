@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useLocal } from "@/components/local-provider";
+import { SessionHint } from "@/components/engine/session-hint";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { primeAudio, RestTimer } from "@/components/training/rest-timer";
 import { SyncStatus } from "@/components/training/sync-status";
@@ -107,6 +108,8 @@ export function SessionView() {
           ? ` · ${totals.workingSets} Arbeitssätze · ${formatWeight(totals.volumeKg, units) || 0} ${weightLabel(units)} Volumen`
           : ""}
       </p>
+
+      {!finished && <SessionHint />}
 
       {(exercises ?? []).map((ex) => (
         <ExerciseCard

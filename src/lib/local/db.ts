@@ -22,6 +22,7 @@ export type LocalDb = Dexie & {
   checkins: EntityTable<WireRow, "id">;
   bodyweight_entries: EntityTable<WireRow, "id">;
   cycle_events: EntityTable<WireRow, "id">;
+  suggestions: EntityTable<WireRow, "id">;
   outbox: EntityTable<OutboxEntry, "seq">;
   meta: EntityTable<MetaEntry, "key">;
 };
@@ -45,6 +46,9 @@ export function createLocalDb(name = "bloom"): LocalDb {
     checkins: "id, day, updated_at",
     bodyweight_entries: "id, day, updated_at",
     cycle_events: "id, day, kind, updated_at",
+  });
+  db.version(4).stores({
+    suggestions: "id, day, kind, updated_at",
   });
   return db;
 }
