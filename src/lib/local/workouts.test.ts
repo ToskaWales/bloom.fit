@@ -19,12 +19,12 @@ beforeEach(() => {
   db = createLocalDb(`w-${++n}`);
 });
 
-const activeSets = (exerciseRowId: string) =>
-  db.workout_sets
+const activeSets = async (exerciseRowId: string) =>
+  (await db.workout_sets
     .where("workout_exercise_id")
     .equals(exerciseRowId)
     .filter((s) => !s.deleted_at)
-    .sortBy("position") as Promise<SetRow[]>;
+    .sortBy("position")) as SetRow[];
 
 describe("workout helpers", () => {
   it("starts a workout and queues it for sync", async () => {
@@ -54,6 +54,23 @@ describe("workout helpers", () => {
       weight_kg: 60,
       reps: 8,
       completed: false,
+    });
+  });
+
+  it("concurrent edits of different fields of one set are both kept", async () => {
+    const w = await startWorkout(db);
+    const e = await addExercise(db, w.id, "barbell-bench-press");
+    const s = await addSet(db, e.id);
+    // what happens when an input blurs (saves reps) while the done button is tapped
+    await Promise.all([
+      updateSet(db, s.id, { reps: 8 }),
+      updateSet(db, s.id, { weight_kg: 60 }),
+      updateSet(db, s.id, { completed: true }),
+    ]);
+    expect(await db.workout_sets.get(s.id)).toMatchObject({
+      reps: 8,
+      weight_kg: 60,
+      completed: true,
     });
   });
 

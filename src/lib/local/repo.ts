@@ -52,3 +52,20 @@ export async function softDeleteWorkout(
   if (w)
     await saveRow(db, "workouts", { ...w, deleted_at: w.deleted_at ?? now });
 }
+
+// Atomic read-modify-write: two quick edits of different fields (an input
+// blurring while a button is tapped) must both survive.
+export async function patchRow<T extends WireRow>(
+  db: LocalDb,
+  table: TableName,
+  id: string,
+  patch: (row: T) => T,
+): Promise<void> {
+  await db.transaction("rw", db[table], db.outbox, async () => {
+    const row = (await db[table].get(id)) as T | undefined;
+    if (!row) return;
+    const next = { ...patch(row), updated_at: new Date().toISOString() };
+    await db[table].put(next);
+    await db.outbox.add({ table, id });
+  });
+}

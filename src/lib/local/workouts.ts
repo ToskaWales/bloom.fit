@@ -1,5 +1,5 @@
 import type { LocalDb } from "./db";
-import { saveRow } from "./repo";
+import { patchRow, saveRow } from "./repo";
 import type { SetRow, WorkoutExerciseRow, WorkoutRow } from "./types";
 
 const uuid = () => crypto.randomUUID();
@@ -95,14 +95,17 @@ export async function updateSet(
     Pick<SetRow, "weight_kg" | "reps" | "rpe" | "set_type" | "completed">
   >,
 ): Promise<void> {
-  const row = (await db.workout_sets.get(setId)) as SetRow | undefined;
-  if (!row) return;
-  await saveRow(db, "workout_sets", { ...row, ...patch });
+  await patchRow<SetRow>(db, "workout_sets", setId, (row) => ({
+    ...row,
+    ...patch,
+  }));
 }
 
 export async function removeSet(db: LocalDb, setId: string): Promise<void> {
-  const row = (await db.workout_sets.get(setId)) as SetRow | undefined;
-  if (row) await saveRow(db, "workout_sets", { ...row, deleted_at: now() });
+  await patchRow<SetRow>(db, "workout_sets", setId, (row) => ({
+    ...row,
+    deleted_at: now(),
+  }));
 }
 
 export async function finishWorkout(

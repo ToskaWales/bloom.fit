@@ -1,0 +1,115 @@
+"use client";
+
+import { useLiveQuery } from "dexie-react-hooks";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLocal } from "@/components/local-provider";
+import { SyncStatus } from "@/components/training/sync-status";
+import { buttonClass } from "@/components/ui";
+import type { SetRow, WorkoutRow } from "@/lib/local/types";
+import { startWorkout } from "@/lib/local/workouts";
+import { summarize } from "@/lib/workout/stats";
+import { formatWeight, weightLabel } from "@/lib/workout/units";
+
+export function TrainingHome() {
+  const { db, units } = useLocal();
+  const router = useRouter();
+
+  const workouts = useLiveQuery(async () => {
+    if (!db) return undefined;
+    const rows = (await db.workouts
+      .orderBy("started_at")
+      .reverse()
+      .filter((w) => !w.deleted_at)
+      .limit(40)
+      .toArray()) as WorkoutRow[];
+    return Promise.all(
+      rows.map(async (w) => {
+        const exercises = await db.workout_exercises
+          .where("workout_id")
+          .equals(w.id)
+          .filter((e) => !e.deleted_at)
+          .toArray();
+        const sets = exercises.length
+          ? ((await db.workout_sets
+              .where("workout_exercise_id")
+              .anyOf(exercises.map((e) => e.id))
+              .toArray()) as SetRow[])
+          : [];
+        return { workout: w, exercises: exercises.length, ...summarize(sets) };
+      }),
+    );
+  }, [db]);
+
+  const running = workouts?.find((w) => !w.workout.ended_at);
+
+  return (
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Training</h1>
+        <SyncStatus />
+      </div>
+
+      {running ? (
+        <Link
+          href={`/training/session?id=${running.workout.id}`}
+          className={`${buttonClass} text-center`}
+        >
+          Laufendes Training fortsetzen
+        </Link>
+      ) : (
+        <button
+          disabled={!db}
+          onClick={async () => {
+            if (!db) return;
+            const w = await startWorkout(db);
+            router.push(`/training/session?id=${w.id}`);
+          }}
+          className={buttonClass}
+        >
+          Training starten
+        </button>
+      )}
+
+      <h2 className="mt-4 text-lg font-semibold">Verlauf</h2>
+      {workouts === undefined ? (
+        <p className="text-neutral-600">Lädt …</p>
+      ) : workouts.length === 0 ? (
+        <p className="text-neutral-600">
+          Noch keine Trainings. Starte dein erstes oben.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {workouts.map(({ workout, exercises, workingSets, volumeKg }) => (
+            <li key={workout.id}>
+              <Link
+                href={`/training/session?id=${workout.id}`}
+                className="block rounded-2xl border border-neutral-200 bg-white p-4"
+              >
+                <div className="flex justify-between">
+                  <span className="font-medium">
+                    {workout.title || "Training"}
+                  </span>
+                  <span className="text-sm text-neutral-500">
+                    {new Date(workout.started_at).toLocaleDateString("de-DE", {
+                      weekday: "short",
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <p className="text-sm text-neutral-600">
+                  {exercises} {exercises === 1 ? "Übung" : "Übungen"} ·{" "}
+                  {workingSets}{" "}
+                  {workingSets === 1 ? "Arbeitssatz" : "Arbeitssätze"} ·{" "}
+                  {formatWeight(volumeKg, units) || 0} {weightLabel(units)}
+                  {!workout.ended_at && " · läuft"}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}
