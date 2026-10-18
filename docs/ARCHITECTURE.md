@@ -88,3 +88,16 @@ Eingänge: Check-ins, Sätze (Last, Wdh., RPE), Gewichtstrend, Zyklusereignisse,
 - Lebensmitteldatenbank: Open Food Facts reicht für Packungsware, wie sieht es bei Frischware/Gerichten aus (BLS)? Lizenz prüfen.
 - Zahlung: Stripe (SEPA, Karte, Apple/Google Pay) – ab Beta.
 - Push-Benachrichtigungen auf iOS-PWA: Verfügbarkeit/Zuverlässigkeit prüfen.
+
+## Anpassungs-Engine (Stand 1d-1)
+
+Läuft ausschließlich auf dem Gerät (`src/lib/engine`, reine Funktionen, keine externe KI).
+
+- **Bereitschaft** (`readiness.ts`): Check-in von heute gegen den Median der eigenen letzten 28 Tage (mind. 7 Werte je Größe, mind. 2 Größen). Abstand ≤ −0,8 → „etwas leichter“, ≥ +0,8 → „besser als sonst“, sonst „wie gewohnt“. Nie gegen eine absolute Skala.
+- **Plateau** (`plateau.ts`): vier jüngste Einheiten (alle in 8 Wochen) ohne mehr als 1 % besseres geschätztes 1RM als alles davor, mind. 2 frühere Einheiten.
+- **Auswahl** (`select.ts`): höchstens 2 Hinweise pro Tag, Priorität Sicherheit > Bereitschaft > Muster > Plateau. Abgelehnte Art 14 Tage ruhig, Plateau je Übung höchstens alle 14 Tage, Sicherheitshinweise werden nie durch frühere Ablehnung stummgeschaltet.
+- **Texte** (`texts.ts`): einziger Ort für Formulierungen. Ein Test prüft jeden möglichen Satz gegen die Verbotsliste aus `CLAUDE.md`. In der Datenbank liegen nur Art, Tag, Zahlen und Reaktion (`suggestions`).
+- **Schreiben** (`src/lib/local/suggestions.ts`): idempotent (Id aus Tag+Art+Gegenstand), Reaktionen werden nie überschrieben, Aufrufe werden pro Datenbank serialisiert.
+- Alle Schwellen sind begründete Startwerte, keine bewiesenen Grenzen. Sie sollen mit echten Daten und einer sportwissenschaftlichen Prüfung überarbeitet werden.
+
+Noch offen (1d-2): Mustererkennung rund um die Periode, Sicherheitsregeln, Muster-Seite, Simulations-Auswertung.
