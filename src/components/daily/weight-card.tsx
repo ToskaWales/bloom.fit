@@ -52,7 +52,7 @@ export function WeightCard({ today }: { today: string }) {
         Gewicht
       </h2>
       <form onSubmit={submit} className="flex items-end gap-2">
-        <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
           Heute ({weightLabel(units)})
           <input
             key={todays?.updated_at ?? "none"}
@@ -65,7 +65,7 @@ export function WeightCard({ today }: { today: string }) {
             className={inputClass}
           />
         </label>
-        <button className={buttonClass}>Speichern</button>
+        <button className={`${buttonClass} shrink-0`}>Speichern</button>
       </form>
       {error && (
         <p role="alert" className="text-sm text-red-700">

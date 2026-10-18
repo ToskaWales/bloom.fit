@@ -5,11 +5,12 @@ import { SYMPTOM_LABELS, type Symptom } from "@/lib/daily/symptoms";
 import type { OverviewRow } from "@/lib/daily/overview";
 import { formatWeight, weightLabel, type Units } from "@/lib/workout/units";
 
-const W = 640;
-const PAD = { left: 34, right: 76, top: 8 };
+// Drawn at phone width so text keeps its size (the SVG scales to its container).
+const W = 360;
+const PAD = { left: 30, right: 66, top: 8 };
 const PLOT_W = W - PAD.left - PAD.right;
 const GAP = 22; // space between panels (holds the panel title)
-const PANELS = { mood: 130, weight: 80, volume: 64 } as const;
+const PANELS = { mood: 120, weight: 72, volume: 56 } as const;
 const AXIS_H = 22;
 
 interface Props {
@@ -44,6 +45,13 @@ const path = (seg: { x: number; y: number }[]) =>
   seg
     .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(" ");
+
+// Open the tooltip on the side with more room, so it never covers the crosshair.
+function tooltipStyle(fraction: number) {
+  return fraction < 0.55
+    ? { left: `${fraction * 100 + 2}%` }
+    : { right: `${(1 - fraction) * 100 + 2}%` };
+}
 
 // Push direct labels apart so they never overlap.
 function spread(
@@ -336,9 +344,9 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
           r.volumeKg > 0 ? (
             <rect
               key={r.day}
-              x={x(i) - Math.min(step * 0.35, 6)}
+              x={x(i) - Math.min(step * 0.35, 5)}
               y={volY(r.volumeKg)}
-              width={Math.min(step * 0.7, 12)}
+              width={Math.min(step * 0.7, 10)}
               height={volumeTop + PANELS.volume - volY(r.volumeKg)}
               rx="3"
               fill="var(--viz-bar)"
@@ -392,10 +400,8 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
       {a && (
         <div
           role="status"
-          className="pointer-events-none absolute top-2 rounded-xl border border-neutral-200 bg-white p-2 text-xs shadow"
-          style={{
-            left: `${Math.min(70, Math.max(0, ((x(active!) - PAD.left) / PLOT_W) * 100))}%`,
-          }}
+          className="pointer-events-none absolute top-2 whitespace-nowrap rounded-xl border border-neutral-200 bg-white p-2 text-xs shadow"
+          style={tooltipStyle(x(active!) / W)}
         >
           <p className="font-semibold">
             {new Date(`${a.day}T12:00:00`).toLocaleDateString("de-DE", {

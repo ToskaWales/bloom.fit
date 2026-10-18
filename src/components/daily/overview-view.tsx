@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { OverviewChart } from "@/components/daily/overview-chart";
 import { SyncStatus } from "@/components/training/sync-status";
-import { addDays, localDay } from "@/lib/daily/day";
+import { useToday } from "@/components/daily/use-today";
+import { addDays } from "@/lib/daily/day";
 import { SYMPTOM_LABELS, type Symptom } from "@/lib/daily/symptoms";
 import { loadOverview } from "@/lib/local/overview-data";
 import { formatWeight, weightLabel } from "@/lib/workout/units";
@@ -16,8 +17,8 @@ const WINDOWS = [4, 8, 12] as const;
 export function OverviewView() {
   const { db, units, hideWeight, cycleMode } = useLocal();
   const [weeks, setWeeks] = useState<(typeof WINDOWS)[number]>(8);
-  const to = localDay();
-  const from = addDays(to, -(weeks * 7 - 1));
+  const to = useToday();
+  const from = to ? addDays(to, -(weeks * 7 - 1)) : "";
 
   const rows = useLiveQuery(
     () => (db ? loadOverview(db, { from, to, hideWeight }) : undefined),

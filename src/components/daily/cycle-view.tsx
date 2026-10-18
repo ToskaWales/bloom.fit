@@ -7,7 +7,8 @@ import { useCycleEvents } from "@/components/daily/use-daily-data";
 import { SyncStatus } from "@/components/training/sync-status";
 import { inputClass, Notice, secondaryButtonClass } from "@/components/ui";
 import { summarizeCycle, type CycleEvent } from "@/lib/daily/cycle";
-import { addDays, localDay } from "@/lib/daily/day";
+import { useToday } from "@/components/daily/use-today";
+import { addDays } from "@/lib/daily/day";
 import { isValidCycleDay, isValidPeriodEnd } from "@/lib/daily/validate";
 import { removeCycleEvent, saveCycleEvent } from "@/lib/local/daily";
 
@@ -27,8 +28,9 @@ const fmt = (day: string) =>
 export function CycleView() {
   const { db, userId, cycleMode } = useLocal();
   const events = useCycleEvents();
-  const today = localDay();
-  const [day, setDay] = useState(today);
+  const today = useToday();
+  const [picked, setPicked] = useState<string | null>(null);
+  const day = picked ?? today;
   const [error, setError] = useState<string | null>(null);
 
   if (cycleMode !== "natural" && cycleMode !== "irregular") {
@@ -46,6 +48,7 @@ export function CycleView() {
     );
   }
 
+  if (!today) return <p className="p-8 text-neutral-600">Lädt …</p>;
   const summary = summarizeCycle(events ?? [], today);
 
   async function log(kind: CycleEvent["kind"]) {
@@ -88,7 +91,7 @@ export function CycleView() {
             value={day}
             min={addDays(today, -365)}
             max={today}
-            onChange={(e) => setDay(e.target.value)}
+            onChange={(e) => setPicked(e.target.value)}
             className={inputClass}
           />
         </label>

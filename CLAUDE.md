@@ -2,7 +2,7 @@
 
 Trainings- und Ernährungs-App für Frauen, die ernsthaft Krafttraining machen (3x+/Woche, Muskelaufbau/Recomp), Markt DACH, Solo-Gründer (Tech). Preis 6,99 €/Monat. Ziel jetzt: **Validierung** (zahlen DACH-Lifterinnen dafür?), kein Full Launch.
 
-**Status: Greenfield – es existiert noch kein Code.** Stack: Next.js (PWA, offline-first) + Supabase (EU-Region, Postgres, Auth, RLS) + TypeScript.
+**Status:** Phase 0 (Landingpage/Warteliste), 1a (Auth/Onboarding), 1b (Training offline, Vorlagen, PRs, Hevy/Strong-Import) und 1c (Check-ins, Gewicht, Zyklus, Verlauf) sind gebaut. Offen: 1d (Anpassungs-Engine), Ernährung. Stack: Next.js (PWA, offline-first) + Supabase (EU-Region, Postgres, Auth, RLS) + TypeScript. Architektur und Entscheidungen: `docs/ARCHITECTURE.md`, Setup-Schritte: `docs/SETUP.md`.
 
 ## Kernmechanismus
 Intensität und Ernährungsziele passen sich an die **eigenen geloggten Daten** an (Gewicht, Energie, Schlaf, Motivation, Trainingsleistung, Skip-Rate) über den Zyklus – **kein fixer Phasenkalender**. Zyklusphase ist nur *ein* Input unter mehreren.
