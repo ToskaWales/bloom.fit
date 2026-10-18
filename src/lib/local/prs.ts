@@ -36,23 +36,34 @@ export async function prsForWorkout(
           .sortBy("position")) as SetRow[]),
       );
     }
-    const history: SetRow[] = [];
-    const earlier = (await db.workout_exercises
-      .where("exercise_id")
-      .equals(exerciseId)
-      .toArray()) as WorkoutExerciseRow[];
-    for (const ex of earlier) {
-      if (ex.deleted_at || ex.workout_id === workoutId) continue;
-      const w = (await db.workouts.get(ex.workout_id)) as
-        WorkoutRow | undefined;
-      if (!w || w.deleted_at || w.started_at >= workout.started_at) continue;
-      history.push(
-        ...((await db.workout_sets
+    // Earlier occurrences, fetched in bulk: one query for the rows, one for their
+    // workouts and one for all their sets (history can span thousands of sets).
+    const earlier = (
+      (await db.workout_exercises
+        .where("exercise_id")
+        .equals(exerciseId)
+        .toArray()) as WorkoutExerciseRow[]
+    ).filter((ex) => !ex.deleted_at && ex.workout_id !== workoutId);
+    const workouts = (await db.workouts.bulkGet([
+      ...new Set(earlier.map((ex) => ex.workout_id)),
+    ])) as (WorkoutRow | undefined)[];
+    const valid = new Set(
+      workouts
+        .filter(
+          (w): w is WorkoutRow =>
+            !!w && !w.deleted_at && w.started_at < workout.started_at,
+        )
+        .map((w) => w.id),
+    );
+    const ids = earlier
+      .filter((ex) => valid.has(ex.workout_id))
+      .map((ex) => ex.id);
+    const history = ids.length
+      ? ((await db.workout_sets
           .where("workout_exercise_id")
-          .equals(ex.id)
-          .toArray()) as SetRow[]),
-      );
-    }
+          .anyOf(ids)
+          .toArray()) as SetRow[])
+      : [];
     for (const [setId, kinds] of findPRs(history, current))
       result.set(setId, kinds);
   }

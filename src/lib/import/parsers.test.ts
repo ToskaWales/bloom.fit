@@ -126,3 +126,73 @@ Heavy,"22 Oct 2025, 18:30","22 Oct 2025, 19:25",,Squat (Barbell),,,0,normal,9999
     expect(unknown.workouts).toEqual([]);
   });
 });
+
+describe("review fixes", () => {
+  const hevyHeader =
+    "title,start_time,end_time,description,exercise_title,superset_id,exercise_notes,set_index,set_type,weight_kg,reps,distance_km,duration_seconds,rpe";
+
+  it("reads weight_lbs from imperial Hevy exports and converts to kg", () => {
+    const csv = `title,start_time,end_time,description,exercise_title,superset_id,exercise_notes,set_index,set_type,weight_lbs,reps,distance_miles,duration_seconds,rpe
+Push,"21 Oct 2025, 18:30","21 Oct 2025, 19:25",,Bench Press (Barbell),,,0,normal,135,5,,,
+`;
+    const rows = parseCsv(csv);
+    expect(detectFormat(rows)).toBe("hevy");
+    expect(
+      parseHevy(rows).workouts[0].exercises[0].sets[0].weightKg,
+    ).toBeCloseTo(61.23, 2);
+  });
+
+  it("never leaves an imported workout without an end (it would look like a running workout)", () => {
+    const hevy = `${hevyHeader}
+A,"21 Oct 2025, 18:30",,,Squat (Barbell),,,0,normal,100,5,,,
+B,"22 Oct 2025, 18:30","22 Oct 2025, 17:00",,Squat (Barbell),,,0,normal,100,5,,,
+`;
+    for (const w of parseHevy(parseCsv(hevy)).workouts)
+      expect(w.endedAt).not.toBeNull();
+    const strong = `Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Reps,Distance,Seconds,Notes,Workout Notes,RPE
+2025-10-21 18:30:00,A,,Squat,1,100,5,0,0,,,
+2025-10-22 18:30:00,B,0s,Squat,1,100,5,0,0,,,
+`;
+    for (const w of parseStrong(parseCsv(strong), "kg").workouts)
+      expect(w.endedAt).not.toBeNull();
+  });
+
+  it("uses a per-row Weight Unit column in Strong exports when present", () => {
+    const csv = `Date,Workout Name,Duration,Exercise Name,Set Order,Weight,Weight Unit,Reps,Distance,Seconds,Notes,Workout Notes,RPE
+2025-10-21 18:30:00,A,30m,Squat,1,225,lbs,5,0,0,,,
+2025-10-21 18:30:00,A,30m,Squat,2,100,kg,5,0,0,,,
+`;
+    const r = parseStrong(parseCsv(csv), null);
+    expect(r.needsUnit).toBeFalsy();
+    expect(r.workouts[0].exercises[0].sets.map((s) => s.weightKg)).toEqual([
+      102.06, 100,
+    ]);
+  });
+
+  it("asks for a unit when Strong gives none, instead of guessing kg", () => {
+    const r = parseStrong(parseCsv(STRONG), null);
+    expect(r.needsUnit).toBe(true);
+    expect(r.workouts).toEqual([]);
+  });
+
+  it("reports unparseable and impossible dates separately", () => {
+    const csv = `${hevyHeader}
+Good,"21 Oct 2025, 18:30","21 Oct 2025, 19:25",,Squat (Barbell),,,0,normal,100,5,,,
+Feb,"31 Feb 2025, 18:30",,,Squat (Barbell),,,0,normal,100,5,,,
+Hour,"21 Oct 2025, 25:00",,,Squat (Barbell),,,0,normal,100,5,,,
+Format,"01.05.2023 18:30",,,Squat (Barbell),,,0,normal,100,5,,,
+`;
+    const r = parseHevy(parseCsv(csv));
+    expect(r.workouts).toHaveLength(1);
+    expect(r.skippedRows).toBe(3);
+    expect(r.warnings.join(" ")).toMatch(/Datum/);
+  });
+
+  it("gives every workout a source key made of the raw export strings (timezone independent)", () => {
+    const a = parseHevy(parseCsv(HEVY)).workouts[0];
+    expect(a.sourceKey).toBe("Push A|21 Oct 2025, 18:30");
+    expect(parseStrong(parseCsv(STRONG), "kg").workouts[0].sourceKey).toBe(
+      "Push A|2025-10-21 18:30:00",
+    );
+  });
+});

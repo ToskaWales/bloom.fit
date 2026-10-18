@@ -24,9 +24,11 @@ export function findPRs(
   if (earlier.length === 0) return result;
 
   let bestWeight = Math.max(...earlier.map((s) => s.weight_kg!));
-  let bestE1rm = Math.max(
-    ...earlier.map((s) => estimateOneRepMax(s.weight_kg, s.reps) ?? 0),
-  );
+  const baselines = earlier
+    .map((s) => estimateOneRepMax(s.weight_kg, s.reps))
+    .filter((x): x is number => x !== null);
+  // No baseline (all earlier sets high-rep): don't flag a 1RM "record" out of thin air.
+  let bestE1rm = baselines.length ? Math.max(...baselines) : Infinity;
 
   for (const s of current) {
     if (!usable(s)) continue;

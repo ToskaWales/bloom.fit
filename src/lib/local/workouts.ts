@@ -179,19 +179,29 @@ export async function lastPerformance(
   const current = (await db.workouts.get(currentWorkoutId)) as
     WorkoutRow | undefined;
   if (!current) return [];
-  const rows = (await db.workout_exercises
-    .where("exercise_id")
-    .equals(exerciseId)
-    .toArray()) as WorkoutExerciseRow[];
-  const candidates: { ex: WorkoutExerciseRow; startedAt: string }[] = [];
-  for (const ex of rows) {
-    if (ex.deleted_at || ex.workout_id === currentWorkoutId) continue;
-    const w = (await db.workouts.get(ex.workout_id)) as WorkoutRow | undefined;
-    if (!w || w.deleted_at || w.started_at >= current.started_at) continue;
-    candidates.push({ ex, startedAt: w.started_at });
-  }
-  candidates.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-  for (const { ex } of candidates) {
+  const rows = (
+    (await db.workout_exercises
+      .where("exercise_id")
+      .equals(exerciseId)
+      .toArray()) as WorkoutExerciseRow[]
+  ).filter((ex) => !ex.deleted_at && ex.workout_id !== currentWorkoutId);
+  const workouts = (await db.workouts.bulkGet([
+    ...new Set(rows.map((ex) => ex.workout_id)),
+  ])) as (WorkoutRow | undefined)[];
+  const startedAt = new Map(
+    workouts
+      .filter(
+        (w): w is WorkoutRow =>
+          !!w && !w.deleted_at && w.started_at < current.started_at,
+      )
+      .map((w) => [w.id, w.started_at]),
+  );
+  const candidates = rows
+    .filter((ex) => startedAt.has(ex.workout_id))
+    .sort((a, b) =>
+      startedAt.get(b.workout_id)!.localeCompare(startedAt.get(a.workout_id)!),
+    );
+  for (const ex of candidates) {
     const sets = (await db.workout_sets
       .where("workout_exercise_id")
       .equals(ex.id)

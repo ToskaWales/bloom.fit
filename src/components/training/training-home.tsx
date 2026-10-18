@@ -116,12 +116,16 @@ export function TrainingHome() {
                   </p>
                 </div>
                 <button
+                  disabled={Boolean(running)}
+                  title={
+                    running ? "Beende zuerst das laufende Training" : undefined
+                  }
                   onClick={async () => {
                     if (!db) return;
                     const w = await startWorkoutFromTemplate(db, template.id);
                     router.push(`/training/session?id=${w.id}`);
                   }}
-                  className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+                  className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
                 >
                   Starten
                 </button>

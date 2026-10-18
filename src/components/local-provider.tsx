@@ -21,6 +21,7 @@ export type SyncStatus = "idle" | "syncing" | "ok" | "error" | "unauthorized";
 
 interface LocalContextValue {
   db: LocalDb | null;
+  userId: string;
   units: Units;
   status: SyncStatus;
   pending: number;
@@ -148,8 +149,8 @@ export function LocalProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ db, units, status, pending, online, syncNow }),
-    [db, units, status, pending, online, syncNow],
+    () => ({ db, userId, units, status, pending, online, syncNow }),
+    [db, userId, units, status, pending, online, syncNow],
   );
   return <LocalContext value={value}>{children}</LocalContext>;
 }

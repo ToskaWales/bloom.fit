@@ -47,7 +47,7 @@ export function parseCsv(input: string): Record<string, string>[] {
           i++;
         } else inQuotes = false;
       } else field += ch;
-    } else if (ch === '"') inQuotes = true;
+    } else if (ch === '"' && field === "") inQuotes = true;
     else if (ch === delimiter) endField();
     else if (ch === "\n") endRow();
     else if (ch === "\r") {

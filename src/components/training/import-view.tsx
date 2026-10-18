@@ -16,10 +16,10 @@ const FORMAT_LABEL = {
 } as const;
 
 export function ImportView() {
-  const { db } = useLocal();
+  const { db, userId } = useLocal();
   const [text, setText] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [units, setUnits] = useState<"kg" | "lbs">("kg");
+  const [units, setUnits] = useState<"kg" | "lbs" | null>(null);
   const [progress, setProgress] = useState<[number, number] | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [failed, setFailed] = useState(false);
@@ -66,7 +66,7 @@ export function ImportView() {
     setProgress([0, parsed.workouts.length]);
     try {
       setSummary(
-        await runImport(db, parsed.workouts, {
+        await runImport(db, userId, parsed.workouts, {
           onProgress: (done, total) => setProgress([done, total]),
         }),
       );
@@ -98,7 +98,11 @@ export function ImportView() {
       <input
         type="file"
         accept=".csv,text/csv"
-        onChange={(e) => onFile(e.target.files?.[0])}
+        onChange={async (e) => {
+          const input = e.currentTarget;
+          await onFile(input.files?.[0]);
+          input.value = ""; // allow choosing the same file again
+        }}
         className="rounded-xl border border-neutral-300 bg-white p-3"
         aria-label="CSV-Datei auswählen"
       />
@@ -115,10 +119,11 @@ export function ImportView() {
         <section className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
           <p className="font-medium">Erkannt: {FORMAT_LABEL[parsed.format]}</p>
 
-          {parsed.format === "strong" && (
+          {parsed.format === "strong" && parsed.needsUnit && (
             <fieldset className="flex gap-4 text-sm">
               <legend className="mb-1 font-medium">
-                In welcher Einheit sind die Gewichte exportiert?
+                In welcher Einheit sind die Gewichte exportiert? (bitte
+                auswählen)
               </legend>
               {(["kg", "lbs"] as const).map((u) => (
                 <label key={u} className="flex items-center gap-1">
@@ -153,9 +158,11 @@ export function ImportView() {
               )}
             </ul>
           ) : (
-            <Notice>
-              In der Datei wurden keine importierbaren Trainings gefunden.
-            </Notice>
+            !parsed.needsUnit && (
+              <Notice>
+                In der Datei wurden keine importierbaren Trainings gefunden.
+              </Notice>
+            )
           )}
           {parsed.warnings.map((w) => (
             <p key={w} className="text-sm text-amber-700">

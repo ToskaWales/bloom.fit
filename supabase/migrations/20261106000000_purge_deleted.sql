@@ -13,11 +13,19 @@ begin
     raise exception 'refusing to purge rows younger than 7 days';
   end if;
   -- parents first; their children go with them (on delete cascade)
-  foreach t in array array['workouts', 'templates', 'workout_exercises', 'template_exercises', 'workout_sets', 'custom_exercises'] loop
+  foreach t in array array['workouts', 'templates', 'workout_exercises', 'template_exercises', 'workout_sets'] loop
     execute format('delete from public.%I where deleted_at is not null and deleted_at < $1', t) using cutoff;
     get diagnostics n = row_count;
     removed := removed + n;
   end loop;
+  -- A deleted custom exercise is kept while history still refers to it (the
+  -- reference is plain text, so purging it would lose the exercise's name).
+  delete from public.custom_exercises ce
+    where ce.deleted_at is not null and ce.deleted_at < cutoff
+      and not exists (select 1 from public.workout_exercises we where we.user_id = ce.user_id and we.exercise_id = ce.id::text)
+      and not exists (select 1 from public.template_exercises te where te.user_id = ce.user_id and te.exercise_id = ce.id::text);
+  get diagnostics n = row_count;
+  removed := removed + n;
   return removed;
 end $$;
 revoke all on function public.purge_deleted_rows(integer) from public, anon, authenticated;

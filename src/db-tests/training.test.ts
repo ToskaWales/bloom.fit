@@ -353,4 +353,34 @@ describe("hardening", () => {
     await expect(q("select purge_deleted_rows(1)")).rejects.toThrow(/refusing/);
     await db.exec("reset role");
   });
+
+  it("keeps a deleted custom exercise while history still references it", async () => {
+    const u = await member("a@example.com");
+    const C1 = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const C2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    await asUser(db, u, async () => {
+      await q(
+        "insert into custom_exercises (id, user_id, name) values ($1, $2, 'Zottman'), ($3, $2, 'Unused')",
+        [C1, u, C2],
+      );
+      await q(
+        "insert into workouts (id, user_id, started_at) values ($1, $2, now())",
+        [W1, u],
+      );
+      await q(
+        "insert into workout_exercises (id, user_id, workout_id, exercise_id, position) values ($1, $2, $3, $4, 0)",
+        [E1, u, W1, C1],
+      );
+    });
+    await q(
+      "update custom_exercises set deleted_at = now() - interval '40 days'",
+    );
+    await db.exec("set role service_role");
+    await q("select purge_deleted_rows(30)");
+    await db.exec("reset role");
+    const left = (await q("select name from custom_exercises")).rows.map(
+      (r) => r.name,
+    );
+    expect(left).toEqual(["Zottman"]);
+  });
 });

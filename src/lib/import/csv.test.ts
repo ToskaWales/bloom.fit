@@ -22,4 +22,11 @@ describe("parseCsv", () => {
     expect(parseCsv("")).toEqual([]);
     expect(parseCsv("a,b\n")).toEqual([]);
   });
+
+  it("treats a quote inside an unquoted field literally instead of swallowing the file", () => {
+    expect(parseCsv('a,b\n5" bar,2\nnext,3\n')).toEqual([
+      { a: '5" bar', b: "2" },
+      { a: "next", b: "3" },
+    ]);
+  });
 });

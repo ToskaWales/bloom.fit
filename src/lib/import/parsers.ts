@@ -16,9 +16,11 @@ export interface ImportedExercise {
 }
 export interface ImportedWorkout {
   source: "hevy" | "strong";
+  /** Raw title + start text from the file: identifies the workout independent of timezone. */
+  sourceKey: string;
   title: string | null;
   startedAt: string;
-  endedAt: string | null;
+  endedAt: string;
   notes: string | null;
   exercises: ImportedExercise[];
 }
@@ -27,6 +29,8 @@ export interface ParseResult {
   workouts: ImportedWorkout[];
   skippedRows: number;
   warnings: string[];
+  /** Strong exports without a unit column: the user has to say kg or lbs. */
+  needsUnit?: boolean;
 }
 
 type Row = Record<string, string>;
@@ -54,38 +58,50 @@ const MONTHS = [
 ];
 
 // Exports carry no timezone; the times are the user's wall-clock times, so they
-// are read in the local timezone of the browser doing the import.
+// are read in the local timezone of the browser doing the import. Impossible
+// dates (31 Feb, hour 25) are rejected instead of rolling over to another day.
 export function parseLocalDate(text: string): string | null {
   const t = text.trim();
+  let parts: [number, number, number, number, number, number] | null = null;
   let m = t.match(
     /^(\d{1,2}) ([A-Za-z]{3})[a-z]*,? (\d{4}),? (\d{1,2}):(\d{2})$/,
   ); // 21 Oct 2025, 18:30
-  let date: Date | null = null;
   if (m) {
     const month = MONTHS.indexOf(m[2].toLowerCase());
     if (month >= 0)
-      date = new Date(
+      parts = [
         Number(m[3]),
         month,
         Number(m[1]),
         Number(m[4]),
         Number(m[5]),
-      );
+        0,
+      ];
   } else if (
     (m = t.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/))
   ) {
-    date = new Date(
+    parts = [
       Number(m[1]),
       Number(m[2]) - 1,
       Number(m[3]),
       Number(m[4]),
       Number(m[5]),
       Number(m[6] ?? 0),
-    );
+    ];
   } else if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/.test(t)) {
-    date = new Date(t);
+    const d = new Date(t);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
   }
-  return date && !Number.isNaN(date.getTime()) ? date.toISOString() : null;
+  if (!parts) return null;
+  const [y, mo, d, h, mi, s] = parts;
+  const date = new Date(y, mo, d, h, mi, s);
+  const same =
+    date.getFullYear() === y &&
+    date.getMonth() === mo &&
+    date.getDate() === d &&
+    date.getHours() === h &&
+    date.getMinutes() === mi;
+  return same ? date.toISOString() : null;
 }
 
 // "1h 10m", "55m", "1h", "45s" -> milliseconds
@@ -131,12 +147,19 @@ const HEVY_TYPES: Record<string, ImportedSetType> = {
   failure: "failure",
 };
 
-function summarizeWarnings(skipped: number): string[] {
-  return skipped
-    ? [
-        `${skipped} Zeile${skipped === 1 ? "" : "n"} ohne Gewicht/Wiederholungen oder mit ungültigen Werten wurde${skipped === 1 ? "" : "n"} übersprungen (z. B. Cardio).`,
-      ]
-    : [];
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+function buildWarnings(skippedSets: number, badDates: number): string[] {
+  const out: string[] = [];
+  if (skippedSets)
+    out.push(
+      `${skippedSets} ${plural(skippedSets, "Zeile", "Zeilen")} ohne Gewicht/Wiederholungen oder mit ungültigen Werten ${plural(skippedSets, "wurde", "wurden")} übersprungen (z. B. Cardio).`,
+    );
+  if (badDates)
+    out.push(
+      `${badDates} ${plural(badDates, "Zeile", "Zeilen")} mit unbekanntem oder ungültigem Datum ${plural(badDates, "wurde", "wurden")} übersprungen. Unterstützt sind Formate wie „21 Oct 2025, 18:30“ und „2025-10-21 18:30:00“.`,
+    );
+  return out;
 }
 
 // Groups consecutive rows into workouts (by `key`) and consecutive same-name rows into exercises.
@@ -177,28 +200,39 @@ class WorkoutBuilder {
 
 export function parseHevy(rows: Row[]): ParseResult {
   const builder = new WorkoutBuilder();
-  let skipped = 0;
+  let skippedSets = 0;
+  let badDates = 0;
   for (const row of rows) {
     const startedAt = parseLocalDate(row.start_time ?? "");
-    const name = (row.exercise_title ?? "").trim();
-    const set = normalizeSet(num(row.weight_kg), num(row.reps), num(row.rpe));
-    if (!startedAt || !name || !set) {
-      skipped++;
+    if (!startedAt) {
+      badDates++;
       continue;
     }
-    const key = `${row.title}|${row.start_time}`;
-    const w = builder.workout(key, () => {
+    const name = (row.exercise_title ?? "").trim();
+    // Imperial accounts export weight_lbs instead of weight_kg.
+    const kg = num(row.weight_kg);
+    const lbs = num(row.weight_lbs);
+    const weight = kg !== null ? kg : lbs !== null ? lbsToKg(lbs) : null;
+    const set = normalizeSet(weight, num(row.reps), num(row.rpe));
+    if (!name || !set) {
+      skippedSets++;
+      continue;
+    }
+    const sourceKey = `${row.title}|${row.start_time}`.trim();
+    const w = builder.workout(sourceKey, () => {
       const end = parseLocalDate(row.end_time ?? "");
       return {
         source: "hevy",
+        sourceKey,
         title: row.title?.trim() || null,
         startedAt,
-        endedAt: end && end >= startedAt ? end : null,
+        // Without a usable end the workout would look like one still in progress.
+        endedAt: end && end >= startedAt ? end : startedAt,
         notes: row.description?.trim() || null,
         exercises: [],
       };
     });
-    builder.addSet(key, w, name, {
+    builder.addSet(sourceKey, w, name, {
       type: HEVY_TYPES[(row.set_type ?? "").toLowerCase()] ?? "normal",
       ...set,
     });
@@ -206,14 +240,34 @@ export function parseHevy(rows: Row[]): ParseResult {
   return {
     format: "hevy",
     workouts: builder.result(),
-    skippedRows: skipped,
-    warnings: summarizeWarnings(skipped),
+    skippedRows: skippedSets + badDates,
+    warnings: buildWarnings(skippedSets, badDates),
   };
 }
 
-export function parseStrong(rows: Row[], units: "kg" | "lbs"): ParseResult {
+const unitOf = (text: string | undefined): "kg" | "lbs" | null => {
+  const t = (text ?? "").trim().toLowerCase();
+  return t === "kg" ? "kg" : t === "lbs" || t === "lb" ? "lbs" : null;
+};
+
+export function parseStrong(
+  rows: Row[],
+  units: "kg" | "lbs" | null,
+): ParseResult {
+  const hasUnitColumn = rows.some((r) => "Weight Unit" in r);
+  if (!hasUnitColumn && units === null) {
+    return {
+      format: "strong",
+      workouts: [],
+      skippedRows: 0,
+      warnings: [],
+      needsUnit: true,
+    };
+  }
+
   const builder = new WorkoutBuilder();
-  let skipped = 0;
+  let skippedSets = 0;
+  let badDates = 0;
   for (const row of rows) {
     const order = (row["Set Order"] ?? "").trim().toUpperCase();
     // "Rest Timer" and similar helper rows are not sets: ignore them silently.
@@ -229,48 +283,54 @@ export function parseStrong(rows: Row[], units: "kg" | "lbs"): ParseResult {
     if (!type) continue;
 
     const startedAt = parseLocalDate(row.Date ?? "");
+    if (!startedAt) {
+      badDates++;
+      continue;
+    }
     const name = (row["Exercise Name"] ?? "").trim();
     const rawWeight = num(row.Weight);
+    const unit = unitOf(row["Weight Unit"]) ?? units ?? "kg";
     const weightKg =
       rawWeight === null
         ? null
-        : units === "lbs"
+        : unit === "lbs"
           ? lbsToKg(rawWeight)
           : rawWeight;
     const set = normalizeSet(weightKg, num(row.Reps), num(row.RPE));
-    if (!startedAt || !name || !set) {
-      skipped++;
+    if (!name || !set) {
+      skippedSets++;
       continue;
     }
-    const key = `${row["Workout Name"]}|${row.Date}`;
-    const w = builder.workout(key, () => {
+    const sourceKey = `${row["Workout Name"]}|${row.Date}`.trim();
+    const w = builder.workout(sourceKey, () => {
       const duration = parseDuration(row.Duration ?? "");
       return {
         source: "strong",
+        sourceKey,
         title: row["Workout Name"]?.trim() || null,
         startedAt,
         endedAt: duration
           ? new Date(Date.parse(startedAt) + duration).toISOString()
-          : null,
+          : startedAt,
         notes: null,
         exercises: [],
       };
     });
     if (!w.notes && row["Workout Notes"]?.trim())
       w.notes = row["Workout Notes"].trim();
-    builder.addSet(key, w, name, { type, ...set });
+    builder.addSet(sourceKey, w, name, { type, ...set });
   }
   return {
     format: "strong",
     workouts: builder.result(),
-    skippedRows: skipped,
-    warnings: summarizeWarnings(skipped),
+    skippedRows: skippedSets + badDates,
+    warnings: buildWarnings(skippedSets, badDates),
   };
 }
 
 export function parseWorkoutFile(
   text: string,
-  strongUnits: "kg" | "lbs",
+  strongUnits: "kg" | "lbs" | null,
 ): ParseResult {
   const rows = parseCsv(text);
   const format = detectFormat(rows);

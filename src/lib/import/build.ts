@@ -39,6 +39,7 @@ type Item = { table: TableName; row: WireRow };
 
 export async function runImport(
   db: LocalDb,
+  userId: string,
   workouts: ImportedWorkout[],
   options: Options = {},
 ): Promise<ImportSummary> {
@@ -52,9 +53,7 @@ export async function runImport(
 
   // name (normalized) -> exercise id, for custom exercises that already exist or were just created
   const custom = new Map<string, string>();
-  for (const c of (await db.custom_exercises
-    .filter((e) => !e.deleted_at)
-    .toArray()) as CustomExerciseRow[]) {
+  for (const c of (await db.custom_exercises.toArray()) as CustomExerciseRow[]) {
     custom.set(normalizeName(c.name), c.id);
   }
 
@@ -62,7 +61,9 @@ export async function runImport(
   for (let i = 0; i < workouts.length; i += chunkSize) {
     const items: Item[] = [];
     for (const w of workouts.slice(i, i + chunkSize)) {
-      const workoutKey = `${w.source}|${w.startedAt}|${w.title ?? ""}`;
+      // Scoped to the user (ids are global in the database) and built from the raw
+      // export text, so the same file gives the same ids in any timezone.
+      const workoutKey = `${userId}|${w.source}|${w.sourceKey}`;
       const workoutId = await deterministicUuid(`workout|${workoutKey}`);
       // Includes soft-deleted rows: a workout the user removed stays removed.
       if (await db.workouts.get(workoutId)) {
@@ -89,7 +90,7 @@ export async function runImport(
           const key = normalizeName(ex.name);
           exerciseId = custom.get(key);
           if (!exerciseId) {
-            exerciseId = await deterministicUuid(`custom|${key}`);
+            exerciseId = await deterministicUuid(`${userId}|custom|${key}`);
             custom.set(key, exerciseId);
             summary.customExercises++;
             items.push({

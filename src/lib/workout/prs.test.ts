@@ -65,4 +65,10 @@ describe("findPRs", () => {
     ];
     expect(findPRs(base, [set("c", 62.5, 5)]).get("c")).toContain("weight");
   });
+
+  it("does not invent an e1RM baseline when earlier sets were all high-rep", () => {
+    const base = [set("h", 40, 20)]; // 20 reps: no reliable e1RM
+    const result = findPRs(base, [set("c", 30, 10)]); // lighter and no weight PR
+    expect(result.size).toBe(0);
+  });
 });

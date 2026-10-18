@@ -10,6 +10,7 @@ import { deterministicUuid, runImport } from "./build";
 import { parseCsv } from "./csv";
 import { parseHevy, type ImportedWorkout } from "./parsers";
 
+const USER = "11111111-aaaa-4aaa-8aaa-111111111111";
 let db: LocalDb;
 let n = 0;
 beforeEach(() => {
@@ -18,6 +19,7 @@ beforeEach(() => {
 
 const workout = (over: Partial<ImportedWorkout> = {}): ImportedWorkout => ({
   source: "hevy",
+  sourceKey: "Push A|21 Oct 2025, 18:30",
   title: "Push A",
   startedAt: "2025-10-21T16:30:00.000Z",
   endedAt: "2025-10-21T17:25:00.000Z",
@@ -49,7 +51,7 @@ describe("deterministicUuid", () => {
 
 describe("runImport", () => {
   it("writes workouts, exercises and sets, matching catalog names and creating custom ones", async () => {
-    const r = await runImport(db, [workout()]);
+    const r = await runImport(db, USER, [workout()]);
     expect(r).toMatchObject({
       imported: 1,
       skippedExisting: 0,
@@ -73,9 +75,9 @@ describe("runImport", () => {
     const custom = await db.custom_exercises.toArray();
     expect(custom.map((c) => c.name)).toEqual(["Zottman Curl Spezial"]);
     expect(exs[1].exercise_id).toBe(custom[0].id);
-    const sets = (await db.workout_sets.toArray()).filter(
-      (s) => s.workout_exercise_id === exs[0].id,
-    );
+    const sets = (await db.workout_sets.toArray())
+      .filter((s) => s.workout_exercise_id === exs[0].id)
+      .sort((a, b) => (a.position as number) - (b.position as number));
     expect(
       sets.map((s) => [s.set_type, s.weight_kg, s.reps, s.rpe, s.completed]),
     ).toEqual([
@@ -85,14 +87,14 @@ describe("runImport", () => {
   });
 
   it("is idempotent: importing the same file twice adds nothing", async () => {
-    await runImport(db, [workout()]);
+    await runImport(db, USER, [workout()]);
     const outboxAfterFirst = await db.outbox.count();
     const counts = [
       await db.workouts.count(),
       await db.workout_sets.count(),
       await db.custom_exercises.count(),
     ];
-    const again = await runImport(db, [workout()]);
+    const again = await runImport(db, USER, [workout()]);
     expect(again).toMatchObject({ imported: 0, skippedExisting: 1, sets: 0 });
     expect([
       await db.workouts.count(),
@@ -103,10 +105,10 @@ describe("runImport", () => {
   });
 
   it("does not resurrect a workout the user deleted after importing it", async () => {
-    await runImport(db, [workout()]);
+    await runImport(db, USER, [workout()]);
     const w = (await db.workouts.toArray())[0];
     await softDelete(db, "workouts", w.id);
-    expect(await runImport(db, [workout()])).toMatchObject({
+    expect(await runImport(db, USER, [workout()])).toMatchObject({
       imported: 0,
       skippedExisting: 1,
     });
@@ -121,7 +123,7 @@ describe("runImport", () => {
       equipment: null,
       deleted_at: null,
     });
-    const r = await runImport(db, [workout()]);
+    const r = await runImport(db, USER, [workout()]);
     expect(r.customExercises).toBe(0);
     expect(
       (await db.workout_exercises.toArray()).some((e) => e.exercise_id === id),
@@ -130,9 +132,13 @@ describe("runImport", () => {
 
   it("produces only rows the sync server accepts (sizes, ids, ordering)", async () => {
     const long = workout({ title: "T".repeat(300), notes: "N".repeat(5000) });
-    await runImport(db, [
+    await runImport(db, USER, [
       long,
-      workout({ startedAt: "2025-10-23T16:30:00.000Z", endedAt: null }),
+      workout({
+        sourceKey: "Push A|23 Oct 2025, 18:30",
+        startedAt: "2025-10-23T16:30:00.000Z",
+        endedAt: "2025-10-23T16:30:00.000Z",
+      }),
     ]);
     for (const t of TABLES) {
       for (const row of await db[t].toArray()) {
@@ -165,11 +171,52 @@ describe("runImport", () => {
 "Pull B","23 Oct 2025, 07:05","23 Oct 2025, 08:00","","Lat Pulldown (Cable)","","","0","normal","50","10","","",""
 `;
     const progress: number[] = [];
-    const r = await runImport(db, parseHevy(parseCsv(csv)).workouts, {
+    const r = await runImport(db, USER, parseHevy(parseCsv(csv)).workouts, {
       chunkSize: 1,
       onProgress: (done) => progress.push(done),
     });
     expect(r.imported).toBe(2);
     expect(progress).toEqual([1, 2]);
+  });
+
+  it("derives different ids for different users (no collisions on the server)", async () => {
+    const other = createLocalDb(`imp-other-${n}`);
+    await runImport(db, USER, [workout()]);
+    await runImport(other, "22222222-bbbb-4bbb-8bbb-222222222222", [workout()]);
+    const ids = async (d: LocalDb) =>
+      [
+        ...(await d.workouts.toArray()),
+        ...(await d.workout_sets.toArray()),
+        ...(await d.custom_exercises.toArray()),
+      ].map((r) => r.id);
+    const [a, b] = [await ids(db), await ids(other)];
+    expect(a.length).toBe(b.length);
+    expect(a.filter((id) => b.includes(id))).toEqual([]);
+  });
+
+  it("ids come from the raw export strings, not the timezone-dependent instant", async () => {
+    await runImport(db, USER, [
+      workout({ startedAt: "2025-10-21T16:30:00.000Z" }),
+    ]);
+    const other = createLocalDb(`imp-tz-${n}`);
+    await runImport(other, USER, [
+      workout({ startedAt: "2025-10-21T15:30:00.000Z" }),
+    ]); // same file, other timezone
+    expect((await other.workouts.toArray())[0].id).toBe(
+      (await db.workouts.toArray())[0].id,
+    );
+  });
+
+  it("does not bring back a custom exercise the user deleted", async () => {
+    await runImport(db, USER, [workout()]);
+    const c = (await db.custom_exercises.toArray())[0];
+    await softDelete(db, "custom_exercises", c.id);
+    await runImport(db, USER, [
+      workout({
+        sourceKey: "Push A|28 Oct 2025, 18:30",
+        startedAt: "2025-10-28T16:30:00.000Z",
+      }),
+    ]);
+    expect((await db.custom_exercises.get(c.id))?.deleted_at).not.toBeNull();
   });
 });
