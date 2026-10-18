@@ -30,3 +30,14 @@ export interface CustomExerciseRow extends WireRow {
   muscle_group: string | null;
   equipment: string | null;
 }
+
+export interface TemplateRow extends WireRow {
+  name: string;
+}
+
+export interface TemplateExerciseRow extends WireRow {
+  template_id: string;
+  exercise_id: string;
+  position: number;
+  set_count: number;
+}

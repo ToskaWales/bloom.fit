@@ -59,11 +59,7 @@ export async function syncOnce(
       // Confirmed by the server: drop exactly what we sent (later edits have newer seqs).
       if (sentSeqs.length) await db.outbox.bulkDelete(sentSeqs);
       pushed += seen.size;
-      if (body.rejected?.length)
-        await db.meta.put({
-          key: "rejected",
-          value: JSON.stringify(body.rejected),
-        });
+      await recordRejected(db, seen, body.rejected ?? []);
       pulledCount += await applyPulled(db, body);
 
       if (!body.hasMore && queued.length < MAX_ROWS_PER_TABLE) break;
@@ -100,4 +96,48 @@ async function applyPulled(db: LocalDb, body: SyncResponse): Promise<number> {
     },
   );
   return applied;
+}
+
+export interface RejectedRow {
+  table: TableName;
+  id: string | null;
+  reason: string;
+}
+
+export const REJECTED_KEY = "rejected";
+
+// Rows the server refused stay listed (so the UI can warn about them) until a
+// later push of the same row succeeds.
+async function recordRejected(
+  db: LocalDb,
+  pushed: Set<string>,
+  rejected: RejectedRow[],
+): Promise<void> {
+  const key = (r: RejectedRow) => `${r.table}:${r.id}`;
+  const existing: RejectedRow[] = JSON.parse(
+    (await db.meta.get(REJECTED_KEY))?.value ?? "[]",
+  );
+  const now = new Set(rejected.map(key));
+  const kept = existing.filter((r) => !pushed.has(key(r)) || now.has(key(r)));
+  const known = new Set(kept.map(key));
+  const merged = [...kept, ...rejected.filter((r) => !known.has(key(r)))];
+  if (merged.length)
+    await db.meta.put({ key: REJECTED_KEY, value: JSON.stringify(merged) });
+  else await db.meta.delete(REJECTED_KEY);
+}
+
+// Only one tab/worker syncs at a time; a second tab would otherwise push a
+// stale copy of a row that the first tab just updated.
+export async function syncWithLock(
+  db: LocalDb,
+  fetcher?: Fetcher,
+): Promise<SyncResult> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return syncOnce(db, fetcher);
+  const result = await locks.request(
+    "bloom-sync",
+    { ifAvailable: true },
+    async (lock) => (lock ? syncOnce(db, fetcher) : null),
+  );
+  return result ?? { status: "ok", pushed: 0, pulled: 0 };
 }

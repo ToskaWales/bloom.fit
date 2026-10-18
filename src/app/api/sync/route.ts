@@ -14,8 +14,11 @@ export async function POST(request: Request) {
   if (!data.user)
     return Response.json({ error: "unauthorized" }, { status: 401 });
 
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > MAX_BODY_BYTES)
+    return Response.json({ error: "too large" }, { status: 413 });
   const text = await request.text();
-  if (text.length > MAX_BODY_BYTES)
+  if (Buffer.byteLength(text) > MAX_BODY_BYTES)
     return Response.json({ error: "too large" }, { status: 413 });
 
   let parsed;

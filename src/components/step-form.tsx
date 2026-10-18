@@ -3,7 +3,7 @@
 import { useActionState, type ReactNode } from "react";
 import { Notice, SubmitButton } from "@/components/ui";
 
-export type StepState = { error?: string };
+export type StepState = { error?: string; done?: boolean };
 
 export function StepForm({
   action,

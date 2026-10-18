@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "./db";
-import { saveRow } from "./repo";
+import { saveRow, softDeleteWorkout } from "./repo";
 import type { SetRow } from "./types";
 import {
   addExercise,
@@ -9,6 +9,7 @@ import {
   finishWorkout,
   lastPerformance,
   removeExercise,
+  removeSet,
   startWorkout,
   updateSet,
 } from "./workouts";
@@ -111,5 +112,87 @@ describe("workout helpers", () => {
     const last = await lastPerformance(db, "barbell-bench-press", current.id);
     expect(last.map((s) => [s.weight_kg, s.reps])).toEqual([[55, 10]]);
     expect(await lastPerformance(db, "pull-up", current.id)).toEqual([]);
+  });
+
+  it("keeps positions unique and ordered after deleting a set in the middle", async () => {
+    const w = await startWorkout(db);
+    const e = await addExercise(db, w.id, "barbell-bench-press");
+    const [a, b, c] = [
+      await addSet(db, e.id),
+      await addSet(db, e.id),
+      await addSet(db, e.id),
+    ];
+    await updateSet(db, c.id, { weight_kg: 70, reps: 3 });
+    await removeSet(db, a.id);
+    const d = await addSet(db, e.id);
+    const sets = await activeSets(e.id);
+    expect(new Set(sets.map((s) => s.position)).size).toBe(sets.length);
+    expect(sets.map((s) => s.id)).toEqual([b.id, c.id, d.id]);
+    expect(d).toMatchObject({ weight_kg: 70, reps: 3 }); // copies the previous *last* set
+  });
+
+  it("keeps exercise positions unique after removing one", async () => {
+    const w = await startWorkout(db);
+    const e1 = await addExercise(db, w.id, "pull-up");
+    await addExercise(db, w.id, "barbell-back-squat");
+    await removeExercise(db, e1.id);
+    const e3 = await addExercise(db, w.id, "leg-press");
+    const rows = await db.workout_exercises
+      .where("workout_id")
+      .equals(w.id)
+      .filter((x) => !x.deleted_at)
+      .toArray();
+    expect(new Set(rows.map((r) => r.position)).size).toBe(rows.length);
+    expect(e3.position).toBeGreaterThan(1);
+  });
+
+  it("lastPerformance only looks at earlier workouts and skips ones without sets", async () => {
+    const mk = async (startedAt: string, weight: number | null) => {
+      const w = await startWorkout(db);
+      await saveRow(db, "workouts", { ...w, started_at: startedAt });
+      const e = await addExercise(db, w.id, "barbell-bench-press");
+      if (weight !== null) {
+        const s = await addSet(db, e.id);
+        await updateSet(db, s.id, {
+          weight_kg: weight,
+          reps: 5,
+          completed: true,
+        });
+      }
+      return w;
+    };
+    const oldest = await mk("2026-09-01T10:00:00.000Z", 50);
+    const middle = await mk("2026-10-01T10:00:00.000Z", 55);
+    const newest = await mk("2026-11-01T10:00:00.000Z", 60);
+    const empty = await mk("2026-10-15T10:00:00.000Z", null);
+
+    expect(
+      (await lastPerformance(db, "barbell-bench-press", newest.id))[0]
+        .weight_kg,
+    ).toBe(55); // skips the empty Oct 15 one
+    expect(
+      (await lastPerformance(db, "barbell-bench-press", middle.id))[0]
+        .weight_kg,
+    ).toBe(50); // not the newer 60
+    expect(await lastPerformance(db, "barbell-bench-press", oldest.id)).toEqual(
+      [],
+    );
+    expect(
+      (await lastPerformance(db, "barbell-bench-press", empty.id))[0].weight_kg,
+    ).toBe(55);
+  });
+
+  it("deleting a workout is one atomic operation covering exercises and sets", async () => {
+    const w = await startWorkout(db);
+    const e = await addExercise(db, w.id, "pull-up");
+    const s = await addSet(db, e.id);
+    await softDeleteWorkout(db, w.id);
+    for (const row of [
+      await db.workouts.get(w.id),
+      await db.workout_exercises.get(e.id),
+      await db.workout_sets.get(s.id),
+    ]) {
+      expect(row?.deleted_at).not.toBeNull();
+    }
   });
 });

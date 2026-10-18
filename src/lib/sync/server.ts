@@ -27,13 +27,20 @@ export interface SyncDb {
 
 export class SyncRequestError extends Error {}
 
-// Cursors overlap slightly (>=) because commits can land out of timestamp
-// order; clients apply pulled rows idempotently, so re-delivery is harmless.
+const SAFETY_WINDOW_MS = 10_000;
+
+export interface RunSyncOptions {
+  now?: () => Date;
+}
+
+// Pulls are idempotent for clients, so re-delivering rows is harmless; see nextCursor.
 export async function runSync(
   db: SyncDb,
   userId: string,
   request: SyncRequest,
+  options: RunSyncOptions = {},
 ): Promise<SyncResponse> {
+  const now = options.now ?? (() => new Date());
   const known = new Set<string>(TABLES);
   for (const key of [
     ...Object.keys(request.push),
@@ -63,7 +70,20 @@ export async function runSync(
         });
       }
     }
-    if (valid.length) await db.upsert(table, userId, valid);
+    if (valid.length) {
+      try {
+        await db.upsert(table, userId, valid);
+      } catch {
+        // One bad row must not block the rest of the batch (or every later sync).
+        for (const row of valid) {
+          try {
+            await db.upsert(table, userId, [row]);
+          } catch {
+            rejected.push({ table, id: String(row.id), reason: "db" });
+          }
+        }
+      }
+    }
   }
 
   const pulled = {} as SyncResponse["pulled"];
@@ -79,9 +99,31 @@ export async function runSync(
     if (rows.length > PULL_LIMIT) hasMore = true;
     const page = rows.slice(0, PULL_LIMIT);
     pulled[table] = page;
-    cursors[table] = page.length
-      ? (page[page.length - 1].updated_at ?? null)
-      : (request.cursors[table] ?? null);
+    cursors[table] = nextCursor(
+      request.cursors[table] ?? null,
+      page,
+      rows.length > PULL_LIMIT,
+      now(),
+    );
   }
   return { pulled, cursors, hasMore, rejected };
+}
+
+// A row is stamped before its transaction commits, so a row stamped at t can
+// become visible after another device already pulled past t. Holding the cursor
+// back by a safety window re-delivers recent rows (harmless: applying is
+// idempotent) instead of skipping them. A full page advances normally, and a
+// cursor never moves backwards.
+function nextCursor(
+  previous: string | null,
+  page: WireRow[],
+  full: boolean,
+  now: Date,
+): string | null {
+  if (page.length === 0) return previous;
+  const last = page[page.length - 1].updated_at ?? null;
+  if (!last) return previous;
+  const limit = new Date(now.getTime() - SAFETY_WINDOW_MS).toISOString();
+  const candidate = full || last < limit ? last : limit;
+  return previous && previous > candidate ? previous : candidate;
 }

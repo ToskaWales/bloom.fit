@@ -7,6 +7,7 @@ import { hardenCookie } from "@/lib/supabase/cookie-options";
 // the data access layer (src/lib/auth/dal.ts), never only here.
 const PROTECTED = [
   "/app",
+  "/training",
   "/onboarding",
   "/einstellungen",
   "/einladung",

@@ -4,11 +4,11 @@
 -- The exercise catalog is static app data; workout_exercises.exercise_id holds a
 -- catalog slug or the uuid of a custom exercise.
 
-create function public.stamp_row() returns trigger language plpgsql as $$
+create function public.stamp_row() returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at = clock_timestamp();
   if tg_op = 'INSERT' then
-    new.created_at = coalesce(new.created_at, clock_timestamp());
+    new.created_at = clock_timestamp(); -- never client-controlled
   else
     new.created_at = old.created_at;
     new.user_id = old.user_id;

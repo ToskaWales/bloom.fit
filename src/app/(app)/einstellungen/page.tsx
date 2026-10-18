@@ -1,8 +1,9 @@
+import { DeleteAccountForm } from "@/components/delete-account-form";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page, secondaryButtonClass } from "@/components/ui";
 import { requireOnboarded } from "@/lib/auth/dal";
 import { berlinDay } from "@/lib/onboarding/schema";
-import { deleteAccount, setProductMail, updateCycle } from "./actions";
+import { setProductMail, updateCycle } from "./actions";
 
 export const metadata = {
   title: "Einstellungen – Bloom",
@@ -97,16 +98,7 @@ export default async function Settings() {
           Dadurch werden dein Konto und alle deine Daten unwiderruflich
           gelöscht.
         </p>
-        <StepForm action={deleteAccount} label="Konto endgültig löschen">
-          <Field label="Tippe LÖSCHEN zur Bestätigung">
-            <input
-              name="confirm"
-              autoComplete="off"
-              required
-              className={inputClass}
-            />
-          </Field>
-        </StepForm>
+        <DeleteAccountForm />
       </section>
     </Page>
   );

@@ -162,4 +162,45 @@ describe("syncOnce", () => {
     expect(r).toMatchObject({ status: "ok", pushed: 1 });
     expect(server.rows.workouts[0].title).toBe("Push 3");
   });
+
+  it("drains more than one batch in several rounds", async () => {
+    await saveRow(dbA, "workouts", workout());
+    await saveRow(dbA, "workout_exercises", exercise());
+    for (let i = 0; i < 450; i++) {
+      await saveRow(
+        dbA,
+        "workout_sets",
+        set({
+          id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+          position: i,
+        }),
+      );
+    }
+    const r = await syncOnce(dbA, fetcherFor());
+    expect(r).toMatchObject({ status: "ok", pushed: 452 });
+    expect(await dbA.outbox.count()).toBe(0);
+    expect(server.rows.workout_sets).toHaveLength(450);
+  });
+
+  it("keeps rejected rows listed until a later push of the same row succeeds", async () => {
+    await saveRow(dbA, "workouts", workout());
+    await saveRow(dbA, "workout_sets", set({ weight_kg: 5000 }));
+    await syncOnce(dbA, fetcherFor());
+    expect(JSON.parse((await dbA.meta.get("rejected"))!.value!)).toHaveLength(
+      1,
+    );
+
+    // unrelated sync does not clear it
+    await saveRow(dbA, "workouts", workout({ title: "Push 2" }));
+    await syncOnce(dbA, fetcherFor());
+    expect(JSON.parse((await dbA.meta.get("rejected"))!.value!)).toHaveLength(
+      1,
+    );
+
+    // fixing and re-pushing the row clears it
+    await saveRow(dbA, "workout_exercises", exercise());
+    await saveRow(dbA, "workout_sets", set({ weight_kg: 60 }));
+    await syncOnce(dbA, fetcherFor());
+    expect(await dbA.meta.get("rejected")).toBeUndefined();
+  });
 });

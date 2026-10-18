@@ -2,18 +2,30 @@
 
 import { useEffect, useState } from "react";
 
-function beep() {
+let audio: AudioContext | null = null;
+
+// Call from a user gesture (completing a set): browsers only allow audio after one.
+export function primeAudio() {
   try {
     const Ctx =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
+    audio ??= new Ctx();
+    void audio.resume();
+  } catch {
+    // audio is optional
+  }
+}
+
+function beep() {
+  try {
+    if (!audio) return;
+    const osc = audio.createOscillator();
     osc.frequency.value = 880;
-    osc.connect(ctx.destination);
+    osc.connect(audio.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.25);
+    osc.stop(audio.currentTime + 0.25);
   } catch {
     // audio is optional
   }

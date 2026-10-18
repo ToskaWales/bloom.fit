@@ -28,29 +28,38 @@ export async function softDeleteWorkout(
   db: LocalDb,
   workoutId: string,
 ): Promise<void> {
-  const now = new Date().toISOString();
-  const exercises = await db.workout_exercises
-    .where("workout_id")
-    .equals(workoutId)
-    .toArray();
-  for (const ex of exercises) {
-    const sets = await db.workout_sets
-      .where("workout_exercise_id")
-      .equals(ex.id)
-      .toArray();
-    for (const s of sets)
-      await saveRow(db, "workout_sets", {
-        ...s,
-        deleted_at: s.deleted_at ?? now,
-      });
-    await saveRow(db, "workout_exercises", {
-      ...ex,
-      deleted_at: ex.deleted_at ?? now,
-    });
-  }
-  const w = await db.workouts.get(workoutId);
-  if (w)
-    await saveRow(db, "workouts", { ...w, deleted_at: w.deleted_at ?? now });
+  await db.transaction(
+    "rw",
+    [db.workouts, db.workout_exercises, db.workout_sets, db.outbox],
+    async () => {
+      const now = new Date().toISOString();
+      const exercises = await db.workout_exercises
+        .where("workout_id")
+        .equals(workoutId)
+        .toArray();
+      for (const ex of exercises) {
+        const sets = await db.workout_sets
+          .where("workout_exercise_id")
+          .equals(ex.id)
+          .toArray();
+        for (const s of sets)
+          await saveRow(db, "workout_sets", {
+            ...s,
+            deleted_at: s.deleted_at ?? now,
+          });
+        await saveRow(db, "workout_exercises", {
+          ...ex,
+          deleted_at: ex.deleted_at ?? now,
+        });
+      }
+      const w = await db.workouts.get(workoutId);
+      if (w)
+        await saveRow(db, "workouts", {
+          ...w,
+          deleted_at: w.deleted_at ?? now,
+        });
+    },
+  );
 }
 
 // Atomic read-modify-write: two quick edits of different fields (an input

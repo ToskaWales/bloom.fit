@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { ExercisePicker } from "@/components/training/exercise-picker";
-import { RestTimer } from "@/components/training/rest-timer";
+import { primeAudio, RestTimer } from "@/components/training/rest-timer";
 import { SyncStatus } from "@/components/training/sync-status";
 import { buttonClass, inputClass, secondaryButtonClass } from "@/components/ui";
 import { getCatalogExercise } from "@/lib/exercises/catalog";
@@ -74,7 +74,8 @@ export function SessionView() {
   const onRest = useCallback((v: number | null) => setRestEndsAt(v), []);
 
   if (!id) return <Message>Kein Training ausgewählt.</Message>;
-  if (workout === undefined || !db) return <Message>Lädt …</Message>;
+  if (!db) return <StorageGate />;
+  if (workout === undefined) return <Message>Lädt …</Message>;
   if (workout === null || workout.deleted_at)
     return <Message>Dieses Training wurde nicht gefunden.</Message>;
 
@@ -103,7 +104,10 @@ export function SessionView() {
           exercise={ex}
           workoutId={workout.id}
           units={units}
-          onSetDone={() => setRestEndsAt(Date.now() + REST_SECONDS * 1000)}
+          onSetDone={() => {
+            primeAudio();
+            setRestEndsAt(Date.now() + REST_SECONDS * 1000);
+          }}
         />
       ))}
 
@@ -161,6 +165,20 @@ export function SessionView() {
         <RestTimer endsAt={restEndsAt} onChange={onRest} />
       )}
     </main>
+  );
+}
+
+// db is null during SSR/hydration; if it stays null the browser blocks local storage.
+function StorageGate() {
+  const [blocked] = useState(
+    () => typeof window !== "undefined" && typeof indexedDB === "undefined",
+  );
+  return (
+    <Message>
+      {blocked
+        ? "Dein Browser blockiert den lokalen Speicher (z. B. im privaten Modus). Bloom kann so nicht offline speichern."
+        : "Lädt …"}
+    </Message>
   );
 }
 
@@ -279,6 +297,9 @@ function SetLine({
   const warmup = set.set_type === "warmup";
 
   function commitWeight(e: React.FocusEvent<HTMLInputElement>) {
+    // Leaving the field untouched must not rewrite the weight (lbs display is rounded).
+    if (e.currentTarget.value.trim() === formatWeight(set.weight_kg, units))
+      return;
     const kg = parseWeightInput(e.currentTarget.value, units);
     if (kg === undefined) {
       e.currentTarget.value = formatWeight(set.weight_kg, units);
@@ -288,21 +309,23 @@ function SetLine({
   }
   function commitReps(e: React.FocusEvent<HTMLInputElement>) {
     const text = e.currentTarget.value.trim();
-    const reps = text === "" ? null : Number(text);
-    if (reps !== null && (!Number.isInteger(reps) || reps < 0 || reps > 1000)) {
+    if (text === (set.reps == null ? "" : String(set.reps))) return;
+    if (text !== "" && !/^\d{1,4}$/.test(text)) {
       e.currentTarget.value = set.reps == null ? "" : String(set.reps);
       return;
     }
-    if (reps !== set.reps) updateSet(db, set.id, { reps });
+    updateSet(db, set.id, { reps: text === "" ? null : Number(text) });
   }
   function commitRpe(e: React.FocusEvent<HTMLInputElement>) {
     const text = e.currentTarget.value.trim().replace(",", ".");
-    const rpe = text === "" ? null : Number(text);
+    if (text === (set.rpe == null ? "" : String(set.rpe))) return;
+    const rpe =
+      text === "" ? null : /^\d{1,2}(\.\d)?$/.test(text) ? Number(text) : NaN;
     if (rpe !== null && !(rpe >= 1 && rpe <= 10)) {
       e.currentTarget.value = set.rpe == null ? "" : String(set.rpe);
       return;
     }
-    if (rpe !== set.rpe) updateSet(db, set.id, { rpe });
+    updateSet(db, set.id, { rpe });
   }
 
   return (

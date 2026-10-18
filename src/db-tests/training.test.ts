@@ -222,3 +222,135 @@ describe("training tables", () => {
     }
   });
 });
+
+describe("templates", () => {
+  const T1 = "55555555-5555-5555-5555-555555555555";
+  const TE1 = "66666666-6666-6666-6666-666666666666";
+
+  it("members can create templates with exercises; others cannot see or attach to them", async () => {
+    const a = await member("a@example.com");
+    const b = await member("b@example.com");
+    await asUser(db, a, async () => {
+      await q(
+        "insert into templates (id, user_id, name) values ($1, $2, 'Push A')",
+        [T1, a],
+      );
+      await q(
+        "insert into template_exercises (id, user_id, template_id, exercise_id, position, set_count) values ($1, $2, $3, 'barbell-bench-press', 0, 4)",
+        [TE1, a, T1],
+      );
+    });
+    expect(
+      (await asUser(db, b, () => q("select * from templates"))).rows,
+    ).toHaveLength(0);
+    await expect(
+      asUser(db, b, () =>
+        q(
+          "insert into template_exercises (id, user_id, template_id, exercise_id, position) values ('77777777-7777-7777-7777-777777777777', $1, $2, 'x', 0)",
+          [b, T1],
+        ),
+      ),
+    ).rejects.toThrow(/foreign key/);
+  });
+
+  it("requires access, validates set_count, and blocks hard deletes", async () => {
+    const pending = await createUser(db, "p@example.com");
+    await expect(
+      asUser(db, pending, () =>
+        q("insert into templates (id, user_id, name) values ($1, $2, 'x')", [
+          T1,
+          pending,
+        ]),
+      ),
+    ).rejects.toThrow(/row-level security/);
+
+    const a = await member("a@example.com");
+    await asUser(db, a, () =>
+      q("insert into templates (id, user_id, name) values ($1, $2, 'Push A')", [
+        T1,
+        a,
+      ]),
+    );
+    await expect(
+      asUser(db, a, () =>
+        q(
+          "insert into template_exercises (id, user_id, template_id, exercise_id, position, set_count) values ($1, $2, $3, 'x', 0, 99)",
+          [TE1, a, T1],
+        ),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      asUser(db, a, () => q("delete from templates where id = $1", [T1])),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("is removed with the account", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () =>
+      q("insert into templates (id, user_id, name) values ($1, $2, 'Push A')", [
+        T1,
+        a,
+      ]),
+    );
+    await q("delete from auth.users where id = $1", [a]);
+    expect(
+      (await q("select count(*)::int as n from templates")).rows[0].n,
+    ).toBe(0);
+  });
+});
+
+describe("hardening", () => {
+  it("ignores a client-supplied created_at on insert", async () => {
+    const u = await member("a@example.com");
+    await asUser(db, u, () =>
+      q(
+        "insert into workouts (id, user_id, started_at, created_at) values ($1, $2, now(), '2000-01-01')",
+        [W1, u],
+      ),
+    );
+    const { rows } = await q(
+      "select created_at > now() - interval '1 minute' as fresh from workouts",
+    );
+    expect(rows[0].fresh).toBe(true);
+  });
+
+  it("purges old soft-deleted rows with their children, keeps recent and live ones", async () => {
+    const u = await member("a@example.com");
+    await seedWorkout(u);
+    const W2 = "88888888-8888-8888-8888-888888888888";
+    await asUser(db, u, () =>
+      q(
+        "insert into workouts (id, user_id, started_at) values ($1, $2, now())",
+        [W2, u],
+      ),
+    );
+    await q(
+      "update workouts set deleted_at = now() - interval '40 days' where id = $1",
+      [W1],
+    );
+    await q(
+      "update workouts set deleted_at = now() - interval '2 days' where id = $1",
+      [W2],
+    );
+
+    await db.exec("set role service_role");
+    const purged = (await q("select purge_deleted_rows(30) as n")).rows[0].n;
+    await db.exec("reset role");
+    expect(purged).toBeGreaterThanOrEqual(1);
+    const left = (await q("select id from workouts order by id")).rows.map(
+      (r) => r.id,
+    );
+    expect(left).toEqual([W2]);
+    expect(
+      (await q("select count(*)::int as n from workout_sets")).rows[0].n,
+    ).toBe(0); // cascaded
+
+    const id = await member("b@example.com");
+    await expect(
+      asUser(db, id, () => q("select purge_deleted_rows(30)")),
+    ).rejects.toThrow(/permission denied/);
+    await db.exec("set role service_role");
+    await expect(q("select purge_deleted_rows(1)")).rejects.toThrow(/refusing/);
+    await db.exec("reset role");
+  });
+});

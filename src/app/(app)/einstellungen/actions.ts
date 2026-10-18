@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { StepState } from "@/components/step-form";
 import { requireOnboarded, requireUser } from "@/lib/auth/dal";
@@ -97,5 +96,5 @@ export async function deleteAccount(
         "Das Löschen hat nicht geklappt. Bitte versuche es später noch einmal.",
     };
   await supabase.auth.signOut();
-  redirect("/");
+  return { done: true };
 }

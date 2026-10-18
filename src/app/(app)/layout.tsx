@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { signOut } from "@/app/login/actions";
 import { LocalProvider } from "@/components/local-provider";
-import { LogoutButton } from "@/components/logout-button";
+import { LogoutForm } from "@/components/logout-button";
 import { requireProfile } from "@/lib/auth/dal";
 
 // Reads the session, so it streams in behind Suspense; the shell stays static.
@@ -33,9 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/einstellungen" className="underline">
             Einstellungen
           </Link>
-          <form action={signOut} className="ml-auto">
-            <LogoutButton />
-          </form>
+          <LogoutForm action={signOut} />
         </nav>
       </header>
       <Suspense fallback={<p className="p-8 text-neutral-600">Lädt …</p>}>

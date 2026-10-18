@@ -13,7 +13,8 @@ import {
   type ReactNode,
 } from "react";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";
-import { syncOnce } from "@/lib/sync/client";
+import { clearPageCache } from "@/lib/local/wipe";
+import { syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
 
 export type SyncStatus = "idle" | "syncing" | "ok" | "error" | "unauthorized";
@@ -92,8 +93,12 @@ export function LocalProvider({
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
     running.current = true;
     setStatus("syncing");
-    syncOnce(db)
-      .then((r) => setStatus(r.status === "ok" ? "ok" : r.status))
+    syncWithLock(db)
+      .then((r) => {
+        setStatus(r.status === "ok" ? "ok" : r.status);
+        // Session ended: don't keep personalised pages around.
+        if (r.status === "unauthorized") void clearPageCache();
+      })
       .finally(() => {
         running.current = false;
       });
@@ -131,11 +136,12 @@ export function LocalProvider({
     navigator.serviceWorker
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then(() => navigator.serviceWorker.ready)
-      .then(() => {
-        // Warm the page cache so the app opens offline.
-        for (const path of ["/training", "/training/session"]) {
-          fetch(path, { headers: { Accept: "text/html" } }).catch(() => {});
-        }
+      .then((registration) => {
+        // Let the worker fetch the offline pages and the scripts they need.
+        registration.active?.postMessage({
+          type: "warm",
+          paths: ["/training", "/training/session"],
+        });
       })
       .catch(() => {});
     navigator.storage?.persist?.().catch(() => {});

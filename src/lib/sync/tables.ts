@@ -6,6 +6,8 @@ export const TABLES = [
   "workouts",
   "workout_exercises",
   "workout_sets",
+  "templates",
+  "template_exercises",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
@@ -23,15 +25,22 @@ export const pushSchemas = {
     equipment: nullableText(40),
     deleted_at: ts.nullable(),
   }),
-  workouts: z.object({
-    id,
-    title: nullableText(80),
-    started_at: ts,
-    ended_at: ts.nullable(),
-    notes: nullableText(2000),
-    source: z.enum(["app", "hevy", "strong"]),
-    deleted_at: ts.nullable(),
-  }),
+  workouts: z
+    .object({
+      id,
+      title: nullableText(80),
+      started_at: ts,
+      ended_at: ts.nullable(),
+      notes: nullableText(2000),
+      source: z.enum(["app", "hevy", "strong"]),
+      deleted_at: ts.nullable(),
+    })
+    .refine(
+      (w) => !w.ended_at || Date.parse(w.ended_at) >= Date.parse(w.started_at),
+      {
+        message: "ended_at before started_at",
+      },
+    ),
   workout_exercises: z.object({
     id,
     workout_id: id,
@@ -49,6 +58,19 @@ export const pushSchemas = {
     reps: z.number().int().min(0).max(1000).nullable(),
     rpe: z.number().min(1).max(10).nullable(),
     completed: z.boolean(),
+    deleted_at: ts.nullable(),
+  }),
+  templates: z.object({
+    id,
+    name: z.string().min(1).max(80),
+    deleted_at: ts.nullable(),
+  }),
+  template_exercises: z.object({
+    id,
+    template_id: id,
+    exercise_id: z.string().min(1).max(64),
+    position: z.number().int().min(0),
+    set_count: z.number().int().min(1).max(20),
     deleted_at: ts.nullable(),
   }),
 } satisfies Record<TableName, z.ZodType>;

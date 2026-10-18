@@ -5,6 +5,18 @@ import type { SetRow, WorkoutExerciseRow, WorkoutRow } from "./types";
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 
+const allTables = (db: LocalDb) => [
+  db.workouts,
+  db.workout_exercises,
+  db.workout_sets,
+  db.outbox,
+];
+
+// Next free position among all rows (including soft-deleted ones), so a new
+// row never ties with an existing one.
+const nextPosition = (rows: { position: number }[]) =>
+  rows.reduce((max, r) => Math.max(max, r.position), -1) + 1;
+
 export async function startWorkout(
   db: LocalDb,
   title: string | null = null,
@@ -27,39 +39,42 @@ export async function addExercise(
   workoutId: string,
   exerciseId: string,
 ): Promise<WorkoutExerciseRow> {
-  const existing = await db.workout_exercises
-    .where("workout_id")
-    .equals(workoutId)
-    .filter((e) => !e.deleted_at)
-    .count();
-  const row: WorkoutExerciseRow = {
-    id: uuid(),
-    workout_id: workoutId,
-    exercise_id: exerciseId,
-    position: existing,
-    notes: null,
-    deleted_at: null,
-  };
-  await saveRow(db, "workout_exercises", row);
-  return row;
+  return db.transaction("rw", allTables(db), async () => {
+    const existing = (await db.workout_exercises
+      .where("workout_id")
+      .equals(workoutId)
+      .toArray()) as WorkoutExerciseRow[];
+    const row: WorkoutExerciseRow = {
+      id: uuid(),
+      workout_id: workoutId,
+      exercise_id: exerciseId,
+      position: nextPosition(existing),
+      notes: null,
+      deleted_at: null,
+    };
+    await saveRow(db, "workout_exercises", row);
+    return row;
+  });
 }
 
 export async function removeExercise(
   db: LocalDb,
   workoutExerciseId: string,
 ): Promise<void> {
-  const ex = (await db.workout_exercises.get(workoutExerciseId)) as
-    WorkoutExerciseRow | undefined;
-  if (!ex) return;
-  const sets = (await db.workout_sets
-    .where("workout_exercise_id")
-    .equals(workoutExerciseId)
-    .toArray()) as SetRow[];
-  const stamp = now();
-  for (const s of sets)
-    if (!s.deleted_at)
-      await saveRow(db, "workout_sets", { ...s, deleted_at: stamp });
-  await saveRow(db, "workout_exercises", { ...ex, deleted_at: stamp });
+  await db.transaction("rw", allTables(db), async () => {
+    const ex = (await db.workout_exercises.get(workoutExerciseId)) as
+      WorkoutExerciseRow | undefined;
+    if (!ex) return;
+    const sets = (await db.workout_sets
+      .where("workout_exercise_id")
+      .equals(workoutExerciseId)
+      .toArray()) as SetRow[];
+    const stamp = now();
+    for (const s of sets)
+      if (!s.deleted_at)
+        await saveRow(db, "workout_sets", { ...s, deleted_at: stamp });
+    await saveRow(db, "workout_exercises", { ...ex, deleted_at: stamp });
+  });
 }
 
 // A new set starts from the previous set's values so repeated sets are one tap.
@@ -67,25 +82,29 @@ export async function addSet(
   db: LocalDb,
   workoutExerciseId: string,
 ): Promise<SetRow> {
-  const sets = (await db.workout_sets
-    .where("workout_exercise_id")
-    .equals(workoutExerciseId)
-    .filter((s) => !s.deleted_at)
-    .sortBy("position")) as SetRow[];
-  const prev = sets[sets.length - 1];
-  const row: SetRow = {
-    id: uuid(),
-    workout_exercise_id: workoutExerciseId,
-    position: sets.length,
-    set_type: "normal",
-    weight_kg: prev?.weight_kg ?? null,
-    reps: prev?.reps ?? null,
-    rpe: null,
-    completed: false,
-    deleted_at: null,
-  };
-  await saveRow(db, "workout_sets", row);
-  return row;
+  return db.transaction("rw", allTables(db), async () => {
+    const all = (await db.workout_sets
+      .where("workout_exercise_id")
+      .equals(workoutExerciseId)
+      .toArray()) as SetRow[];
+    const active = all
+      .filter((s) => !s.deleted_at)
+      .sort((a, b) => a.position - b.position);
+    const prev = active[active.length - 1];
+    const row: SetRow = {
+      id: uuid(),
+      workout_exercise_id: workoutExerciseId,
+      position: nextPosition(all),
+      set_type: "normal",
+      weight_kg: prev?.weight_kg ?? null,
+      reps: prev?.reps ?? null,
+      rpe: null,
+      completed: false,
+      deleted_at: null,
+    };
+    await saveRow(db, "workout_sets", row);
+    return row;
+  });
 }
 
 export async function updateSet(
@@ -112,28 +131,31 @@ export async function finishWorkout(
   db: LocalDb,
   workoutId: string,
 ): Promise<void> {
-  const workout = (await db.workouts.get(workoutId)) as WorkoutRow | undefined;
-  if (!workout) return;
-  const exercises = await db.workout_exercises
-    .where("workout_id")
-    .equals(workoutId)
-    .filter((e) => !e.deleted_at)
-    .toArray();
-  for (const ex of exercises) {
-    const sets = (await db.workout_sets
-      .where("workout_exercise_id")
-      .equals(ex.id)
-      .filter((s) => !s.deleted_at)
-      .toArray()) as SetRow[];
-    for (const s of sets) {
-      if (!s.completed && s.weight_kg == null && s.reps == null) {
-        await saveRow(db, "workout_sets", { ...s, deleted_at: now() });
+  await db.transaction("rw", allTables(db), async () => {
+    const workout = (await db.workouts.get(workoutId)) as
+      WorkoutRow | undefined;
+    if (!workout) return;
+    const exercises = await db.workout_exercises
+      .where("workout_id")
+      .equals(workoutId)
+      .filter((e) => !e.deleted_at)
+      .toArray();
+    for (const ex of exercises) {
+      const sets = (await db.workout_sets
+        .where("workout_exercise_id")
+        .equals(ex.id)
+        .filter((s) => !s.deleted_at)
+        .toArray()) as SetRow[];
+      for (const s of sets) {
+        if (!s.completed && s.weight_kg == null && s.reps == null) {
+          await saveRow(db, "workout_sets", { ...s, deleted_at: now() });
+        }
       }
     }
-  }
-  await saveRow(db, "workouts", {
-    ...workout,
-    ended_at: workout.ended_at ?? now(),
+    await saveRow(db, "workouts", {
+      ...workout,
+      ended_at: workout.ended_at ?? now(),
+    });
   });
 }
 
@@ -141,31 +163,41 @@ export async function reopenWorkout(
   db: LocalDb,
   workoutId: string,
 ): Promise<void> {
-  const workout = (await db.workouts.get(workoutId)) as WorkoutRow | undefined;
-  if (workout) await saveRow(db, "workouts", { ...workout, ended_at: null });
+  await patchRow<WorkoutRow>(db, "workouts", workoutId, (w) => ({
+    ...w,
+    ended_at: null,
+  }));
 }
 
-// Sets of the most recent earlier workout that contained this exercise.
+// Sets of the most recent workout *before* this one that has this exercise with
+// at least one set. Uses the exercise_id index, so it stays fast with long histories.
 export async function lastPerformance(
   db: LocalDb,
   exerciseId: string,
-  excludeWorkoutId: string,
+  currentWorkoutId: string,
 ): Promise<SetRow[]> {
+  const current = (await db.workouts.get(currentWorkoutId)) as
+    WorkoutRow | undefined;
+  if (!current) return [];
   const rows = (await db.workout_exercises
-    .filter((e) => e.exercise_id === exerciseId && !e.deleted_at)
+    .where("exercise_id")
+    .equals(exerciseId)
     .toArray()) as WorkoutExerciseRow[];
-  let best: { ex: WorkoutExerciseRow; startedAt: string } | undefined;
+  const candidates: { ex: WorkoutExerciseRow; startedAt: string }[] = [];
   for (const ex of rows) {
-    if (ex.workout_id === excludeWorkoutId) continue;
+    if (ex.deleted_at || ex.workout_id === currentWorkoutId) continue;
     const w = (await db.workouts.get(ex.workout_id)) as WorkoutRow | undefined;
-    if (!w || w.deleted_at) continue;
-    if (!best || w.started_at > best.startedAt)
-      best = { ex, startedAt: w.started_at };
+    if (!w || w.deleted_at || w.started_at >= current.started_at) continue;
+    candidates.push({ ex, startedAt: w.started_at });
   }
-  if (!best) return [];
-  return (await db.workout_sets
-    .where("workout_exercise_id")
-    .equals(best.ex.id)
-    .filter((s) => !s.deleted_at)
-    .sortBy("position")) as SetRow[];
+  candidates.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  for (const { ex } of candidates) {
+    const sets = (await db.workout_sets
+      .where("workout_exercise_id")
+      .equals(ex.id)
+      .filter((s) => !s.deleted_at)
+      .sortBy("position")) as SetRow[];
+    if (sets.length) return sets;
+  }
+  return [];
 }
