@@ -1,6 +1,6 @@
 import { CATALOG, type CatalogExercise } from "./catalog";
 
-const normalize = (s: string) =>
+export const normalizeName = (s: string) =>
   s
     .toLowerCase()
     .normalize("NFD")
@@ -12,7 +12,7 @@ const normalize = (s: string) =>
 const index = new Map<string, CatalogExercise>();
 for (const ex of CATALOG) {
   for (const label of [ex.name, ex.id.replaceAll("-", " "), ...ex.aliases]) {
-    const key = normalize(label);
+    const key = normalizeName(label);
     if (key && !index.has(key)) index.set(key, ex);
   }
 }
@@ -20,16 +20,16 @@ for (const ex of CATALOG) {
 // Exact (normalized) match on name, id or alias. Used by the CSV importers;
 // unmatched names become custom exercises, so nothing is silently lost.
 export function matchExercise(name: string): CatalogExercise | undefined {
-  return index.get(normalize(name));
+  return index.get(normalizeName(name));
 }
 
 // Simple ranked search for the exercise picker.
 export function searchExercises(query: string, limit = 30): CatalogExercise[] {
-  const q = normalize(query);
+  const q = normalizeName(query);
   if (!q) return CATALOG.slice(0, limit);
   const scored: [number, CatalogExercise][] = [];
   for (const ex of CATALOG) {
-    const labels = [ex.name, ...ex.aliases].map(normalize);
+    const labels = [ex.name, ...ex.aliases].map(normalizeName);
     let score = 0;
     if (labels.some((l) => l === q)) score = 100;
     else if (labels.some((l) => l.startsWith(q))) score = 80;

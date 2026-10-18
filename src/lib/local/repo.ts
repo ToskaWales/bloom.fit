@@ -78,3 +78,27 @@ export async function patchRow<T extends WireRow>(
     await db.outbox.add({ table, id });
   });
 }
+
+// Bulk variant of saveRow: one transaction, rows queued for sync parents-first
+// (the table order given by `order`).
+export async function saveRows(
+  db: LocalDb,
+  items: { table: TableName; row: WireRow }[],
+  order: readonly TableName[],
+): Promise<void> {
+  const stamp = new Date().toISOString();
+  await db.transaction(
+    "rw",
+    [...order.map((t) => db[t]), db.outbox],
+    async () => {
+      for (const table of order) {
+        const rows = items
+          .filter((i) => i.table === table)
+          .map((i) => ({ ...i.row, updated_at: stamp }));
+        if (!rows.length) continue;
+        await db[table].bulkPut(rows);
+        await db.outbox.bulkAdd(rows.map((r) => ({ table, id: r.id })));
+      }
+    },
+  );
+}

@@ -141,6 +141,10 @@ export function TrainingHome() {
         </>
       )}
 
+      <Link href="/training/import" className="text-sm underline">
+        Training aus Hevy oder Strong importieren
+      </Link>
+
       <h2 className="mt-4 text-lg font-semibold">Verlauf</h2>
       {workouts === undefined ? (
         <p className="text-neutral-600">Lädt …</p>
