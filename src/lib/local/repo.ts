@@ -1,0 +1,54 @@
+import type { TableName, WireRow } from "@/lib/sync/tables";
+import type { LocalDb } from "./db";
+
+// Every local write also queues the row for sync, atomically.
+export async function saveRow(
+  db: LocalDb,
+  table: TableName,
+  row: WireRow,
+): Promise<void> {
+  const stamped = { ...row, updated_at: new Date().toISOString() };
+  await db.transaction("rw", db[table], db.outbox, async () => {
+    await db[table].put(stamped);
+    await db.outbox.add({ table, id: row.id });
+  });
+}
+
+export async function softDelete(
+  db: LocalDb,
+  table: TableName,
+  id: string,
+): Promise<void> {
+  const row = await db[table].get(id);
+  if (!row) return;
+  await saveRow(db, table, { ...row, deleted_at: new Date().toISOString() });
+}
+
+export async function softDeleteWorkout(
+  db: LocalDb,
+  workoutId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const exercises = await db.workout_exercises
+    .where("workout_id")
+    .equals(workoutId)
+    .toArray();
+  for (const ex of exercises) {
+    const sets = await db.workout_sets
+      .where("workout_exercise_id")
+      .equals(ex.id)
+      .toArray();
+    for (const s of sets)
+      await saveRow(db, "workout_sets", {
+        ...s,
+        deleted_at: s.deleted_at ?? now,
+      });
+    await saveRow(db, "workout_exercises", {
+      ...ex,
+      deleted_at: ex.deleted_at ?? now,
+    });
+  }
+  const w = await db.workouts.get(workoutId);
+  if (w)
+    await saveRow(db, "workouts", { ...w, deleted_at: w.deleted_at ?? now });
+}
