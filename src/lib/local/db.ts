@@ -19,6 +19,9 @@ export type LocalDb = Dexie & {
   workout_sets: EntityTable<WireRow, "id">;
   templates: EntityTable<WireRow, "id">;
   template_exercises: EntityTable<WireRow, "id">;
+  checkins: EntityTable<WireRow, "id">;
+  bodyweight_entries: EntityTable<WireRow, "id">;
+  cycle_events: EntityTable<WireRow, "id">;
   outbox: EntityTable<OutboxEntry, "seq">;
   meta: EntityTable<MetaEntry, "key">;
 };
@@ -37,6 +40,11 @@ export function createLocalDb(name = "bloom"): LocalDb {
     workout_exercises: "id, workout_id, exercise_id, updated_at",
     templates: "id, updated_at",
     template_exercises: "id, template_id, updated_at",
+  });
+  db.version(3).stores({
+    checkins: "id, day, updated_at",
+    bodyweight_entries: "id, day, updated_at",
+    cycle_events: "id, day, kind, updated_at",
   });
   return db;
 }

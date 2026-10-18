@@ -13,7 +13,8 @@ begin
     raise exception 'refusing to purge rows younger than 7 days';
   end if;
   -- parents first; their children go with them (on delete cascade)
-  foreach t in array array['workouts', 'templates', 'workout_exercises', 'template_exercises', 'workout_sets'] loop
+  foreach t in array array['workouts', 'templates', 'workout_exercises', 'template_exercises', 'workout_sets',
+                          'checkins', 'bodyweight_entries', 'cycle_events'] loop
     execute format('delete from public.%I where deleted_at is not null and deleted_at < $1', t) using cutoff;
     get diagnostics n = row_count;
     removed := removed + n;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SYMPTOMS } from "@/lib/daily/symptoms";
 
 // Parents first: children reference them with foreign keys.
 export const TABLES = [
@@ -8,6 +9,9 @@ export const TABLES = [
   "workout_sets",
   "templates",
   "template_exercises",
+  "checkins",
+  "bodyweight_entries",
+  "cycle_events",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
@@ -71,6 +75,30 @@ export const pushSchemas = {
     exercise_id: z.string().min(1).max(64),
     position: z.number().int().min(0),
     set_count: z.number().int().min(1).max(20),
+    deleted_at: ts.nullable(),
+  }),
+  checkins: z.object({
+    id,
+    day: z.iso.date(),
+    sleep_quality: z.number().int().min(1).max(5).nullable(),
+    sleep_hours: z.number().min(0).max(24).nullable(),
+    energy: z.number().int().min(1).max(5).nullable(),
+    motivation: z.number().int().min(1).max(5).nullable(),
+    hunger: z.number().int().min(1).max(5).nullable(),
+    symptoms: z.array(z.enum(SYMPTOMS)).max(12),
+    note: nullableText(1000),
+    deleted_at: ts.nullable(),
+  }),
+  bodyweight_entries: z.object({
+    id,
+    day: z.iso.date(),
+    weight_kg: z.number().min(30).max(300),
+    deleted_at: ts.nullable(),
+  }),
+  cycle_events: z.object({
+    id,
+    kind: z.enum(["period_start", "period_end", "ovulation_test_positive"]),
+    day: z.iso.date(),
     deleted_at: ts.nullable(),
   }),
 } satisfies Record<TableName, z.ZodType>;

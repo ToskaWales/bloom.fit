@@ -10,18 +10,8 @@ import type {
 import { TABLES, type TableName, type WireRow } from "@/lib/sync/tables";
 import type { ImportedWorkout } from "./parsers";
 
-// Stable ids: the same exported workout always maps to the same row ids, so
-// re-importing a file can never create duplicates (here or after syncing).
-export async function deterministicUuid(key: string): Promise<string> {
-  const digest = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)),
-  );
-  const b = digest.slice(0, 16);
-  b[6] = (b[6] & 0x0f) | 0x50; // version 5 layout
-  b[8] = (b[8] & 0x3f) | 0x80; // RFC 4122 variant
-  const hex = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
+export { deterministicUuid } from "@/lib/ids";
+import { deterministicUuid } from "@/lib/ids";
 
 export interface ImportSummary {
   imported: number;

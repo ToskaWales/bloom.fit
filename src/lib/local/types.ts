@@ -41,3 +41,24 @@ export interface TemplateExerciseRow extends WireRow {
   position: number;
   set_count: number;
 }
+
+export interface CheckinRow extends WireRow {
+  day: string;
+  sleep_quality: number | null;
+  sleep_hours: number | null;
+  energy: number | null;
+  motivation: number | null;
+  hunger: number | null;
+  symptoms: string[];
+  note: string | null;
+}
+
+export interface WeightRow extends WireRow {
+  day: string;
+  weight_kg: number;
+}
+
+export interface CycleEventRow extends WireRow {
+  kind: "period_start" | "period_end" | "ovulation_test_positive";
+  day: string;
+}
