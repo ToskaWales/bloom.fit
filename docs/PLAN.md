@@ -55,3 +55,10 @@ Beirat DACH-Sportwissenschaft (z. B. DSHS Köln), prospektive Auswertung (Adhär
 ## Arbeitsweise
 
 `/plan` → Bestätigung → `/tdd` → `/verify` → `/code-review` → `/checkpoint`. Gesundheitsdaten-/Auth-Änderungen immer durch `security-reviewer`.
+
+## Vor dem öffentlichen Launch (aus Security-Review Phase 1a)
+
+- **Rate-Limit/Captcha** pro IP und Adresse für Login-Code, Warteliste, Code-Einlösung (Cloudflare Turnstile + Supabase-Captcha, Custom SMTP mit sinnvollen Limits). Aktuell nur Schutz durch Cooldowns pro Adresse.
+- Admin-Zugang an unveränderliche User-ID oder `app_metadata.role` + MFA binden (heute: bestätigte E-Mail in `ADMIN_EMAILS`).
+- Supabase „before user created“-Hook, falls die Login-Sperre auch gegen direkte API-Aufrufe wirken soll (heute nur Mail-Spam-Filter).
+- E2E-Tests (Playwright) für Login → Einladung → Onboarding → Export → Löschung gegen ein echtes Supabase-Testprojekt.

@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 
 // OAuth (Apple/Google) return target: exchange the PKCE code for a session.
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  // Same origin the OAuth flow was started from (PKCE cookie lives there).
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
   const code = searchParams.get("code");
   if (!code) return NextResponse.redirect(`${origin}/login?error=1`);
 

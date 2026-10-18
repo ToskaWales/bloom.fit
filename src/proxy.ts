@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hardenCookie } from "@/lib/supabase/cookie-options";
 
 // Refreshes the Supabase session cookie on every request and does an
 // optimistic redirect for signed-out visitors. Real authorization happens in
@@ -27,7 +28,7 @@ export async function proxy(request: NextRequest) {
           );
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, hardenCookie(options)),
           );
         },
       },
@@ -45,7 +46,9 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
   }
   return response;
 }

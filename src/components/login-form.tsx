@@ -37,6 +37,9 @@ export function LoginForm() {
           pendingLabel="Wird geprüft …"
         />
         {verified.status === "error" && <Notice>{verified.message}</Notice>}
+        <a href="/login" className="text-center text-sm underline">
+          Andere E-Mail-Adresse verwenden
+        </a>
       </form>
     );
   }

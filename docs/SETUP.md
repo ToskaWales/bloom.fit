@@ -63,4 +63,4 @@ Supabase Dashboard → Authentication.
 ## 8. Einladungen
 
 - `ADMIN_EMAILS` (kommagetrennt) in den Umgebungsvariablen setzen. Diese Adressen sehen `/admin`.
-- Einladen: `/admin` → Warteliste ankreuzen oder Adressen eingeben → „Einladungen senden“. Jede Einladung ist 14 Tage gültig, einmal einlösbar und an die Adresse gebunden (Login per E-Mail), der Link funktioniert zusätzlich für Apple/Google.
+- Einladen: `/admin` → Warteliste ankreuzen oder Adressen eingeben → „Einladungen senden“. Jede Einladung ist 14 Tage gültig, einmal einlösbar. Per E-Mail-Login wird die Einladung automatisch der Adresse zugeordnet. Der Code selbst ist ein Inhaber-Token: Wer ihn hat, kann ihn einlösen (nötig für Apple/Google mit anderer oder verborgener Adresse).

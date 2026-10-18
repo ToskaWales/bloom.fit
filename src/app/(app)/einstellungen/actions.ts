@@ -36,25 +36,29 @@ export async function updateCycle(
 export async function setProductMail(formData: FormData) {
   const { supabase, user } = await requireOnboarded();
   const wanted = formData.get("productMail") === "on";
-  const { data: active } = await supabase
+  const { data: active, error: readError } = await supabase
     .from("consents")
     .select("id")
     .eq("user_id", user.id)
     .eq("kind", "product_mail")
     .is("revoked_at", null);
+  if (readError) throw readError;
+
   if (wanted && !active?.length) {
-    await supabase.from("consents").insert({
+    const { error } = await supabase.from("consents").insert({
       user_id: user.id,
       kind: "product_mail",
       version: CONSENT_VERSIONS.product_mail,
     });
+    if (error) throw error;
   } else if (!wanted && active?.length) {
-    await supabase
+    const { error } = await supabase
       .from("consents")
       .update({ revoked_at: new Date().toISOString() })
       .eq("user_id", user.id)
       .eq("kind", "product_mail")
       .is("revoked_at", null);
+    if (error) throw error;
   }
   revalidatePath("/einstellungen");
 }
@@ -71,7 +75,22 @@ export async function deleteAccount(
   ) {
     return { error: "Bitte tippe zur Bestätigung LÖSCHEN." };
   }
-  const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
+  // Remove personal data that isn't linked by a cascading foreign key.
+  const admin = createAdminClient();
+  if (user.email) {
+    const email = user.email.toLowerCase();
+    const cleanup = await Promise.all([
+      admin.from("waitlist").delete().eq("email", email),
+      admin.from("invites").delete().eq("email", email),
+      admin.from("invites").delete().eq("redeemed_by", user.id),
+    ]);
+    if (cleanup.some((r) => r.error))
+      return {
+        error:
+          "Das Löschen hat nicht geklappt. Bitte versuche es später noch einmal.",
+      };
+  }
+  const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error)
     return {
       error:

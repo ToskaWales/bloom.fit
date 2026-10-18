@@ -11,8 +11,6 @@ import {
   goalsStep,
 } from "@/lib/onboarding/schema";
 
-const invalid: StepState = { error: "Bitte prüfe deine Angaben." };
-
 export async function saveGoals(
   _prev: StepState,
   formData: FormData,
@@ -115,11 +113,15 @@ export async function saveConsents(
     "health_data" as const,
     ...(parsed.data.productMail ? (["product_mail"] as const) : []),
   ];
-  const { data: active } = await supabase
+  const { data: active, error: readError } = await supabase
     .from("consents")
     .select("kind")
     .eq("user_id", user.id)
     .is("revoked_at", null);
+  if (readError)
+    return {
+      error: "Speichern hat nicht geklappt. Bitte versuche es noch einmal.",
+    };
   const have = new Set((active ?? []).map((c) => c.kind));
   const missing = wanted.filter((k) => !have.has(k));
   if (missing.length) {
@@ -139,6 +141,12 @@ export async function saveConsents(
     .from("profiles")
     .update({ onboarding_completed_at: new Date().toISOString() })
     .eq("id", user.id);
-  if (error) return invalid;
+  if (error) {
+    return {
+      error: /profile incomplete/.test(error.message)
+        ? "Bitte schließe zuerst alle vorherigen Schritte ab."
+        : "Speichern hat nicht geklappt. Bitte versuche es noch einmal.",
+    };
+  }
   redirect("/app");
 }

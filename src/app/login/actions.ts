@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { redeemRememberedInvite } from "@/lib/invites/cookie";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,7 +14,7 @@ export type LoginState =
 
 const emailSchema = z.email().max(254);
 
-export async function signInWithProvider(provider: "google" | "apple") {
+async function startOAuth(provider: "google" | "apple") {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -26,13 +27,15 @@ export async function signInWithProvider(provider: "google" | "apple") {
 }
 
 export async function signInWithGoogle() {
-  await signInWithProvider("google");
+  await startOAuth("google");
 }
 export async function signInWithApple() {
-  await signInWithProvider("apple");
+  await startOAuth("apple");
 }
 
-// Always answers "code sent" so the form can't be used to find out who is invited.
+// Responds identically for every well-formed address: the gate check and the
+// mail send happen after the response, and errors are only logged, so neither
+// the answer nor its timing reveals who is invited.
 export async function requestCode(
   _prev: LoginState,
   formData: FormData,
@@ -49,27 +52,26 @@ export async function requestCode(
     };
   const email = parsed.data;
 
-  try {
-    const { data: allowed } = await createAdminClient().rpc(
-      "can_request_login",
-      { p_email: email },
-    );
-    if (allowed) {
-      const supabase = await createClient();
+  const supabase = await createClient();
+  after(async () => {
+    try {
+      const { data: allowed, error: gateError } = await createAdminClient().rpc(
+        "can_request_login",
+        {
+          p_email: email,
+        },
+      );
+      if (gateError) throw gateError;
+      if (!allowed) return;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
       });
       if (error) throw error;
+    } catch (err) {
+      console.error("login code request failed", err);
     }
-  } catch (err) {
-    console.error("login code request failed", err);
-    return {
-      status: "error",
-      message:
-        "Das hat leider nicht geklappt. Bitte versuche es später noch einmal.",
-    };
-  }
+  });
   return { status: "code_sent", email };
 }
 

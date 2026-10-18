@@ -6,7 +6,7 @@ import path from "node:path";
 // RLS policies can run against real Postgres semantics in-process.
 const SUPABASE_STUBS = `
   create schema auth;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text);
+  create table auth.users (id uuid primary key default gen_random_uuid(), email text, email_confirmed_at timestamptz);
   create function auth.uid() returns uuid language sql stable
     as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create role anon nologin;
@@ -29,10 +29,14 @@ export async function createTestDb(): Promise<PGlite> {
   return db;
 }
 
-export async function createUser(db: PGlite, email: string): Promise<string> {
+export async function createUser(
+  db: PGlite,
+  email: string,
+  confirmed = true,
+): Promise<string> {
   const res = await db.query<{ id: string }>(
-    "insert into auth.users (email) values ($1) returning id",
-    [email],
+    "insert into auth.users (email, email_confirmed_at) values ($1, case when $2::boolean then now() end) returning id",
+    [email, confirmed],
   );
   return res.rows[0].id;
 }

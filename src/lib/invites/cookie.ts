@@ -8,7 +8,7 @@ export const INVITE_COOKIE = "bloom_invite";
 export async function rememberInvite(code: string) {
   (await cookies()).set(INVITE_COOKIE, normalizeInviteCode(code), {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60,
     path: "/",

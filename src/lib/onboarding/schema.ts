@@ -19,6 +19,7 @@ export const CONSENT_VERSIONS = {
 
 export const lbsToKg = (lbs: number) =>
   Math.round(lbs * 0.45359237 * 100) / 100;
+export const kgToLbs = (kg: number) => Math.round((kg / 0.45359237) * 10) / 10;
 
 const checkbox = z.preprocess(
   (v) => v === "on" || v === true || v === "true",
@@ -26,23 +27,37 @@ const checkbox = z.preprocess(
 );
 
 export const goalsStep = z.object({
-  goals: z.array(z.enum(GOALS)).min(1),
+  goals: z
+    .array(z.enum(GOALS))
+    .min(1)
+    .transform((g) => [...new Set(g)]),
   trainingDays: z.coerce.number().int().min(1).max(7),
   experience: z.enum(EXPERIENCE),
 });
 
 const DAY_MS = 24 * 3600_000;
 
+// Calendar day in Germany, so entries around midnight aren't rejected as "future".
+const berlinDay = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(d);
+
+const isRealDate = (d: string) => {
+  const parsed = new Date(`${d}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === d
+  );
+};
+
 export function cycleStep(today: Date) {
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const max = iso(today);
-  const min = iso(new Date(today.getTime() - 366 * DAY_MS));
+  const max = berlinDay(today);
+  const min = berlinDay(new Date(today.getTime() - 366 * DAY_MS));
   return z
     .object({
       cycleMode: z.enum(CYCLE_MODES),
       lastPeriodStart: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .refine(isRealDate)
         .refine((d) => d <= max && d >= min)
         .optional(),
     })
@@ -55,6 +70,8 @@ export function cycleStep(today: Date) {
     }));
 }
 
+export { berlinDay };
+
 export const basicsStep = z
   .object({
     units: z.enum(UNITS),
@@ -63,9 +80,17 @@ export const basicsStep = z
   .transform((v, ctx) => {
     if (!v.startWeight)
       return { units: v.units, startWeightKg: null as number | null };
+    if (!/^\d{2,3}([.,]\d{1,2})?$/.test(v.startWeight)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "implausible weight",
+        path: ["startWeight"],
+      });
+      return z.NEVER;
+    }
     const n = Number(v.startWeight.replace(",", "."));
     const kg = v.units === "imperial" ? lbsToKg(n) : n;
-    if (!Number.isFinite(n) || kg < 30 || kg > 300) {
+    if (kg < 30 || kg > 300) {
       ctx.addIssue({
         code: "custom",
         message: "implausible weight",

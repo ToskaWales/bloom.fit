@@ -4,7 +4,8 @@ export function safeNext(next: string | null | undefined): string {
     !next ||
     !next.startsWith("/") ||
     next.startsWith("//") ||
-    next.includes("\\")
+    next.includes("\\") ||
+    /[\x00-\x1f\x7f]/.test(next)
   )
     return "/app";
   return next;

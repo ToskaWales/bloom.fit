@@ -4,6 +4,7 @@ import {
   consentStep,
   cycleStep,
   goalsStep,
+  kgToLbs,
   lbsToKg,
 } from "./schema";
 
@@ -47,6 +48,17 @@ describe("goalsStep", () => {
   });
 });
 
+describe("goalsStep extras", () => {
+  it("removes duplicate goals", () => {
+    const r = goalsStep.safeParse({
+      goals: ["muscle", "muscle"],
+      trainingDays: 3,
+      experience: "lt1y",
+    });
+    expect(r.success && r.data.goals).toEqual(["muscle"]);
+  });
+});
+
 describe("cycleStep", () => {
   const today = new Date("2026-11-10T12:00:00Z");
   it("accepts a mode without a date", () => {
@@ -82,6 +94,30 @@ describe("cycleStep", () => {
     });
     expect(r.success && r.data.lastPeriodStart).toBeNull();
   });
+  it("rejects impossible calendar dates", () => {
+    expect(
+      cycleStep(today).safeParse({
+        cycleMode: "natural",
+        lastPeriodStart: "2026-02-31",
+      }).success,
+    ).toBe(false);
+  });
+  it("uses the German calendar day, so late-evening UTC entries on 'today' are accepted", () => {
+    // 23:30 UTC on Nov 10 is already Nov 11 in Berlin (UTC+1)
+    const lateUtc = new Date("2026-11-10T23:30:00Z");
+    expect(
+      cycleStep(lateUtc).safeParse({
+        cycleMode: "natural",
+        lastPeriodStart: "2026-11-11",
+      }).success,
+    ).toBe(true);
+    expect(
+      cycleStep(lateUtc).safeParse({
+        cycleMode: "natural",
+        lastPeriodStart: "2026-11-12",
+      }).success,
+    ).toBe(false);
+  });
   it("rejects unknown modes (no phase presets)", () => {
     expect(
       cycleStep(today).safeParse({ cycleMode: "phase_synced" }).success,
@@ -99,6 +135,22 @@ describe("basicsStep", () => {
   it("treats weight as optional", () => {
     const r = basicsStep.safeParse({ units: "metric", startWeight: "" });
     expect(r.success && r.data.startWeightKg).toBeNull();
+  });
+  it("round-trips lbs <-> kg for the form default", () => {
+    expect(kgToLbs(lbsToKg(150))).toBeCloseTo(150, 1);
+    const kg = basicsStep.safeParse({
+      units: "imperial",
+      startWeight: String(kgToLbs(68.04)),
+    });
+    expect(kg.success && kg.data.startWeightKg).toBeCloseTo(68.04, 1);
+  });
+  it("rejects exponent/hex notation", () => {
+    expect(
+      basicsStep.safeParse({ units: "metric", startWeight: "1e2" }).success,
+    ).toBe(false);
+    expect(
+      basicsStep.safeParse({ units: "metric", startWeight: "0x50" }).success,
+    ).toBe(false);
   });
   it("rejects implausible weights", () => {
     expect(

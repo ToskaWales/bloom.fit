@@ -10,6 +10,8 @@ beforeEach(async () => {
 
 const q = (sql: string, params: unknown[] = []) =>
   db.query<Record<string, unknown>>(sql, params);
+const grantAccess = (id: string) =>
+  q("update profiles set access_granted_at = now() where id = $1", [id]);
 
 describe("profile creation and invite gate", () => {
   it("creates a pending profile for uninvited users", async () => {
@@ -85,6 +87,19 @@ describe("profile creation and invite gate", () => {
     expect(r.rows[0].ok).toBe(true);
   });
 
+  it("rejects expired codes and anonymous callers", async () => {
+    await q(
+      "insert into invites (code_hash, expires_at) values (encode(sha256(convert_to('OLD-CODE', 'UTF8')), 'hex'), now() - interval '1 day')",
+    );
+    const id = await createUser(db, "z@example.com");
+    const expired = await asUser(db, id, () =>
+      q("select redeem_invite('OLD-CODE') as ok"),
+    );
+    expect(expired.rows[0].ok).toBe(false);
+    const anon = await q("select redeem_invite('OLD-CODE') as ok");
+    expect(anon.rows[0].ok).toBe(false);
+  });
+
   it("rejects wrong codes", async () => {
     const id = await createUser(db, "z@example.com");
     const r = await asUser(db, id, () =>
@@ -127,6 +142,8 @@ describe("row level security", () => {
   it("consents are private, insert-only for the owner, revocable", async () => {
     const a = await createUser(db, "a@example.com");
     const b = await createUser(db, "b@example.com");
+    await grantAccess(a);
+    await grantAccess(b);
     await asUser(db, a, () =>
       q(
         "insert into consents (user_id, kind, version) values ($1, 'terms', '2026-11')",
@@ -156,6 +173,7 @@ describe("row level security", () => {
 
   it("allows only one active consent per kind", async () => {
     const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
     await asUser(db, a, () =>
       q(
         "insert into consents (user_id, kind, version) values ($1, 'terms', 'v1')",
@@ -173,9 +191,159 @@ describe("row level security", () => {
   });
 });
 
+describe("hardening", () => {
+  it("uninvited users cannot write profile data or consents through the API", async () => {
+    const a = await createUser(db, "a@example.com");
+    const upd = await asUser(db, a, () =>
+      q(
+        "update profiles set cycle_mode = 'natural' where id = $1 returning id",
+        [a],
+      ),
+    );
+    expect(upd.rows).toHaveLength(0);
+    await expect(
+      asUser(db, a, () =>
+        q(
+          "insert into consents (user_id, kind, version) values ($1, 'terms', 'v1')",
+          [a],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/);
+    // but they can still read their own pending profile (needed for /einladung)
+    const seen = await asUser(db, a, () => q("select id from profiles"));
+    expect(seen.rows).toHaveLength(1);
+  });
+
+  it("consent timestamps are server-controlled", async () => {
+    const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
+    await expect(
+      asUser(db, a, () =>
+        q(
+          "insert into consents (user_id, kind, version, granted_at) values ($1, 'terms', 'v1', '2000-01-01')",
+          [a],
+        ),
+      ),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(db, a, () =>
+        q(
+          "insert into consents (user_id, kind, version, revoked_at) values ($1, 'terms', 'v1', now())",
+          [a],
+        ),
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("revocation is final, server-timestamped and cannot be undone", async () => {
+    const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
+    await asUser(db, a, () =>
+      q(
+        "insert into consents (user_id, kind, version) values ($1, 'product_mail', 'v1')",
+        [a],
+      ),
+    );
+    await asUser(db, a, () =>
+      q(
+        "update consents set revoked_at = '2000-01-01' where user_id = $1 and kind = 'product_mail'",
+        [a],
+      ),
+    );
+    const { rows } = await q(
+      "select revoked_at > now() - interval '1 minute' as fresh from consents",
+    );
+    expect(rows[0].fresh).toBe(true);
+    await expect(
+      asUser(db, a, () =>
+        q("update consents set revoked_at = null where user_id = $1", [a]),
+      ),
+    ).rejects.toThrow(/already revoked/);
+  });
+
+  it("revoking health-data consent ends onboarding", async () => {
+    const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
+    await q(
+      `update profiles set goals = '{muscle}', training_days = 4, experience = '1to3y',
+         cycle_mode = 'natural', basics_completed_at = now() where id = $1`,
+      [a],
+    );
+    await asUser(db, a, () =>
+      q(
+        "insert into consents (user_id, kind, version) values ($1, 'terms', 'v1'), ($1, 'health_data', 'v1')",
+        [a],
+      ),
+    );
+    await asUser(db, a, () =>
+      q("update profiles set onboarding_completed_at = now() where id = $1", [
+        a,
+      ]),
+    );
+    await asUser(db, a, () =>
+      q(
+        "update consents set revoked_at = now() where user_id = $1 and kind = 'health_data'",
+        [a],
+      ),
+    );
+    const { rows } = await q(
+      "select onboarding_completed_at from profiles where id = $1",
+      [a],
+    );
+    expect(rows[0].onboarding_completed_at).toBeNull();
+  });
+
+  it("does not burn a code for users who already have access", async () => {
+    await q(
+      "insert into invites (email, code_hash, expires_at) values ('a@example.com', 'hh', now() + interval '1 day')",
+    );
+    const a = await createUser(db, "a@example.com"); // auto-granted via email invite
+    await q(
+      "insert into invites (code_hash, expires_at) values (encode(sha256(convert_to('KEEP-ME-SAFE-1234', 'UTF8')), 'hex'), now() + interval '1 day')",
+    );
+    const r = await asUser(db, a, () =>
+      q("select redeem_invite('KEEP-ME-SAFE-1234') as ok"),
+    );
+    expect(r.rows[0].ok).toBe(false);
+    const inv = await q("select redeemed_at from invites where email is null");
+    expect(inv.rows[0].redeemed_at).toBeNull();
+  });
+
+  it("only auto-grants access once the email is verified", async () => {
+    await q(
+      "insert into invites (email, code_hash, expires_at) values ('new@example.com', 'hx', now() + interval '1 day')",
+    );
+    const id = await createUser(db, "new@example.com", false);
+    expect(
+      (await q("select access_granted_at from profiles where id = $1", [id]))
+        .rows[0].access_granted_at,
+    ).toBeNull();
+    await q("update auth.users set email_confirmed_at = now() where id = $1", [
+      id,
+    ]);
+    expect(
+      (await q("select access_granted_at from profiles where id = $1", [id]))
+        .rows[0].access_granted_at,
+    ).not.toBeNull();
+    expect(
+      (await q("select redeemed_by from invites where code_hash = 'hx'"))
+        .rows[0].redeemed_by,
+    ).toBe(id);
+  });
+});
+
 describe("onboarding completion", () => {
+  const fillProfile = (id: string) =>
+    q(
+      `update profiles set goals = '{muscle}', training_days = 4, experience = '1to3y',
+         cycle_mode = 'natural', basics_completed_at = now() where id = $1`,
+      [id],
+    );
+
   it("requires active terms and health_data consent", async () => {
     const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
+    await fillProfile(a);
     await expect(
       asUser(db, a, () =>
         q("update profiles set onboarding_completed_at = now() where id = $1", [
@@ -198,8 +366,27 @@ describe("onboarding completion", () => {
     expect(ok.rows).toHaveLength(1);
   });
 
+  it("requires a complete profile (no skipping steps)", async () => {
+    const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
+    await asUser(db, a, () =>
+      q(
+        "insert into consents (user_id, kind, version) values ($1, 'terms', 'v1'), ($1, 'health_data', 'v1')",
+        [a],
+      ),
+    );
+    await expect(
+      asUser(db, a, () =>
+        q("update profiles set onboarding_completed_at = now() where id = $1", [
+          a,
+        ]),
+      ),
+    ).rejects.toThrow(/profile incomplete/);
+  });
+
   it("validates goals and cycle mode", async () => {
     const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
     await expect(
       asUser(db, a, () =>
         q("update profiles set goals = '{weightloss}' where id = $1", [a]),
@@ -216,6 +403,7 @@ describe("onboarding completion", () => {
 describe("account deletion", () => {
   it("cascades to profile and consents", async () => {
     const a = await createUser(db, "a@example.com");
+    await grantAccess(a);
     await asUser(db, a, () =>
       q(
         "insert into consents (user_id, kind, version) values ($1, 'terms', 'v1')",

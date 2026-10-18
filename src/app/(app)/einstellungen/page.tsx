@@ -1,6 +1,7 @@
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page, secondaryButtonClass } from "@/components/ui";
 import { requireOnboarded } from "@/lib/auth/dal";
+import { berlinDay } from "@/lib/onboarding/schema";
 import { deleteAccount, setProductMail, updateCycle } from "./actions";
 
 export const metadata = {
@@ -50,6 +51,7 @@ export default async function Settings() {
             <input
               type="date"
               name="lastPeriodStart"
+              max={berlinDay(new Date())}
               defaultValue={profile.last_period_start ?? ""}
               className={inputClass}
             />

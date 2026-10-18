@@ -12,6 +12,8 @@ describe("safeNext", () => {
       "//evil.com",
       "/\\evil.com",
       "javascript:alert(1)",
+      "/\t/evil.com",
+      "/a\r\nSet-Cookie:x",
       "",
       null,
       undefined,

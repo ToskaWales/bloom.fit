@@ -1,12 +1,21 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
 import { Notice, Page, secondaryButtonClass } from "@/components/ui";
+import { createClient } from "@/lib/supabase/server";
 import { signInWithApple, signInWithGoogle } from "./actions";
 
 export const metadata = {
   title: "Einloggen – Bloom",
   robots: { index: false },
 };
+
+async function RedirectIfSignedIn() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (data.user) redirect("/app");
+  return null;
+}
 
 async function Messages({
   searchParams,
@@ -35,6 +44,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         Bloom ist aktuell nur mit Einladung nutzbar.
       </p>
       <Suspense>
+        <RedirectIfSignedIn />
         <Messages searchParams={searchParams} />
       </Suspense>
       <div className="flex flex-col gap-3">

@@ -2,6 +2,12 @@ import { notFound, redirect } from "next/navigation";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page } from "@/components/ui";
 import { requireInvited, type Profile } from "@/lib/auth/dal";
+import {
+  nextStep,
+  STEP_ORDER,
+  type OnboardingStep,
+} from "@/lib/onboarding/next-step";
+import { berlinDay, kgToLbs } from "@/lib/onboarding/schema";
 import { saveBasics, saveConsents, saveCycle, saveGoals } from "../actions";
 
 export const metadata = {
@@ -9,8 +15,8 @@ export const metadata = {
   robots: { index: false },
 };
 
-const STEPS = ["ziele", "zyklus", "basis", "einwilligung"] as const;
-type Step = (typeof STEPS)[number];
+const STEPS = STEP_ORDER;
+type Step = OnboardingStep;
 
 const radio =
   "flex items-start gap-2 rounded-xl border border-neutral-200 bg-white p-3 text-sm font-normal";
@@ -118,6 +124,7 @@ function Cycle({ profile }: { profile: Profile }) {
         <input
           type="date"
           name="lastPeriodStart"
+          max={berlinDay(new Date())}
           defaultValue={profile.last_period_start ?? ""}
           className={inputClass}
         />
@@ -159,7 +166,13 @@ function Basics({ profile }: { profile: Profile }) {
         <input
           name="startWeight"
           inputMode="decimal"
-          defaultValue={profile.start_weight_kg ?? ""}
+          defaultValue={
+            profile.start_weight_kg == null
+              ? ""
+              : profile.units === "imperial"
+                ? kgToLbs(profile.start_weight_kg)
+                : profile.start_weight_kg
+          }
           className={inputClass}
         />
       </Field>
@@ -229,8 +242,11 @@ export default async function OnboardingStep({
   const { step } = await params;
   if (!STEPS.includes(step as Step)) notFound();
   const { profile } = await requireInvited();
-  if (profile.onboarding_completed_at) redirect("/app");
+  const next = nextStep(profile);
+  if (next === null) redirect("/app");
   const index = STEPS.indexOf(step as Step);
+  // Steps can't be skipped: send the user to the first incomplete one.
+  if (index > STEPS.indexOf(next)) redirect(`/onboarding/${next}`);
 
   return (
     <Page title={TITLES[step as Step]}>

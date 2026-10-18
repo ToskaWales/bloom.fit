@@ -8,8 +8,7 @@ export const metadata = {
   robots: { index: false },
 };
 
-export default async function AdminPage() {
-  await requireAdmin();
+async function loadInviteData() {
   const db = createAdminClient();
   const [{ data: waitlist }, { data: invites }] = await Promise.all([
     db
@@ -17,17 +16,32 @@ export default async function AdminPage() {
       .select("email, variant, source, confirmed_at")
       .not("confirmed_at", "is", null)
       .order("confirmed_at"),
-    db.from("invites").select("email, redeemed_at"),
+    db.from("invites").select("email, redeemed_at, expires_at"),
   ]);
-  const invited = new Set((invites ?? []).map((i) => i.email));
-  const open = (waitlist ?? []).filter((w) => !invited.has(w.email));
-  const redeemed = (invites ?? []).filter((i) => i.redeemed_at).length;
+  // Expired, unredeemed invites don't count: those people can be invited again.
+  const now = Date.now();
+  const invited = new Set(
+    (invites ?? [])
+      .filter((i) => i.redeemed_at || new Date(i.expires_at).getTime() > now)
+      .map((i) => i.email),
+  );
+  return {
+    total: waitlist?.length ?? 0,
+    open: (waitlist ?? []).filter((w) => !invited.has(w.email)),
+    sent: invites?.length ?? 0,
+    redeemed: (invites ?? []).filter((i) => i.redeemed_at).length,
+  };
+}
+
+export default async function AdminPage() {
+  await requireAdmin();
+  const { total, open, sent, redeemed } = await loadInviteData();
 
   return (
     <Page title="Einladungen" narrow={false}>
       <p className="text-sm text-neutral-600">
-        {waitlist?.length ?? 0} bestätigte Wartelisten-Einträge ·{" "}
-        {invites?.length ?? 0} Einladungen verschickt · {redeemed} eingelöst
+        {total} bestätigte Wartelisten-Einträge · {sent} Einladungen verschickt
+        · {redeemed} eingelöst
       </p>
       <InviteForm waitlist={open} />
     </Page>

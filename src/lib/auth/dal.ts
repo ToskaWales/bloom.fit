@@ -12,6 +12,7 @@ export interface Profile {
   cycle_mode: "natural" | "hormonal" | "irregular" | "none" | null;
   last_period_start: string | null;
   start_weight_kg: number | null;
+  basics_completed_at: string | null;
   onboarding_completed_at: string | null;
   access_granted_at: string | null;
 }
@@ -34,7 +35,9 @@ async function loadProfile(
     .select("*")
     .eq("id", id)
     .single();
-  if (error || !data) redirect("/login");
+  // A signed-in user without a profile is a server-side inconsistency, not a
+  // reason to bounce them through /login (which would loop).
+  if (error || !data) throw new Error("Profile not found for signed-in user");
   return data as Profile;
 }
 
@@ -60,6 +63,6 @@ export async function requireOnboarded() {
 
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
-  if (!isAdmin(user.email)) redirect("/");
+  if (!user.email_confirmed_at || !isAdmin(user.email)) redirect("/");
   return { supabase, user };
 }
