@@ -21,23 +21,36 @@ export async function createTestDb(): Promise<PGlite> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
   const dir = path.resolve(__dirname, "../../supabase/migrations");
-  for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+  for (const file of readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
     await db.exec(readFileSync(path.join(dir, file), "utf8"));
   }
   return db;
 }
 
 export async function createUser(db: PGlite, email: string): Promise<string> {
-  const res = await db.query<{ id: string }>("insert into auth.users (email) values ($1) returning id", [email]);
+  const res = await db.query<{ id: string }>(
+    "insert into auth.users (email) values ($1) returning id",
+    [email],
+  );
   return res.rows[0].id;
 }
 
 // Run `fn` as an authenticated user (RLS enforced), then reset.
-export async function asUser<T>(db: PGlite, userId: string, fn: () => Promise<T>): Promise<T> {
-  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userId}', false);`);
+export async function asUser<T>(
+  db: PGlite,
+  userId: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await db.exec(
+    `set role authenticated; select set_config('request.jwt.claim.sub', '${userId}', false);`,
+  );
   try {
     return await fn();
   } finally {
-    await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`);
+    await db.exec(
+      `reset role; select set_config('request.jwt.claim.sub', '', false);`,
+    );
   }
 }
