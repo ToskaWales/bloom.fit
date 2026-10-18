@@ -12,6 +12,8 @@ async function Providers({ children }: { children: React.ReactNode }) {
     <LocalProvider
       userId={user.id}
       units={profile.units}
+      cycleMode={profile.cycle_mode}
+      hideWeight={profile.hide_weight}
       enabled={Boolean(profile.onboarding_completed_at)}
     >
       {children}
@@ -29,6 +31,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <Link href="/training" className="underline">
             Training
+          </Link>
+          <Link href="/verlauf" className="underline">
+            Verlauf
           </Link>
           <Link href="/einstellungen" className="underline">
             Einstellungen

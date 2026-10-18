@@ -98,3 +98,14 @@ export async function deleteAccount(
   await supabase.auth.signOut();
   return { done: true };
 }
+
+export async function setHideWeight(formData: FormData) {
+  const { supabase, user } = await requireOnboarded();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ hide_weight: formData.get("hideWeight") === "on" })
+    .eq("id", user.id);
+  if (error) throw error;
+  // The provider in the layout carries this flag, so refresh the whole layout.
+  revalidatePath("/", "layout");
+}

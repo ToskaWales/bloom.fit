@@ -9,6 +9,9 @@ const TRAINING_TABLES = [
   "workout_sets",
   "templates",
   "template_exercises",
+  "checkins",
+  "bodyweight_entries",
+  "cycle_events",
 ] as const;
 
 async function fetchAll(

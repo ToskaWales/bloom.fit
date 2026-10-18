@@ -6,7 +6,13 @@ const VERSION = "v2";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 3000;
-const CACHEABLE_PATHS = ["/app", "/training", "/training/session"];
+const CACHEABLE_PATHS = [
+  "/app",
+  "/training",
+  "/training/session",
+  "/verlauf",
+  "/zyklus",
+];
 const OFFLINE_FALLBACK = "/training";
 
 self.addEventListener("install", () => self.skipWaiting());

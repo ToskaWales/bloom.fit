@@ -17,3 +17,18 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Overview chart tokens. First three categorical slots of the validated palette
+   (blue, orange, aqua); the app has no dark theme, so there is a single set. */
+.viz-root {
+  --viz-surface: #ffffff;
+  --viz-grid: #ece9e6;
+  --viz-axis: #a8a29e;
+  --viz-text: #1c1917;
+  --viz-muted: #57534e;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --viz-period: #e11d48;
+  --viz-bar: #a8a29e;
+}

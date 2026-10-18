@@ -13,6 +13,7 @@ export interface Profile {
   last_period_start: string | null;
   start_weight_kg: number | null;
   basics_completed_at: string | null;
+  hide_weight: boolean;
   onboarding_completed_at: string | null;
   access_granted_at: string | null;
 }

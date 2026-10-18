@@ -17,12 +17,16 @@ import { clearPageCache } from "@/lib/local/wipe";
 import { syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
 
+export type CycleMode = "natural" | "hormonal" | "irregular" | "none" | null;
+
 export type SyncStatus = "idle" | "syncing" | "ok" | "error" | "unauthorized";
 
 interface LocalContextValue {
   db: LocalDb | null;
   userId: string;
   units: Units;
+  cycleMode: CycleMode;
+  hideWeight: boolean;
   status: SyncStatus;
   pending: number;
   online: boolean;
@@ -65,11 +69,15 @@ function subscribeOnline(callback: () => void) {
 export function LocalProvider({
   userId,
   units,
+  cycleMode,
+  hideWeight,
   enabled,
   children,
 }: {
   userId: string;
   units: Units;
+  cycleMode: CycleMode;
+  hideWeight: boolean;
   enabled: boolean;
   children: ReactNode;
 }) {
@@ -141,7 +149,13 @@ export function LocalProvider({
         // Let the worker fetch the offline pages and the scripts they need.
         registration.active?.postMessage({
           type: "warm",
-          paths: ["/training", "/training/session"],
+          paths: [
+            "/app",
+            "/training",
+            "/training/session",
+            "/verlauf",
+            "/zyklus",
+          ],
         });
       })
       .catch(() => {});
@@ -149,8 +163,28 @@ export function LocalProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ db, userId, units, status, pending, online, syncNow }),
-    [db, userId, units, status, pending, online, syncNow],
+    () => ({
+      db,
+      userId,
+      units,
+      cycleMode,
+      hideWeight,
+      status,
+      pending,
+      online,
+      syncNow,
+    }),
+    [
+      db,
+      userId,
+      units,
+      cycleMode,
+      hideWeight,
+      status,
+      pending,
+      online,
+      syncNow,
+    ],
   );
   return <LocalContext value={value}>{children}</LocalContext>;
 }
