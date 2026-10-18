@@ -64,3 +64,30 @@ Supabase Dashboard → Authentication.
 
 - `ADMIN_EMAILS` (kommagetrennt) in den Umgebungsvariablen setzen. Diese Adressen sehen `/admin`.
 - Einladen: `/admin` → Warteliste ankreuzen oder Adressen eingeben → „Einladungen senden“. Jede Einladung ist 14 Tage gültig, einmal einlösbar. Per E-Mail-Login wird die Einladung automatisch der Adresse zugeordnet. Der Code selbst ist ein Inhaber-Token: Wer ihn hat, kann ihn einlösen (nötig für Apple/Google mit anderer oder verborgener Adresse).
+
+## 9. Datenbank-Migrationen (Reihenfolge)
+
+Im Supabase SQL Editor nacheinander ausführen, jeweils nur einmal:
+
+1. `20261101000000_waitlist.sql` (schon eingespielt)
+2. `20261102000000_accounts.sql` (schon eingespielt)
+3. `20261103000000_login_gate.sql` (schon eingespielt)
+4. `20261104000000_training.sql` (Trainings-Log)
+5. `20261105000000_templates.sql` (Vorlagen)
+6. `20261106000000_purge_deleted.sql` (Aufräumfunktion für gelöschte Zeilen)
+
+Hinweis: `accounts.sql` wurde nach dem ersten Einspielen noch gehärtet (has_access-Sperre, Einwilligungen, Onboarding-Regeln). Wenn dein Projekt die frühe Version hat, setze die Konten-Tabellen zurück (solange noch keine echten Nutzerinnen existieren: `drop table public.consents, public.invites, public.profiles cascade;` plus die Funktionen und Trigger, oder das Projekt neu anlegen) und spiele 2 und 3 neu ein.
+
+### Gelöschte Daten endgültig entfernen
+
+Gelöschte Trainings bleiben 30 Tage als „weich gelöscht“ in der Datenbank, damit die Löschung alle Geräte erreicht. Danach sollen sie verschwinden. Plane das täglich ein (Supabase → Database → Extensions → `pg_cron` aktivieren):
+
+```sql
+select cron.schedule('purge-deleted-rows', '0 3 * * *', 'select public.purge_deleted_rows(30)');
+```
+
+Ein Gerät, das länger als 30 Tage offline war, könnte gelöschte Einträge sonst wieder hochladen.
+
+## 10. Training importieren
+
+Unter `/training/import` lässt sich der CSV-Export aus Hevy oder Strong laden. Das Format wurde nach der dokumentierten Struktur gebaut und mit nachgebauten Beispieldateien getestet. Mit echten Exports bitte einmal gegenprüfen.
