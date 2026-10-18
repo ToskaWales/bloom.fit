@@ -6,7 +6,16 @@ import { useRouter } from "next/navigation";
 import { useLocal } from "@/components/local-provider";
 import { SyncStatus } from "@/components/training/sync-status";
 import { buttonClass } from "@/components/ui";
-import type { SetRow, WorkoutRow } from "@/lib/local/types";
+import type {
+  SetRow,
+  TemplateExerciseRow,
+  TemplateRow,
+  WorkoutRow,
+} from "@/lib/local/types";
+import {
+  deleteTemplate,
+  startWorkoutFromTemplate,
+} from "@/lib/local/templates";
 import { startWorkout } from "@/lib/local/workouts";
 import { summarize } from "@/lib/workout/stats";
 import { formatWeight, weightLabel } from "@/lib/workout/units";
@@ -41,6 +50,25 @@ export function TrainingHome() {
     );
   }, [db]);
 
+  const templates = useLiveQuery(async () => {
+    if (!db) return [];
+    const rows = (await db.templates
+      .filter((t) => !t.deleted_at)
+      .toArray()) as TemplateRow[];
+    return Promise.all(
+      rows
+        .sort((a, b) => a.name.localeCompare(b.name, "de"))
+        .map(async (t) => ({
+          template: t,
+          exercises: (await db.template_exercises
+            .where("template_id")
+            .equals(t.id)
+            .filter((e) => !e.deleted_at)
+            .toArray()) as TemplateExerciseRow[],
+        })),
+    );
+  }, [db]);
+
   const running = workouts?.find((w) => !w.workout.ended_at);
 
   return (
@@ -69,6 +97,48 @@ export function TrainingHome() {
         >
           Training starten
         </button>
+      )}
+
+      {templates && templates.length > 0 && (
+        <>
+          <h2 className="mt-4 text-lg font-semibold">Vorlagen</h2>
+          <ul className="flex flex-col gap-2">
+            {templates.map(({ template, exercises }) => (
+              <li
+                key={template.id}
+                className="flex items-center gap-2 rounded-2xl border border-neutral-200 bg-white p-4"
+              >
+                <div className="flex-1">
+                  <p className="font-medium">{template.name}</p>
+                  <p className="text-sm text-neutral-600">
+                    {exercises.length}{" "}
+                    {exercises.length === 1 ? "Übung" : "Übungen"}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!db) return;
+                    const w = await startWorkoutFromTemplate(db, template.id);
+                    router.push(`/training/session?id=${w.id}`);
+                  }}
+                  className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Starten
+                </button>
+                <button
+                  onClick={() => {
+                    if (db && confirm(`Vorlage „${template.name}“ löschen?`))
+                      deleteTemplate(db, template.id);
+                  }}
+                  className="text-sm text-neutral-500 underline"
+                  aria-label={`Vorlage ${template.name} löschen`}
+                >
+                  Löschen
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <h2 className="mt-4 text-lg font-semibold">Verlauf</h2>

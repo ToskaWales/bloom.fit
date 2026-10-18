@@ -10,7 +10,9 @@ import { SyncStatus } from "@/components/training/sync-status";
 import { buttonClass, inputClass, secondaryButtonClass } from "@/components/ui";
 import { getCatalogExercise } from "@/lib/exercises/catalog";
 import type { LocalDb } from "@/lib/local/db";
+import { prsForWorkout } from "@/lib/local/prs";
 import { softDeleteWorkout } from "@/lib/local/repo";
+import { saveWorkoutAsTemplate } from "@/lib/local/templates";
 import type {
   CustomExerciseRow,
   SetRow,
@@ -27,6 +29,7 @@ import {
   reopenWorkout,
   updateSet,
 } from "@/lib/local/workouts";
+import type { PrKind } from "@/lib/workout/prs";
 import { summarize } from "@/lib/workout/stats";
 import {
   formatWeight,
@@ -71,6 +74,11 @@ export function SessionView() {
     return summarize(sets);
   }, [db, exercises]);
 
+  const prs = useLiveQuery(
+    () => (db && id ? prsForWorkout(db, id) : new Map<string, PrKind[]>()),
+    [db, id],
+  );
+
   const onRest = useCallback((v: number | null) => setRestEndsAt(v), []);
 
   if (!id) return <Message>Kein Training ausgewählt.</Message>;
@@ -92,6 +100,9 @@ export function SessionView() {
           dateStyle: "medium",
           timeStyle: "short",
         })}
+        {prs && prs.size > 0
+          ? ` · 🏆 ${prs.size} ${prs.size === 1 ? "Bestleistung" : "Bestleistungen"}`
+          : ""}
         {totals
           ? ` · ${totals.workingSets} Arbeitssätze · ${formatWeight(totals.volumeKg, units) || 0} ${weightLabel(units)} Volumen`
           : ""}
@@ -104,6 +115,7 @@ export function SessionView() {
           exercise={ex}
           workoutId={workout.id}
           units={units}
+          prs={prs}
           onSetDone={() => {
             primeAudio();
             setRestEndsAt(Date.now() + REST_SECONDS * 1000);
@@ -139,6 +151,18 @@ export function SessionView() {
             Training beenden
           </button>
         )}
+        <button
+          onClick={async () => {
+            const name = prompt(
+              "Name der Vorlage",
+              workout.title || "Training",
+            );
+            if (name?.trim()) await saveWorkoutAsTemplate(db, workout.id, name);
+          }}
+          className="text-sm underline"
+        >
+          Als Vorlage speichern
+        </button>
         <button
           onClick={async () => {
             if (!confirm("Dieses Training endgültig löschen?")) return;
@@ -191,12 +215,14 @@ function ExerciseCard({
   exercise,
   workoutId,
   units,
+  prs,
   onSetDone,
 }: {
   db: LocalDb;
   exercise: WorkoutExerciseRow;
   workoutId: string;
   units: Units;
+  prs: Map<string, PrKind[]> | undefined;
   onSetDone: () => void;
 }) {
   const catalog = getCatalogExercise(exercise.exercise_id);
@@ -269,6 +295,18 @@ function ExerciseCard({
           />
         ))}
       </div>
+      {(sets ?? []).map((s, i) =>
+        prs?.has(s.id) ? (
+          <p key={`pr-${s.id}`} className="mt-2 text-sm text-amber-700">
+            🏆 Satz {i + 1}: neue Bestleistung (
+            {prs
+              .get(s.id)!
+              .map((k) => (k === "weight" ? "Gewicht" : "geschätztes 1RM"))
+              .join(" und ")}
+            )
+          </p>
+        ) : null,
+      )}
       <button
         onClick={() => addSet(db, exercise.id)}
         className="mt-3 w-full rounded-xl bg-neutral-100 py-2 text-sm font-medium"
