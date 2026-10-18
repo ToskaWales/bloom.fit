@@ -144,8 +144,9 @@ export function ImportView() {
               </li>
               {stats.unmatched.length > 0 && (
                 <li>
-                  {stats.unmatched.length} Übungen sind nicht im Bloom-Katalog
-                  und werden als eigene Übungen angelegt:{" "}
+                  {stats.unmatched.length === 1
+                    ? "1 Übung ist nicht im Bloom-Katalog und wird als eigene Übung angelegt:"
+                    : `${stats.unmatched.length} Übungen sind nicht im Bloom-Katalog und werden als eigene Übungen angelegt:`}{" "}
                   {stats.unmatched.slice(0, 12).join(", ")}
                   {stats.unmatched.length > 12 ? " …" : ""}
                 </li>
@@ -186,7 +187,7 @@ export function ImportView() {
         <Notice tone="info">
           {summary.imported} Trainings importiert ({summary.sets} Sätze
           {summary.customExercises
-            ? `, ${summary.customExercises} neue eigene Übungen`
+            ? `, ${summary.customExercises} neue eigene ${summary.customExercises === 1 ? "Übung" : "Übungen"}`
             : ""}
           )
           {summary.skippedExisting
