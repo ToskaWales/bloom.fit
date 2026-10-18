@@ -1,6 +1,16 @@
+import { summarizeCycle } from "@/lib/daily/cycle";
 import { addDays, localDay } from "@/lib/daily/day";
+import type { WeightPoint } from "@/lib/daily/weight";
 import { buildCandidates } from "@/lib/engine";
+import {
+  analyzePatterns,
+  type DayValue,
+  type PatternAnalysis,
+  type PatternMetric,
+} from "@/lib/engine/patterns";
+import { performanceSeries } from "@/lib/engine/performance";
 import type { ExerciseSession } from "@/lib/engine/plateau";
+import { evaluateSafety } from "@/lib/engine/safety";
 import type { ReadinessCheckin } from "@/lib/engine/readiness";
 import { selectSuggestions, type PastSuggestion } from "@/lib/engine/select";
 import { deterministicUuid } from "@/lib/ids";
@@ -9,16 +19,34 @@ import type { LocalDb } from "./db";
 import { patchRow, saveRow } from "./repo";
 import type {
   CheckinRow,
+  CycleEventRow,
   SetRow,
   SuggestionRow,
   SuggestionStatus,
+  WeightRow,
   WorkoutExerciseRow,
   WorkoutRow,
 } from "./types";
 
 const HISTORY_DAYS = 40; // check-ins the engine looks at (baseline is 28 days)
 const PAST_DAYS = 30; // earlier suggestions, for cooldowns
-const SESSION_DAYS = 400;
+const SESSION_DAYS = 180; // plateau looks 56 + 84 days back, patterns need a few earlier sessions
+const PATTERN_DAYS = 200; // check-ins for pattern detection: a handful of cycles
+const WEIGHT_DAYS = 60;
+
+// Engine kinds the refresh owns: it may remove its own stale hints, never others.
+const OWNED_KINDS = new Set(["readiness", "plateau", "pattern", "safety"]);
+
+const sameParams = (a: SuggestionRow["params"], b: SuggestionRow["params"]) => {
+  const ka = Object.keys(a).sort();
+  const kb = Object.keys(b).sort();
+  return (
+    ka.length === kb.length &&
+    ka.every(
+      (k, i) => k === kb[i] && JSON.stringify(a[k]) === JSON.stringify(b[k]),
+    )
+  );
+};
 
 // Best estimated 1RM per exercise and workout, over the last year, from local data.
 export async function exerciseSessionsFromDb(
@@ -33,7 +61,7 @@ export async function exerciseSessionsFromDb(
       .where("started_at")
       .aboveOrEqual(lower)
       .toArray()) as WorkoutRow[]
-  ).filter((w) => !w.deleted_at);
+  ).filter((w) => !w.deleted_at && w.ended_at !== null); // a running workout is not a session yet
   if (!workouts.length) return new Map();
   const dayOf = new Map(
     workouts.map((w) => [w.id, localDay(new Date(w.started_at))]),
@@ -53,7 +81,13 @@ export async function exerciseSessionsFromDb(
 
   const best = new Map<string, Map<string, number>>(); // exercise_id -> workout_id -> best e1RM
   for (const s of sets) {
-    if (s.deleted_at || !s.completed || s.set_type === "warmup") continue;
+    if (
+      s.deleted_at ||
+      !s.completed ||
+      s.set_type === "warmup" ||
+      (s.weight_kg ?? 0) <= 0
+    )
+      continue;
     const e1rm = estimateOneRepMax(s.weight_kg, s.reps);
     const ex = exerciseById.get(s.workout_exercise_id);
     if (e1rm === null || !ex) continue;
@@ -83,8 +117,10 @@ const queues = new WeakMap<LocalDb, Promise<unknown>>();
 interface RefreshOptions {
   userId: string;
   today: string;
-  /** A safety notice is active (set by the safety rules): never suggest doing more. */
-  safetyFlag?: boolean;
+  /** Cycle tracking mode: patterns and the safety rules need logged periods. */
+  cycleMode?: "natural" | "hormonal" | "irregular" | "none" | null;
+  /** Weight is never read when she hides it. */
+  hideWeight?: boolean;
 }
 
 // Runs the engine on this device's data and stores today's hints. Safe to call
@@ -102,24 +138,115 @@ export function refreshSuggestions(
   return run;
 }
 
-async function doRefresh(
+const SERIES: { metric: PatternMetric; key: keyof CheckinRow }[] = [
+  { metric: "energy", key: "energy" },
+  { metric: "motivation", key: "motivation" },
+  { metric: "sleep", key: "sleep_quality" },
+  { metric: "hunger", key: "hunger" },
+];
+
+export interface EngineData {
+  checkins: CheckinRow[];
+  starts: string[];
+  cycleEvents: CycleEventRow[];
+  weights: WeightPoint[];
+  exerciseSessions: Map<string, ExerciseSession[]>;
+}
+
+export async function loadEngineData(
   db: LocalDb,
-  { userId, today, safetyFlag = false }: RefreshOptions,
-): Promise<void> {
+  today: string,
+): Promise<EngineData> {
   const checkins = (
     (await db.checkins
       .where("day")
-      .between(addDays(today, -HISTORY_DAYS), today, true, true)
+      .between(addDays(today, -PATTERN_DAYS), today, true, true)
       .toArray()) as CheckinRow[]
+  ).filter((c) => !c.deleted_at);
+  const cycleEvents = (
+    (await db.cycle_events.toArray()) as CycleEventRow[]
+  ).filter((e) => !e.deleted_at);
+  const weights = (
+    (await db.bodyweight_entries
+      .where("day")
+      .between(addDays(today, -WEIGHT_DAYS), today, true, true)
+      .toArray()) as WeightRow[]
   )
-    .filter((c) => !c.deleted_at)
-    .map<ReadinessCheckin>((c) => ({
-      day: c.day,
-      energy: c.energy,
-      motivation: c.motivation,
-      sleep_quality: c.sleep_quality,
-    }));
-  const exerciseSessions = await exerciseSessionsFromDb(db, today);
+    .filter((w) => !w.deleted_at)
+    .map((w) => ({ day: w.day, kg: w.weight_kg }));
+  return {
+    checkins,
+    cycleEvents,
+    starts: cycleEvents
+      .filter((e) => e.kind === "period_start")
+      .map((e) => e.day),
+    weights,
+    exerciseSessions: await exerciseSessionsFromDb(db, today),
+  };
+}
+
+export function patternsFrom(data: EngineData, today: string): PatternAnalysis {
+  const series = {
+    performance: performanceSeries(data.exerciseSessions),
+  } as Record<PatternMetric, DayValue[]>;
+  for (const { metric, key } of SERIES) {
+    series[metric] = data.checkins.flatMap((c) =>
+      typeof c[key] === "number"
+        ? [{ day: c.day, value: c[key] as number }]
+        : [],
+    );
+  }
+  return analyzePatterns({ today, starts: data.starts, series });
+}
+
+// Everything the refresh reads, condensed to one string: when it changes the
+// engine runs again, otherwise nothing is recomputed.
+export async function engineSignature(
+  db: LocalDb,
+  today: string,
+): Promise<string> {
+  const latest = async (
+    table:
+      | "workouts"
+      | "workout_exercises"
+      | "workout_sets"
+      | "checkins"
+      | "cycle_events"
+      | "bodyweight_entries",
+  ) => {
+    const rows = (await db[table].toArray()) as { updated_at: string }[];
+    return `${rows.length}:${rows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), "")}`;
+  };
+  const parts = await Promise.all(
+    (
+      [
+        "workouts",
+        "workout_exercises",
+        "workout_sets",
+        "checkins",
+        "cycle_events",
+        "bodyweight_entries",
+      ] as const
+    ).map(latest),
+  );
+  return `${today}|${parts.join("|")}`;
+}
+
+async function doRefresh(
+  db: LocalDb,
+  { userId, today, cycleMode = null, hideWeight = false }: RefreshOptions,
+): Promise<void> {
+  const data = await loadEngineData(db, today);
+  const tracksCycle = cycleMode === "natural" || cycleMode === "irregular";
+  const safety = tracksCycle
+    ? evaluateSafety({
+        today,
+        cycle: summarizeCycle(data.cycleEvents, today),
+        checkins: data.checkins,
+        weights: hideWeight ? null : data.weights,
+      })
+    : null;
+  const patterns = tracksCycle ? patternsFrom(data, today) : null;
 
   const pastRows = (
     (await db.suggestions
@@ -135,7 +262,20 @@ async function doRefresh(
   }));
 
   const selected = selectSuggestions(
-    buildCandidates({ today, checkins, exerciseSessions, safetyFlag }),
+    buildCandidates({
+      today,
+      checkins: data.checkins
+        .filter((c) => c.day >= addDays(today, -HISTORY_DAYS))
+        .map<ReadinessCheckin>((c) => ({
+          day: c.day,
+          energy: c.energy,
+          motivation: c.motivation,
+          sleep_quality: c.sleep_quality,
+        })),
+      exerciseSessions: data.exerciseSessions,
+      patterns,
+      safety,
+    }),
     past,
     today,
   );
@@ -162,12 +302,7 @@ async function doRefresh(
 
     for (const { c, id } of wanted) {
       const row = existing.get(id);
-      if (
-        row &&
-        !row.deleted_at &&
-        JSON.stringify(row.params) === JSON.stringify(c.params)
-      )
-        continue; // unchanged
+      if (row && !row.deleted_at && sameParams(row.params, c.params)) continue; // unchanged
       await saveRow(db, "suggestions", {
         id,
         kind: c.kind,
@@ -179,9 +314,14 @@ async function doRefresh(
         deleted_at: null,
       } satisfies SuggestionRow);
     }
-    // a hint the data no longer supports (e.g. today's check-in was removed) goes away unless she reacted to it
+    // a hint the data no longer supports goes away, unless she reacted to it or it is not the engine's
     for (const row of existing.values()) {
-      if (!keep.has(row.id) && !row.deleted_at && row.status === "shown") {
+      if (
+        !keep.has(row.id) &&
+        !row.deleted_at &&
+        row.status === "shown" &&
+        OWNED_KINDS.has(row.kind)
+      ) {
         await saveRow(db, "suggestions", {
           ...row,
           deleted_at: new Date().toISOString(),

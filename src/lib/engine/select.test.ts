@@ -83,4 +83,103 @@ describe("selectSuggestions", () => {
       readiness,
     ]);
   });
+
+  it("lets a third plateau through once the first two are in cooldown", () => {
+    const third: Candidate = {
+      kind: "plateau",
+      subject: "pull-up",
+      params: {},
+    };
+    const past: PastSuggestion[] = [
+      {
+        kind: "plateau",
+        subject: "barbell-bench-press",
+        day: "2026-10-25",
+        status: "shown",
+      },
+      {
+        kind: "plateau",
+        subject: "barbell-back-squat",
+        day: "2026-10-25",
+        status: "shown",
+      },
+    ];
+    expect(
+      selectSuggestions([plateauBench, plateauSquat, third], past, today),
+    ).toEqual([third]);
+  });
+
+  it("shows at most one plateau per day", () => {
+    expect(selectSuggestions([plateauBench, plateauSquat], [], today)).toEqual([
+      plateauBench,
+    ]);
+  });
+
+  it("keeps the cooldown per readiness level: dismissing 'higher' does not silence 'lower'", () => {
+    const lower: Candidate = {
+      kind: "readiness",
+      subject: "lower",
+      params: {},
+    };
+    const dismissedHigher: PastSuggestion = {
+      kind: "readiness",
+      subject: "higher",
+      day: "2026-10-28",
+      status: "dismissed",
+    };
+    expect(selectSuggestions([lower], [dismissedHigher], today)).toEqual([
+      lower,
+    ]);
+  });
+
+  it("is allowed again exactly 14 days after a dismissal, not on day 13", () => {
+    const d = (day: string): PastSuggestion => ({
+      kind: "readiness",
+      subject: "lower",
+      day,
+      status: "dismissed",
+    });
+    const lower: Candidate = {
+      kind: "readiness",
+      subject: "lower",
+      params: {},
+    };
+    expect(selectSuggestions([lower], [d("2026-10-17")], today)).toEqual([]); // 13 days ago
+    expect(selectSuggestions([lower], [d("2026-10-16")], today)).toEqual([
+      lower,
+    ]); // 14 days ago
+  });
+
+  it("keeps a safety notice quiet for a week after she marked it as read, but not after a dismissal", () => {
+    const read: PastSuggestion = {
+      kind: "safety",
+      subject: "",
+      day: "2026-10-27",
+      status: "accepted",
+    };
+    expect(selectSuggestions([safety], [read], today)).toEqual([]);
+    expect(
+      selectSuggestions([safety], [{ ...read, day: "2026-10-22" }], today),
+    ).toEqual([safety]); // 8 days ago
+  });
+
+  it("raises a pattern for the same finding at most once every four weeks", () => {
+    const pattern: Candidate = {
+      kind: "pattern",
+      subject: "energy:before",
+      params: {},
+    };
+    const shown = (day: string): PastSuggestion => ({
+      kind: "pattern",
+      subject: "energy:before",
+      day,
+      status: "accepted",
+    });
+    expect(selectSuggestions([pattern], [shown("2026-10-10")], today)).toEqual(
+      [],
+    ); // 20 days
+    expect(selectSuggestions([pattern], [shown("2026-10-01")], today)).toEqual([
+      pattern,
+    ]); // 29 days
+  });
 });

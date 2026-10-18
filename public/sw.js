@@ -2,7 +2,7 @@
 // - /_next/static assets: cache-first (content-hashed, immutable)
 // - an explicit allowlist of app pages: network-first, falling back to the last
 //   cached copy. Nothing else (settings, admin, data export, API, auth) is cached.
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 3000;
@@ -12,6 +12,7 @@ const CACHEABLE_PATHS = [
   "/training/session",
   "/verlauf",
   "/zyklus",
+  "/muster",
 ];
 const OFFLINE_FALLBACK = "/training";
 

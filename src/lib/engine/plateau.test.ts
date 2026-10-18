@@ -105,4 +105,31 @@ describe("detectPlateau", () => {
     ];
     expect(detectPlateau(sessions, today)).not.toBeNull();
   });
+
+  it("compares with the weeks before the recent sessions, not with an old record", () => {
+    const afterBreak = [
+      s("2026-03-05", 100), // old heavy single, long before the recent block
+      s("2026-08-20", 70),
+      s("2026-09-03", 72),
+      s("2026-09-10", 74),
+      s("2026-10-01", 76),
+      s("2026-10-08", 78),
+      s("2026-10-15", 80),
+      s("2026-10-22", 82),
+    ];
+    expect(detectPlateau(afterBreak, today)).toBeNull(); // clearly progressing again
+  });
+
+  it("never flags exercises without a usable load (bodyweight logged as 0)", () => {
+    const zeros = [
+      s("2026-08-20", 0),
+      s("2026-09-03", 0),
+      s("2026-09-10", 0),
+      s("2026-10-01", 0),
+      s("2026-10-08", 0),
+      s("2026-10-15", 0),
+      s("2026-10-22", 0),
+    ];
+    expect(detectPlateau(zeros, today)).toBeNull();
+  });
 });

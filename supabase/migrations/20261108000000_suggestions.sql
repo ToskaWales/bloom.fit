@@ -30,3 +30,49 @@ create policy suggestions_update_own on public.suggestions for update to authent
   using (user_id = auth.uid() and public.has_access()) with check (user_id = auth.uid() and public.has_access());
 create trigger suggestions_stamp before insert or update on public.suggestions
   for each row execute function public.stamp_row();
+
+-- A reaction is one-way: a device that still shows the hint as "shown" (synced
+-- late, or re-derived by the engine) must not overwrite an accepted/dismissed one.
+create function public.suggestions_keep_reaction() returns trigger language plpgsql set search_path = '' as $$
+begin
+  if old.status <> 'shown' and new.status = 'shown' then
+    new.status = old.status;
+    new.reacted_at = old.reacted_at;
+  end if;
+  return new;
+end $$;
+create trigger suggestions_keep_reaction before update on public.suggestions
+  for each row execute function public.suggestions_keep_reaction();
+
+-- Replaces the purge function from 20261106 so that the daily-tracking tables
+-- and suggestions are purged as well (migrations stay append-only).
+create or replace function public.purge_deleted_rows(older_than_days integer default 30) returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  cutoff timestamptz := now() - make_interval(days => older_than_days);
+  removed integer := 0;
+  n integer;
+  t text;
+begin
+  if older_than_days < 7 then
+    raise exception 'refusing to purge rows younger than 7 days';
+  end if;
+  -- parents first; their children go with them (on delete cascade)
+  foreach t in array array['workouts', 'templates', 'workout_exercises', 'template_exercises', 'workout_sets',
+                          'checkins', 'bodyweight_entries', 'cycle_events', 'suggestions'] loop
+    execute format('delete from public.%I where deleted_at is not null and deleted_at < $1', t) using cutoff;
+    get diagnostics n = row_count;
+    removed := removed + n;
+  end loop;
+  -- A deleted custom exercise is kept while history still refers to it (the
+  -- reference is plain text, so purging it would lose the exercise's name).
+  delete from public.custom_exercises ce
+    where ce.deleted_at is not null and ce.deleted_at < cutoff
+      and not exists (select 1 from public.workout_exercises we where we.user_id = ce.user_id and we.exercise_id = ce.id::text)
+      and not exists (select 1 from public.template_exercises te where te.user_id = ce.user_id and te.exercise_id = ce.id::text);
+  get diagnostics n = row_count;
+  removed := removed + n;
+  return removed;
+end $$;
+revoke all on function public.purge_deleted_rows(integer) from public, anon, authenticated;
+grant execute on function public.purge_deleted_rows(integer) to service_role;

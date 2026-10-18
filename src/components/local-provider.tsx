@@ -158,6 +158,7 @@ export function LocalProvider({
             "/training/session",
             "/verlauf",
             "/zyklus",
+            "/muster",
           ],
         });
       })

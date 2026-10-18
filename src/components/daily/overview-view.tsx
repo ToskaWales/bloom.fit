@@ -78,9 +78,14 @@ export function OverviewView() {
       )}
 
       {cycleMode === "natural" || cycleMode === "irregular" ? (
-        <Link href="/zyklus" className="text-sm underline">
-          Zyklus-Protokoll öffnen
-        </Link>
+        <div className="flex gap-4 text-sm">
+          <Link href="/zyklus" className="underline">
+            Zyklus-Protokoll öffnen
+          </Link>
+          <Link href="/muster" className="underline">
+            Muster ansehen
+          </Link>
+        </div>
       ) : null}
 
       {rows && hasData && (

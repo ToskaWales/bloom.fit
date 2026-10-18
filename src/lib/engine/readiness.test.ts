@@ -103,4 +103,48 @@ describe("computeReadiness", () => {
       "not_enough_data",
     );
   });
+
+  it("decides the level on the exact average, so +0.75 and -0.75 are treated the same", () => {
+    // energy alternates 2/3 (median 2.5), motivation is always 3: today's distances average exactly ±0.75
+    const mk = (offset: number, e: number, m: number) => ({
+      day: addDays(today, offset),
+      energy: e,
+      motivation: m,
+      sleep_quality: null,
+    });
+    const hist = Array.from({ length: 8 }, (_, i) =>
+      mk(-(i + 1), i % 2 ? 2 : 3, 3),
+    );
+    const up = computeReadiness(today, [mk(0, 3, 4), ...hist]); // +0.5 and +1
+    const down = computeReadiness(today, [mk(0, 2, 2), ...hist]); // -0.5 and -1
+    expect(up.status === "ready" && up.level).toBe("usual");
+    expect(down.status === "ready" && down.level).toBe("usual");
+  });
+
+  it("needs two metrics pointing the same way, whichever number of metrics was logged", () => {
+    const two = usual.map((u) => ({ ...u, sleep_quality: null }));
+    // one metric far below, the other normal: only one deviates -> not a lower day
+    const r = computeReadiness(today, [
+      c(0, { energy: 1, motivation: 3, sleep_quality: null }),
+      ...two,
+    ]);
+    expect(r.status === "ready" && r.level).toBe("usual");
+    // both below -> lower
+    const both = computeReadiness(today, [
+      c(0, { energy: 2, motivation: 2, sleep_quality: null }),
+      ...two,
+    ]);
+    expect(both.status === "ready" && both.level).toBe("lower");
+  });
+
+  it("counts history only for metrics that have a value today", () => {
+    const hist = usual.map((u) => ({ ...u, sleep_quality: 3 }));
+    // today has no energy/motivation, only sleep -> only one usable metric
+    const r = computeReadiness(today, [
+      { day: today, energy: null, motivation: null, sleep_quality: 2 },
+      ...hist,
+    ]);
+    expect(r).toMatchObject({ status: "not_enough_data" });
+    if (r.status === "not_enough_data") expect(r.have).toBe(10);
+  });
 });

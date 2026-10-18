@@ -76,7 +76,7 @@ Im Supabase SQL Editor nacheinander ausführen, jeweils nur einmal:
 5. `20261105000000_templates.sql` (Vorlagen)
 6. `20261106000000_purge_deleted.sql` (Aufräumfunktion für gelöschte Zeilen)
 7. `20261107000000_daily_tracking.sql` (Check-ins, Gewicht, Zyklus, Einstellung „Gewicht ausblenden“)
-8. `20261108000000_suggestions.sql` (Vorschläge der Anpassungs-Engine)
+8. `20261108000000_suggestions.sql` (Vorschläge der Anpassungs-Engine; ersetzt außerdem die Aufräumfunktion aus 6 um die neuen Tabellen)
 
 Hinweis: `accounts.sql` wurde nach dem ersten Einspielen noch gehärtet (has_access-Sperre, Einwilligungen, Onboarding-Regeln). Wenn dein Projekt die frühe Version hat, setze die Konten-Tabellen zurück (solange noch keine echten Nutzerinnen existieren: `drop table public.consents, public.invites, public.profiles cascade;` plus die Funktionen und Trigger, oder das Projekt neu anlegen) und spiele 2 und 3 neu ein.
 

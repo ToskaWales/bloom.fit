@@ -2,9 +2,13 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { useLocal } from "@/components/local-provider";
-import { useSuggestions } from "@/components/engine/use-suggestions";
+import Link from "next/link";
+import {
+  useReadinessParts,
+  useSuggestions,
+} from "@/components/engine/use-suggestions";
 import { getCatalogExercise } from "@/lib/exercises/catalog";
-import { renderSuggestion } from "@/lib/engine/texts";
+import { renderSuggestion, type RenderedSuggestion } from "@/lib/engine/texts";
 import { reactToSuggestion } from "@/lib/local/suggestions";
 import type { CustomExerciseRow, SuggestionRow } from "@/lib/local/types";
 
@@ -15,18 +19,41 @@ export function useExerciseNames() {
       db ? ((await db.custom_exercises.toArray()) as CustomExerciseRow[]) : [],
     [db],
   );
-  return (id: string) =>
+  const name = (id: string) =>
     getCatalogExercise(id)?.name ??
     custom?.find((c) => c.id === id)?.name ??
     "Übung";
+  // custom exercises load asynchronously: don't flash a wrong name meanwhile
+  return { name, ready: custom !== undefined };
 }
 
 export function SuggestionsCard({ today }: { today: string }) {
   const { db, units } = useLocal();
   const rows = useSuggestions(today);
-  const exerciseName = useExerciseNames();
-  const visible = (rows ?? []).filter((r) => r.status !== "dismissed");
-  if (!db || visible.length === 0) return null;
+  const names = useExerciseNames();
+  const readinessParts = useReadinessParts(today);
+  const safetyActive = (rows ?? []).some(
+    (r) => r.kind === "safety" && r.status !== "dismissed",
+  );
+  const items = (rows ?? [])
+    .filter((r) => r.status !== "dismissed")
+    .map((row) => ({
+      row,
+      rendered: renderSuggestion(
+        { kind: row.kind, subject: row.subject, params: row.params },
+        {
+          units,
+          exerciseName: names.name,
+          readinessParts: readinessParts ?? undefined,
+          safetyActive,
+        },
+      ),
+    }))
+    .filter(
+      (i): i is { row: SuggestionRow; rendered: RenderedSuggestion } =>
+        i.rendered !== null,
+    );
+  if (!db || !names.ready || items.length === 0) return null;
 
   return (
     <section
@@ -36,13 +63,12 @@ export function SuggestionsCard({ today }: { today: string }) {
       <h2 id="suggestions-title" className="text-lg font-semibold">
         Für dich heute
       </h2>
-      {visible.map((row) => (
+      {items.map(({ row, rendered }) => (
         <SuggestionItem
           key={row.id}
           row={row}
-          units={units}
-          exerciseName={exerciseName}
-          onReact={(s) => reactToSuggestion(db, row.id, s)}
+          r={rendered}
+          onReact={(s) => void reactToSuggestion(db, row.id, s).catch(() => {})}
         />
       ))}
     </section>
@@ -51,19 +77,13 @@ export function SuggestionsCard({ today }: { today: string }) {
 
 function SuggestionItem({
   row,
-  units,
-  exerciseName,
+  r,
   onReact,
 }: {
   row: SuggestionRow;
-  units: "metric" | "imperial";
-  exerciseName: (id: string) => string;
+  r: RenderedSuggestion;
   onReact: (status: "accepted" | "dismissed") => void;
 }) {
-  const r = renderSuggestion(
-    { kind: row.kind, subject: row.subject, params: row.params },
-    { units, exerciseName },
-  );
   const accepted = row.status === "accepted";
   return (
     <article className="flex flex-col gap-2 rounded-xl bg-white p-3 text-sm">
@@ -83,6 +103,11 @@ function SuggestionItem({
           ist ein Vorschlag, keine Regel und kein medizinischer Rat.
         </p>
       </details>
+      {row.kind === "pattern" && (
+        <Link href="/muster" className="text-neutral-600 underline">
+          Alle Muster ansehen
+        </Link>
+      )}
       {accepted ? (
         <p className="text-xs text-neutral-500">Notiert.</p>
       ) : (

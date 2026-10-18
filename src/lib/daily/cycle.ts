@@ -30,6 +30,8 @@ export interface CycleSummary {
   medianLength: number | null;
   periodLengths: number[];
   prediction: CyclePrediction | null;
+  /** Days beyond the end of the usual window while the status is "overdue", otherwise null. */
+  overdueDays: number | null;
 }
 
 // Gaps outside this range are most likely a missed log, not a real cycle.
@@ -84,6 +86,30 @@ function withoutMissedLogs(lengths: number[]): number[] {
   return lengths.filter((l) => l <= OUTLIER_FACTOR * m);
 }
 
+export interface CycleSpan {
+  start: string;
+  next: string;
+  length: number;
+}
+
+// Complete cycles (start to the next start) that can be trusted: implausible
+// gaps and missed logs are dropped, exactly as in summarizeCycle.
+export function plausibleCycles(events: CycleEvent[]): CycleSpan[] {
+  const starts = normalizeStarts(
+    events.filter((e) => e.kind === "period_start").map((e) => e.day),
+  );
+  const spans: CycleSpan[] = [];
+  for (let i = 1; i < starts.length; i++) {
+    const length = daysBetween(starts[i - 1], starts[i]);
+    if (length >= MIN_PLAUSIBLE && length <= MAX_PLAUSIBLE)
+      spans.push({ start: starts[i - 1], next: starts[i], length });
+  }
+  const typical = spans.length >= 3 ? median(spans.map((c) => c.length)) : null;
+  return typical === null
+    ? spans
+    : spans.filter((c) => c.length <= OUTLIER_FACTOR * typical);
+}
+
 // Descriptive statistics of the user's own logged cycles. Deliberately no phase
 // names: cycle position is one input among several, and effects differ a lot
 // between women. A next-period estimate is only offered for regular cycles.
@@ -124,6 +150,7 @@ export function summarizeCycle(
     lengths,
     periodLengths,
     medianLength: lengths.length ? median(lengths) : null,
+    overdueDays: null as number | null,
   };
   if (!lastStart) return { ...base, status: "no_data", prediction: null };
   if (elapsed !== null && elapsed > MAX_PLAUSIBLE)
@@ -144,7 +171,12 @@ export function summarizeCycle(
   };
   // Past the window: no stale prediction, just a neutral heads-up in the UI.
   if (today > prediction.latest)
-    return { ...base, status: "overdue", prediction: null };
+    return {
+      ...base,
+      status: "overdue",
+      prediction: null,
+      overdueDays: daysBetween(prediction.latest, today),
+    };
   return { ...base, status: "regular", prediction };
 }
 

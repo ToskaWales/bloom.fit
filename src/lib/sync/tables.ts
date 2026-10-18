@@ -118,7 +118,7 @@ export const pushSchemas = {
         ]),
       )
       .refine(
-        (p) => Object.keys(p).length <= 20 && JSON.stringify(p).length <= 2000,
+        (p) => Object.keys(p).length <= 20 && JSON.stringify(p).length <= 1500,
       ),
     status: z.enum(["shown", "accepted", "dismissed"]),
     reacted_at: ts.nullable(),

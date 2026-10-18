@@ -58,25 +58,26 @@ export function computeReadiness(
   const parts: ReadinessPart[] = [];
   let have = 0;
   for (const { key, metric } of METRICS) {
+    const value = todays[key];
+    if (value === null) continue; // only metrics she logged today count
     const values = prior
       .map((c) => c[key])
       .filter((v): v is number => v !== null);
     have = Math.max(have, values.length);
-    const value = todays[key];
-    if (value === null || values.length < MIN_BASELINE_VALUES) continue;
+    if (values.length < MIN_BASELINE_VALUES) continue;
     parts.push({ metric, value, baseline: median(values) });
   }
   if (parts.length < MIN_METRICS)
     return { status: "not_enough_data", have, need: MIN_BASELINE_VALUES };
 
-  const delta = round1(
-    parts.reduce((sum, p) => sum + (p.value - p.baseline), 0) / parts.length,
-  );
-  const level =
-    delta <= -LEVEL_THRESHOLD
-      ? "lower"
-      : delta >= LEVEL_THRESHOLD
-        ? "higher"
-        : "usual";
-  return { status: "ready", level, delta, parts };
+  const mean =
+    parts.reduce((sum, p) => sum + (p.value - p.baseline), 0) / parts.length;
+  // A day only counts as lower/higher when at least two values point the same
+  // way: one outlier among normal values is noise, with two or three metrics alike.
+  const agreeing = (sign: 1 | -1) =>
+    parts.filter((p) => Math.sign(p.value - p.baseline) === sign).length;
+  let level: "lower" | "usual" | "higher" = "usual";
+  if (mean <= -LEVEL_THRESHOLD && agreeing(-1) >= 2) level = "lower";
+  else if (mean >= LEVEL_THRESHOLD && agreeing(1) >= 2) level = "higher";
+  return { status: "ready", level, delta: round1(mean), parts };
 }

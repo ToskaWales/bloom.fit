@@ -89,15 +89,19 @@ Eingänge: Check-ins, Sätze (Last, Wdh., RPE), Gewichtstrend, Zyklusereignisse,
 - Zahlung: Stripe (SEPA, Karte, Apple/Google Pay) – ab Beta.
 - Push-Benachrichtigungen auf iOS-PWA: Verfügbarkeit/Zuverlässigkeit prüfen.
 
-## Anpassungs-Engine (Stand 1d-1)
+## Anpassungs-Engine (Stand 1d-2)
 
 Läuft ausschließlich auf dem Gerät (`src/lib/engine`, reine Funktionen, keine externe KI).
 
 - **Bereitschaft** (`readiness.ts`): Check-in von heute gegen den Median der eigenen letzten 28 Tage (mind. 7 Werte je Größe, mind. 2 Größen). Abstand ≤ −0,8 → „etwas leichter“, ≥ +0,8 → „besser als sonst“, sonst „wie gewohnt“. Nie gegen eine absolute Skala.
 - **Plateau** (`plateau.ts`): vier jüngste Einheiten (alle in 8 Wochen) ohne mehr als 1 % besseres geschätztes 1RM als alles davor, mind. 2 frühere Einheiten.
-- **Auswahl** (`select.ts`): höchstens 2 Hinweise pro Tag, Priorität Sicherheit > Bereitschaft > Muster > Plateau. Abgelehnte Art 14 Tage ruhig, Plateau je Übung höchstens alle 14 Tage, Sicherheitshinweise werden nie durch frühere Ablehnung stummgeschaltet.
+- **Muster rund um die Periode** (`patterns.ts`): pro Zyklus die 4 Tage vor der Periode und die ersten 3 Tage der Periode gegen die übrigen Tage, für Energie, Motivation, Schlaf, Hunger und Trainingsleistung (`performance.ts`: geschätztes 1RM relativ zum eigenen üblichen Niveau). Ein Muster erscheint nur bei: mind. 2 Zyklen mit genug Einträgen, spürbarer Mittelwertdifferenz (0,7 Skalenpunkte bzw. 4 %), gleicher Richtung in jedem Zyklus und Permutationstest mit α = 0,005 (Bonferroni über 10 Vergleiche). Zyklen über 45 Tage zählen nicht (vermutlich vergessener Eintrag). Auswertung der Fehlalarm- und Erkennungsrate: `docs/ENGINE-EVALUATION.md`. „Kein klares Muster“ ist ein gleichwertiges Ergebnis (Seite `/muster`).
+- **Sicherheitsregel** (`safety.ts`): Periode deutlich überfällig (mind. 7 Tage über dem üblichen Fenster) UND (Energie über 14 Tage meist niedrig ODER Gewichtstrend deutlich gefallen). Gewicht wird nie gelesen, wenn es ausgeblendet ist. Folge: ruhiger Hinweis „sprich mit einer Ärztin oder einem Arzt“, keine Steigerungs-, Plateau- oder Musterhinweise, kein „eine Wiederholung mehr“.
+- **Auswahl** (`select.ts`): höchstens 2 Hinweise pro Tag, Priorität Sicherheit > Bereitschaft > Muster > Plateau. Abgelehnte Art 14 Tage ruhig; Plateau je Übung höchstens alle 14 Tage, Muster je Befund alle 28 Tage, höchstens eines je Art und Tag; Sicherheitshinweise werden nie durch Ablehnung stummgeschaltet (nur „Habe ich gelesen“ ruht 7 Tage).
 - **Texte** (`texts.ts`): einziger Ort für Formulierungen. Ein Test prüft jeden möglichen Satz gegen die Verbotsliste aus `CLAUDE.md`. In der Datenbank liegen nur Art, Tag, Zahlen und Reaktion (`suggestions`).
 - **Schreiben** (`src/lib/local/suggestions.ts`): idempotent (Id aus Tag+Art+Gegenstand), Reaktionen werden nie überschrieben, Aufrufe werden pro Datenbank serialisiert.
 - Alle Schwellen sind begründete Startwerte, keine bewiesenen Grenzen. Sie sollen mit echten Daten und einer sportwissenschaftlichen Prüfung überarbeitet werden.
 
-Noch offen (1d-2): Mustererkennung rund um die Periode, Sicherheitsregeln, Muster-Seite, Simulations-Auswertung.
+Nur Art, Gegenstand, wenige Zahlen und Reaktion werden gespeichert; die Zahlen unter „Warum sehe ich das?“ für Bereitschaft werden lokal neu berechnet. Eine Reaktion kann serverseitig nicht auf „shown“ zurückgesetzt werden (Trigger `suggestions_keep_reaction`).
+
+Noch offen: Ernährungs-Hinweise (Hunger-Muster fließen bereits ein; Kalorien/Protein erst mit Ernährungs-Logging, nur als weiche Option).

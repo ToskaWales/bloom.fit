@@ -3,27 +3,55 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect } from "react";
 import { useLocal } from "@/components/local-provider";
-import { refreshSuggestions, suggestionsForDay } from "@/lib/local/suggestions";
-import type { SuggestionRow } from "@/lib/local/types";
+import { addDays } from "@/lib/daily/day";
+import { computeReadiness, type ReadinessPart } from "@/lib/engine/readiness";
+import {
+  engineSignature,
+  refreshSuggestions,
+  suggestionsForDay,
+} from "@/lib/local/suggestions";
+import type { CheckinRow, SuggestionRow } from "@/lib/local/types";
 
-// Re-runs the on-device engine whenever today's check-in or the workout log
-// changes, and returns today's hints (undefined while the database opens).
+// Re-runs the on-device engine whenever the data it reads changes (check-ins,
+// workouts, cycle events, weight) and returns today's hints (undefined while
+// the database opens).
 export function useSuggestions(today: string): SuggestionRow[] | undefined {
-  const { db, userId } = useLocal();
+  const { db, userId, cycleMode, hideWeight } = useLocal();
 
-  const signature = useLiveQuery(async () => {
-    if (!db || !today) return undefined;
-    const todays = await db.checkins.where("day").equals(today).toArray();
-    return `${todays.map((c) => `${c.updated_at}${c.deleted_at ?? ""}`).join(",")}|${await db.workouts.count()}`;
-  }, [db, today]);
+  const signature = useLiveQuery(
+    async () => (db && today ? await engineSignature(db, today) : undefined),
+    [db, today],
+  );
 
   useEffect(() => {
     if (db && today && signature !== undefined)
-      void refreshSuggestions(db, { userId, today }).catch(() => {});
-  }, [db, userId, today, signature]);
+      void refreshSuggestions(db, {
+        userId,
+        today,
+        cycleMode,
+        hideWeight,
+      }).catch(() => {});
+  }, [db, userId, today, signature, cycleMode, hideWeight]);
 
   return useLiveQuery(
     async () => (db && today ? await suggestionsForDay(db, today) : undefined),
     [db, today],
   );
+}
+
+// Today's readiness numbers, recomputed locally for the "why" lines: the stored
+// hint only keeps the level, not her check-in values.
+export function useReadinessParts(today: string): ReadinessPart[] | undefined {
+  const { db } = useLocal();
+  return useLiveQuery(async () => {
+    if (!db || !today) return undefined;
+    const rows = (
+      (await db.checkins
+        .where("day")
+        .between(addDays(today, -40), today, true, true)
+        .toArray()) as CheckinRow[]
+    ).filter((c) => !c.deleted_at);
+    const r = computeReadiness(today, rows);
+    return r.status === "ready" ? r.parts : [];
+  }, [db, today]);
 }

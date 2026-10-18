@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { periodDaySet, summarizeCycle, type CycleEvent } from "./cycle";
+import {
+  periodDaySet,
+  plausibleCycles,
+  summarizeCycle,
+  type CycleEvent,
+} from "./cycle";
 
 const start = (day: string): CycleEvent => ({ kind: "period_start", day });
 const end = (day: string): CycleEvent => ({ kind: "period_end", day });
@@ -224,5 +229,42 @@ describe("periodDaySet", () => {
     expect(periodDaySet([start("2026-10-01"), start("2026-10-01")]).size).toBe(
       1,
     );
+  });
+});
+
+describe("overdueDays and plausibleCycles", () => {
+  it("reports how many days the period is beyond the usual window", () => {
+    // expected 2026-10-19, window ends 2026-10-21 (half width 2 days)
+    expect(summarizeCycle(regular, "2026-10-30")).toMatchObject({
+      status: "overdue",
+      overdueDays: 9,
+    });
+    expect(summarizeCycle(regular, "2026-10-01").overdueDays).toBeNull();
+  });
+
+  it("lists complete cycles with their start, next start and length, without implausible gaps", () => {
+    const withGap = [
+      start("2026-06-01"),
+      start("2026-06-29"),
+      start("2026-09-21"),
+      start("2026-10-19"),
+      start("2026-11-16"),
+    ]; // 28, 84, 28, 28
+    expect(plausibleCycles(withGap)).toEqual([
+      { start: "2026-06-01", next: "2026-06-29", length: 28 },
+      { start: "2026-09-21", next: "2026-10-19", length: 28 },
+      { start: "2026-10-19", next: "2026-11-16", length: 28 },
+    ]);
+  });
+
+  it("drops a cycle that is about twice the usual length (a missed log)", () => {
+    const missed = [
+      "2026-01-01",
+      "2026-01-29",
+      "2026-02-26",
+      "2026-04-23",
+      "2026-05-21",
+    ].map(start);
+    expect(plausibleCycles(missed).map((c) => c.length)).toEqual([28, 28, 28]);
   });
 });

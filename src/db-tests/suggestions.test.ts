@@ -131,6 +131,36 @@ describe("suggestions", () => {
     );
   });
 
+  it("never lets a stale device set a reacted hint back to shown", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () => insert(a));
+    await asUser(db, a, () =>
+      q(
+        "update suggestions set status = 'dismissed', reacted_at = '2026-10-02T08:00:00Z' where id = $1",
+        [S1],
+      ),
+    );
+    await asUser(db, a, () =>
+      q(
+        "update suggestions set status = 'shown', reacted_at = null, params = '{\"level\":\"lower\"}' where id = $1",
+        [S1],
+      ),
+    );
+    const row = (
+      await q(
+        "select status, reacted_at, params from suggestions where id = $1",
+        [S1],
+      )
+    ).rows[0];
+    expect(row.status).toBe("dismissed");
+    expect(row.reacted_at).not.toBeNull();
+    // other changes (new numbers) still go through, and she can change her mind
+    expect(row.params).toEqual({ level: "lower" });
+    await asUser(db, a, () =>
+      q("update suggestions set status = 'accepted' where id = $1", [S1]),
+    );
+  });
+
   it("is removed with the account and purged when old and deleted", async () => {
     const a = await member("a@example.com");
     await asUser(db, a, () => insert(a));
