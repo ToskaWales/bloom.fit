@@ -17,6 +17,8 @@ import { clearPageCache } from "@/lib/local/wipe";
 import { requeueRejected, syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
 
+export type NutritionMode = "off" | "log" | "log_no_totals";
+
 export type CycleMode = "natural" | "hormonal" | "irregular" | "none" | null;
 
 export type SyncStatus = "idle" | "syncing" | "ok" | "error" | "unauthorized";
@@ -27,6 +29,7 @@ interface LocalContextValue {
   units: Units;
   cycleMode: CycleMode;
   hideWeight: boolean;
+  nutritionMode: NutritionMode;
   status: SyncStatus;
   pending: number;
   online: boolean;
@@ -71,6 +74,7 @@ export function LocalProvider({
   units,
   cycleMode,
   hideWeight,
+  nutritionMode,
   enabled,
   children,
 }: {
@@ -78,6 +82,7 @@ export function LocalProvider({
   units: Units;
   cycleMode: CycleMode;
   hideWeight: boolean;
+  nutritionMode: NutritionMode;
   enabled: boolean;
   children: ReactNode;
 }) {
@@ -159,6 +164,7 @@ export function LocalProvider({
             "/verlauf",
             "/zyklus",
             "/muster",
+            "/ernaehrung",
           ],
         });
       })
@@ -173,6 +179,7 @@ export function LocalProvider({
       units,
       cycleMode,
       hideWeight,
+      nutritionMode,
       status,
       pending,
       online,
@@ -184,6 +191,7 @@ export function LocalProvider({
       units,
       cycleMode,
       hideWeight,
+      nutritionMode,
       status,
       pending,
       online,

@@ -13,6 +13,8 @@ export const TABLES = [
   "bodyweight_entries",
   "cycle_events",
   "suggestions",
+  "foods",
+  "food_logs",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
@@ -124,6 +126,48 @@ export const pushSchemas = {
     reacted_at: ts.nullable(),
     deleted_at: ts.nullable(),
   }),
+  foods: z
+    .object({
+      id,
+      name: z.string().min(1).max(80),
+      brand: nullableText(80),
+      barcode: z
+        .string()
+        .regex(/^[0-9]{6,32}$/)
+        .nullable(),
+      basis: z.enum(["100g", "portion"]),
+      portion_g: z.number().gt(0).max(2000).nullable(),
+      kcal: z.number().min(0).max(5000).nullable(),
+      protein_g: z.number().min(0).max(500).nullable(),
+      carbs_g: z.number().min(0).max(500).nullable(),
+      fat_g: z.number().min(0).max(500).nullable(),
+      source: z.enum(["own", "off"]),
+      favorite: z.boolean(),
+      deleted_at: ts.nullable(),
+    })
+    .refine((f) => f.kcal !== null || f.protein_g !== null, {
+      message: "kcal or protein required",
+    })
+    .refine((f) => f.basis !== "100g" || f.kcal === null || f.kcal <= 900, {
+      message: "kcal per 100 g too high",
+    }),
+  food_logs: z
+    .object({
+      id,
+      day: z.iso.date(),
+      meal: z.enum(["morning", "midday", "evening", "snack"]).nullable(),
+      food_id: id.nullable(),
+      name_snapshot: z.string().max(80),
+      amount_g: z.number().gt(0).max(3000).nullable(),
+      kcal: z.number().min(0).max(10000).nullable(),
+      protein_g: z.number().min(0).max(1000).nullable(),
+      carbs_g: z.number().min(0).max(1000).nullable(),
+      fat_g: z.number().min(0).max(1000).nullable(),
+      deleted_at: ts.nullable(),
+    })
+    .refine((l) => l.kcal !== null || l.protein_g !== null, {
+      message: "kcal or protein required",
+    }),
 } satisfies Record<TableName, z.ZodType>;
 
 export type PushRow<T extends TableName> = z.infer<(typeof pushSchemas)[T]>;

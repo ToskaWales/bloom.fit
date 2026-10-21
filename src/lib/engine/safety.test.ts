@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { summarizeCycle } from "@/lib/daily/cycle";
-import { evaluateSafety } from "./safety";
+import {
+  evaluateEnergyNote,
+  evaluateSafety,
+  lowIntake,
+  type IntakeEntry,
+} from "./safety";
 
 const today = "2026-10-30";
 const start = (day: string) => ({ kind: "period_start" as const, day });
@@ -215,5 +220,99 @@ describe("evaluateSafety: weight window", () => {
       weights: [old, ...recent],
     });
     expect(r.weightFall).toBe(false);
+  });
+});
+
+// intake: one entry per meal, so a day needs at least two entries to count
+const intakeDays = (
+  kcalPerDay: number,
+  days = 10,
+  entriesPerDay = 2,
+): IntakeEntry[] =>
+  Array.from({ length: days }, (_, d) =>
+    Array.from({ length: entriesPerDay }, () => ({
+      day: addDays(today, -d),
+      kcal: kcalPerDay / entriesPerDay,
+    })),
+  ).flat();
+
+describe("lowIntake", () => {
+  it("needs seven well-logged days in the last two weeks and a low median", () => {
+    expect(lowIntake(today, intakeDays(1000, 10))).toBe(true);
+    expect(lowIntake(today, intakeDays(1000, 6))).toBe(false); // too few days logged
+    expect(lowIntake(today, intakeDays(1800, 10))).toBe(false);
+    expect(lowIntake(today, intakeDays(1000, 10, 1))).toBe(false); // one entry a day: probably incomplete logging
+  });
+  it("ignores days older than two weeks, entries without kcal, and null", () => {
+    const old = intakeDays(900, 10).map((e) => ({
+      ...e,
+      day: addDays(e.day, -30),
+    }));
+    expect(lowIntake(today, old)).toBe(false);
+    expect(
+      lowIntake(
+        today,
+        intakeDays(1000, 10).map((e) => ({ ...e, kcal: null })),
+      ),
+    ).toBe(false);
+    expect(lowIntake(today, null)).toBe(false);
+  });
+});
+
+describe("evaluateSafety with intake", () => {
+  const late = "2026-10-30";
+  it("low intake counts as a second signal next to a clearly late period", () => {
+    const r = evaluateSafety({
+      today: late,
+      cycle: cycleAt(late),
+      checkins: [],
+      weights: null,
+      intake: intakeDays(1000, 10),
+    });
+    expect(r).toMatchObject({
+      active: true,
+      lowIntake: true,
+      lowEnergy: false,
+    });
+  });
+  it("is not read when intake is null (nutrition off)", () => {
+    const r = evaluateSafety({
+      today: late,
+      cycle: cycleAt(late),
+      checkins: [],
+      weights: null,
+      intake: null,
+    });
+    expect(r).toMatchObject({ active: false, lowIntake: false });
+  });
+  it("low intake alone never activates it", () => {
+    const r = evaluateSafety({
+      today,
+      cycle: summarizeCycle(regular, "2026-10-10"),
+      checkins: [],
+      weights: null,
+      intake: intakeDays(900, 12),
+    });
+    expect(r.active).toBe(false);
+  });
+});
+
+describe("evaluateEnergyNote (no period signal)", () => {
+  const base = {
+    today,
+    checkins: energy(1),
+    intake: intakeDays(1000, 10),
+    trainingDays: 8,
+  };
+  it("needs low intake AND low energy AND regular training", () => {
+    expect(evaluateEnergyNote(base).active).toBe(true);
+    expect(evaluateEnergyNote({ ...base, trainingDays: 3 }).active).toBe(false);
+    expect(evaluateEnergyNote({ ...base, checkins: energy(4) }).active).toBe(
+      false,
+    );
+    expect(
+      evaluateEnergyNote({ ...base, intake: intakeDays(1900, 10) }).active,
+    ).toBe(false);
+    expect(evaluateEnergyNote({ ...base, intake: null }).active).toBe(false);
   });
 });

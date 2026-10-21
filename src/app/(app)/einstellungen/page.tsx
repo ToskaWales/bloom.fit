@@ -5,7 +5,7 @@ import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page, secondaryButtonClass } from "@/components/ui";
 import { requireOnboarded } from "@/lib/auth/dal";
 import { berlinDay } from "@/lib/onboarding/schema";
-import { setProductMail, updateCycle } from "./actions";
+import { setNutritionMode, setProductMail, updateCycle } from "./actions";
 
 export const metadata = {
   title: "Einstellungen – Bloom",
@@ -22,6 +22,11 @@ export default async function Settings() {
     .select("id")
     .eq("kind", "product_mail")
     .is("revoked_at", null);
+  const nutritionModes = [
+    ["off", "Aus"],
+    ["log", "Einträge mit Tagessumme"],
+    ["log_no_totals", "Nur Einträge, ohne Summen"],
+  ] as const;
   const modes = [
     ["natural", "Natürlicher Zyklus"],
     ["irregular", "Unregelmäßig oder wechselnd"],
@@ -67,6 +72,45 @@ export default async function Settings() {
       <section className="flex max-w-md flex-col gap-3">
         <h2 className="text-lg font-semibold">Gewicht</h2>
         <HideWeightForm initial={profile.hide_weight} />
+      </section>
+
+      <section className="flex max-w-md flex-col gap-3">
+        <h2 className="text-lg font-semibold">Ernährung</h2>
+        <p className="text-sm text-neutral-700">
+          Optional: Du kannst eintragen, was du isst. Bloom gibt dir dazu kein
+          Tagesziel vor und bewertet nichts. Du kannst es jederzeit ausschalten.
+        </p>
+        <ClearCacheOnSubmit>
+          <StepForm action={setNutritionMode} label="Speichern">
+            <fieldset className="flex flex-col gap-2">
+              {nutritionModes.map(([value, label]) => (
+                <label key={value} className={radio}>
+                  <input
+                    type="radio"
+                    name="nutritionMode"
+                    value={value}
+                    defaultChecked={profile.nutrition_mode === value}
+                    className="mt-1"
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+            {profile.nutrition_mode === "off" && (
+              <label className={radio}>
+                <input
+                  type="checkbox"
+                  name="nutritionConsent"
+                  value="on"
+                  className="mt-1"
+                />
+                Ich willige ein, dass Bloom meine Ernährungseinträge speichert.
+                Sie gehören zu meinen Gesundheitsdaten, bleiben in der EU und
+                lassen sich exportieren und löschen.
+              </label>
+            )}
+          </StepForm>
+        </ClearCacheOnSubmit>
       </section>
 
       <section className="flex max-w-md flex-col gap-3">

@@ -10,16 +10,22 @@ import {
 } from "@/lib/engine/patterns";
 import { performanceSeries } from "@/lib/engine/performance";
 import type { ExerciseSession } from "@/lib/engine/plateau";
-import { evaluateSafety } from "@/lib/engine/safety";
+import {
+  evaluateEnergyNote,
+  evaluateSafety,
+  type IntakeEntry,
+} from "@/lib/engine/safety";
 import type { ReadinessCheckin } from "@/lib/engine/readiness";
 import { selectSuggestions, type PastSuggestion } from "@/lib/engine/select";
 import { deterministicUuid } from "@/lib/ids";
 import { estimateOneRepMax } from "@/lib/workout/stats";
+import type { NutritionMode } from "@/components/local-provider";
 import type { LocalDb } from "./db";
 import { patchRow, saveRow } from "./repo";
 import type {
   CheckinRow,
   CycleEventRow,
+  FoodLogRow,
   SetRow,
   SuggestionRow,
   SuggestionStatus,
@@ -33,6 +39,8 @@ const PAST_DAYS = 30; // earlier suggestions, for cooldowns
 const SESSION_DAYS = 200; // plateau looks 56 + 84 days back, patterns need a few earlier sessions
 const PATTERN_DAYS = 200; // check-ins for pattern detection: a handful of cycles
 const WEIGHT_DAYS = 60;
+const INTAKE_DAYS = 14;
+const TRAINING_WINDOW_DAYS = 14;
 
 // Engine kinds the refresh owns: it may remove its own stale hints, never others.
 const OWNED_KINDS = new Set(["readiness", "plateau", "pattern", "safety"]);
@@ -121,6 +129,8 @@ interface RefreshOptions {
   cycleMode?: "natural" | "hormonal" | "irregular" | "none" | null;
   /** Weight is never read when she hides it. */
   hideWeight?: boolean;
+  /** Food entries are only read when nutrition is on. */
+  nutritionMode?: NutritionMode;
 }
 
 // Runs the engine on this device's data and stores today's hints. Safe to call
@@ -138,6 +148,18 @@ export function refreshSuggestions(
   return run;
 }
 
+function trainingDays(
+  sessions: Map<string, ExerciseSession[]>,
+  today: string,
+): number {
+  const days = new Set<string>();
+  for (const list of sessions.values())
+    for (const s of list)
+      if (s.day <= today && s.day > addDays(today, -TRAINING_WINDOW_DAYS))
+        days.add(s.day);
+  return days.size;
+}
+
 const SERIES: { metric: PatternMetric; key: keyof CheckinRow }[] = [
   { metric: "energy", key: "energy" },
   { metric: "motivation", key: "motivation" },
@@ -150,6 +172,7 @@ export interface EngineData {
   starts: string[];
   cycleEvents: CycleEventRow[];
   weights: WeightPoint[];
+  intake: IntakeEntry[] | null;
   exerciseSessions: Map<string, ExerciseSession[]>;
 }
 
@@ -157,6 +180,7 @@ export async function loadEngineData(
   db: LocalDb,
   today: string,
   hideWeight = false,
+  nutritionMode: NutritionMode = "off",
 ): Promise<EngineData> {
   const checkins = (
     (await db.checkins
@@ -177,9 +201,21 @@ export async function loadEngineData(
       )
         .filter((w) => !w.deleted_at)
         .map((w) => ({ day: w.day, kg: w.weight_kg }));
+  const intake =
+    nutritionMode === "off"
+      ? null
+      : (
+          (await db.food_logs
+            .where("day")
+            .between(addDays(today, -INTAKE_DAYS), today, true, true)
+            .toArray()) as FoodLogRow[]
+        )
+          .filter((l) => !l.deleted_at)
+          .map((l) => ({ day: l.day, kcal: l.kcal }));
   return {
     checkins,
     cycleEvents,
+    intake,
     starts: cycleEvents
       .filter((e) => e.kind === "period_start")
       .map((e) => e.day),
@@ -208,6 +244,7 @@ export async function engineSignature(
   db: LocalDb,
   today: string,
   hideWeight = false,
+  nutritionMode: NutritionMode = "off",
 ): Promise<string> {
   const tables = [
     "workouts",
@@ -216,6 +253,7 @@ export async function engineSignature(
     "checkins",
     "cycle_events",
     ...(hideWeight ? [] : (["bodyweight_entries"] as const)),
+    ...(nutritionMode === "off" ? [] : (["food_logs"] as const)),
   ] as const;
   // count + newest write, both from the updated_at index: no table scans
   const parts = await Promise.all(
@@ -229,9 +267,15 @@ export async function engineSignature(
 
 async function doRefresh(
   db: LocalDb,
-  { userId, today, cycleMode = null, hideWeight = false }: RefreshOptions,
+  {
+    userId,
+    today,
+    cycleMode = null,
+    hideWeight = false,
+    nutritionMode = "off",
+  }: RefreshOptions,
 ): Promise<void> {
-  const data = await loadEngineData(db, today, hideWeight);
+  const data = await loadEngineData(db, today, hideWeight, nutritionMode);
   const tracksCycle = cycleMode === "natural" || cycleMode === "irregular";
   const safety = tracksCycle
     ? evaluateSafety({
@@ -239,9 +283,20 @@ async function doRefresh(
         cycle: summarizeCycle(data.cycleEvents, today),
         checkins: data.checkins,
         weights: hideWeight ? null : data.weights,
+        intake: data.intake,
       })
     : null;
   const patterns = tracksCycle ? patternsFrom(data, today) : null;
+  // Without a period signal, careful intake logging can raise the same calm notice.
+  const energyNote =
+    !tracksCycle && data.intake
+      ? evaluateEnergyNote({
+          today,
+          checkins: data.checkins,
+          intake: data.intake,
+          trainingDays: trainingDays(data.exerciseSessions, today),
+        })
+      : null;
 
   const pastRows = (
     (await db.suggestions
@@ -270,6 +325,7 @@ async function doRefresh(
       exerciseSessions: data.exerciseSessions,
       patterns,
       safety,
+      energyNote,
     }),
     past,
     today,

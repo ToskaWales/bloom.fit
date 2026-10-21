@@ -14,6 +14,7 @@ export interface Profile {
   start_weight_kg: number | null;
   basics_completed_at: string | null;
   hide_weight: boolean;
+  nutrition_mode: "off" | "log" | "log_no_totals";
   onboarding_completed_at: string | null;
   access_granted_at: string | null;
 }

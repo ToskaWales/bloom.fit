@@ -4,6 +4,7 @@ import { addDays } from "@/lib/daily/day";
 import { pushSchemas } from "@/lib/sync/tables";
 import { createLocalDb, type LocalDb } from "./db";
 import { patchCheckin, saveCheckin, saveCycleEvent } from "./daily";
+import { addQuickEntry } from "./nutrition";
 import { saveRow } from "./repo";
 import {
   engineSignature,
@@ -291,5 +292,120 @@ describe("refreshSuggestions: cycle mode", () => {
       cycleMode: "hormonal",
     });
     expect(await suggestionsForDay(db, today)).toHaveLength(0);
+  });
+});
+
+describe("refreshSuggestions: nutrition", () => {
+  async function lowIntakeAndEnergy(target: LocalDb) {
+    for (let i = 1; i <= 12; i++) {
+      await saveCheckin(target, USER, addDays(today, -i), values(1, 3, 3));
+      for (const name of ["a", "b"])
+        await addQuickEntry(target, {
+          day: addDays(today, -i),
+          meal: null,
+          name,
+          kcal: 450,
+          proteinG: null,
+        });
+    }
+    await saveCheckin(target, USER, today, values(5, 5, 5));
+  }
+  async function trainDays(target: LocalDb, days: number) {
+    const was = db;
+    db = target;
+    for (let i = 1; i <= days; i++)
+      await benchSession(addDays(today, -i), 60, 5);
+    db = was;
+  }
+
+  it("raises the notice without a period signal when intake is low, energy is low and she trains regularly", async () => {
+    await lowIntakeAndEnergy(db);
+    await trainDays(db, 8);
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "log",
+    });
+    const rows = (await suggestionsForDay(db, today)) as SuggestionRow[];
+    expect(rows.find((r) => r.kind === "safety")).toMatchObject({
+      subject: "energy",
+      params: { lowIntake: true },
+    });
+    for (const r of rows.filter((r) => r.kind === "readiness"))
+      expect(r.params.canPush).toBe(false);
+  });
+
+  it("never reads food entries when nutrition is off", async () => {
+    await lowIntakeAndEnergy(db);
+    await trainDays(db, 8);
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "off",
+    });
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("safety");
+  });
+
+  it("stays quiet when she hardly trains", async () => {
+    await lowIntakeAndEnergy(db);
+    await trainDays(db, 2);
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "log",
+    });
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("safety");
+  });
+
+  it("adds low intake as a signal next to a clearly late period", async () => {
+    for (const d of [
+      "2026-06-01",
+      "2026-06-29",
+      "2026-07-27",
+      "2026-08-24",
+      "2026-09-21",
+    ])
+      await saveCycleEvent(db, USER, "period_start", d);
+    for (let i = 1; i <= 12; i++)
+      for (const name of ["a", "b"])
+        await addQuickEntry(db, {
+          day: addDays(today, -i),
+          meal: null,
+          name,
+          kcal: 450,
+          proteinG: null,
+        });
+    await saveCheckin(db, USER, today, values(3, 3, 3));
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "natural",
+      nutritionMode: "log_no_totals",
+    });
+    const safety = (await suggestionsForDay(db, today)).find(
+      (r) => r.kind === "safety",
+    );
+    expect(safety?.params).toMatchObject({ lowIntake: true });
+  });
+
+  it("the signature changes when food entries change, only while nutrition is on", async () => {
+    const off = await engineSignature(db, today, false, "off");
+    const on = await engineSignature(db, today, false, "log");
+    await addQuickEntry(db, {
+      day: today,
+      meal: null,
+      name: "x",
+      kcal: 100,
+      proteinG: null,
+    });
+    expect(await engineSignature(db, today, false, "off")).toBe(off);
+    expect(await engineSignature(db, today, false, "log")).not.toBe(on);
   });
 });

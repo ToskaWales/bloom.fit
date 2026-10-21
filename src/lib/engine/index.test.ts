@@ -29,12 +29,14 @@ const inactive: SafetyResult = {
   overdueDays: 0,
   lowEnergy: false,
   weightFall: false,
+  lowIntake: false,
 };
 const active: SafetyResult = {
   active: true,
   overdueDays: 9,
   lowEnergy: true,
   weightFall: false,
+  lowIntake: false,
 };
 const finding = {
   metric: "energy" as const,
@@ -186,5 +188,41 @@ describe("buildCandidates", () => {
 
   it("works without a safety result (cycle tracking off)", () => {
     expect(() => buildCandidates(input({ safety: null }))).not.toThrow();
+  });
+
+  it("carries low intake into the safety hint", () => {
+    const [c] = buildCandidates(
+      input({ safety: { ...active, lowIntake: true } }),
+    );
+    expect(c.params).toMatchObject({ lowIntake: true });
+  });
+
+  it("raises the same kind of notice without a period signal and holds back everything that suggests more", () => {
+    const out = buildCandidates(
+      input({
+        safety: null,
+        energyNote: { active: true, lowIntake: true, lowEnergy: true },
+        checkins: [checkin(0, 5), ...history],
+        patterns: found,
+        exerciseSessions: new Map([["barbell-bench-press", plateauSessions()]]),
+      }),
+    );
+    expect(out.map((c) => c.kind)).toEqual(["safety", "readiness"]);
+    expect(out[0]).toMatchObject({
+      subject: "energy",
+      params: { lowIntake: true, lowEnergy: true },
+    });
+    expect(out[1].params.canPush).toBe(false);
+  });
+
+  it("ignores an inactive energy note", () => {
+    expect(
+      buildCandidates(
+        input({
+          safety: null,
+          energyNote: { active: false, lowIntake: true, lowEnergy: false },
+        }),
+      ),
+    ).toEqual([]);
   });
 });

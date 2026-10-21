@@ -19,12 +19,14 @@ export function useSuggestions(
   today: string,
   { refresh = true }: { refresh?: boolean } = {},
 ): SuggestionRow[] | undefined {
-  const { db, userId, cycleMode, hideWeight } = useLocal();
+  const { db, userId, cycleMode, hideWeight, nutritionMode } = useLocal();
 
   const signature = useLiveQuery(
     async () =>
-      db && today ? await engineSignature(db, today, hideWeight) : undefined,
-    [db, today, hideWeight],
+      db && today
+        ? await engineSignature(db, today, hideWeight, nutritionMode)
+        : undefined,
+    [db, today, hideWeight, nutritionMode],
   );
 
   useEffect(() => {
@@ -34,8 +36,18 @@ export function useSuggestions(
         today,
         cycleMode,
         hideWeight,
+        nutritionMode,
       }).catch(() => {});
-  }, [refresh, db, userId, today, signature, cycleMode, hideWeight]);
+  }, [
+    refresh,
+    db,
+    userId,
+    today,
+    signature,
+    cycleMode,
+    hideWeight,
+    nutritionMode,
+  ]);
 
   return useLiveQuery(
     async () => (db && today ? await suggestionsForDay(db, today) : undefined),

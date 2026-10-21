@@ -167,29 +167,49 @@ export function renderSuggestion(
 
   if (c.kind === "safety") {
     const overdue = num(p.overdueDays);
+    const late = overdue !== null && overdue > 0;
+    const lowEnergy = p.lowEnergy === true;
+    const weightFall = p.weightFall === true;
+    const lowIntake = p.lowIntake === true;
     const signals = [
-      "deine Periode ist später als sonst",
-      ...(p.lowEnergy === true
-        ? ["deine Energie war zuletzt meist niedrig"]
+      ...(late || c.subject !== "energy"
+        ? ["deine Periode ist später als sonst"]
         : []),
-      ...(p.weightFall === true
+      ...(lowEnergy ? ["deine Energie war zuletzt meist niedrig"] : []),
+      ...(weightFall
         ? ["dein Gewicht hat sich zuletzt deutlich verändert"]
+        : []),
+      ...(lowIntake
+        ? [
+            "an vielen Tagen stehen eher kleine Mengen in deinem Ernährungs-Protokoll",
+          ]
         : []),
     ];
     const because = [
-      overdue !== null
-        ? `Periode seit etwa ${overdue} ${overdue === 1 ? "Tag" : "Tagen"} über dem üblichen Zeitraum`
-        : "Periode später als in deinen bisherigen Zyklen",
-      ...(p.lowEnergy === true
+      ...(late
+        ? [
+            `Periode seit etwa ${overdue} ${overdue === 1 ? "Tag" : "Tagen"} über dem üblichen Zeitraum`,
+          ]
+        : c.subject !== "energy"
+          ? ["Periode später als in deinen bisherigen Zyklen"]
+          : []),
+      ...(lowEnergy
         ? ["Energie in den letzten zwei Wochen meist bei 1 oder 2"]
         : []),
-      ...(p.weightFall === true
+      ...(weightFall
         ? ["Gewichtstrend in den letzten zwei Wochen gefallen"]
         : []),
+      ...(lowIntake
+        ? [
+            "An mindestens sieben der letzten vierzehn Tage hast du mehrere Einträge gemacht, die zusammen eher klein ausfallen",
+          ]
+        : []),
+      ...(c.subject === "energy" ? ["Dazu trainierst du regelmäßig"] : []),
     ];
+    if (because.length === 0) return null;
     return {
       title: "Mehrere Hinweise, die dir wichtig sein könnten",
-      body: `Bei dir passt gerade zusammen: ${signals.join(", ")}. Das kann viele Gründe haben, zum Beispiel Stress, wenig Schlaf oder zu wenig Energie bei viel Training. Wenn es anhält, sprich bitte mit einer Ärztin oder einem Arzt. Bloom schlägt dir in dieser Zeit keine Steigerung vor.`,
+      body: `Bei dir passt gerade zusammen: ${signals.join(", ")}. Das kann viele Gründe haben, zum Beispiel Stress, wenig Schlaf, zu wenig Energie bei viel Training oder dass nicht alles im Protokoll steht. Wenn es anhält, sprich bitte mit einer Ärztin, einem Arzt oder einer Ernährungsfachkraft. Bloom schlägt dir in dieser Zeit keine Steigerung vor.`,
       because,
       acceptLabel: "Habe ich gelesen",
     };

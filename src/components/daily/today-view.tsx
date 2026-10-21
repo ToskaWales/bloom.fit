@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckinCard } from "@/components/daily/checkin-card";
 import { CycleCard } from "@/components/daily/cycle-card";
 import { WeightCard } from "@/components/daily/weight-card";
+import { NutritionCard } from "@/components/nutrition/nutrition-card";
 import { SuggestionsCard } from "@/components/engine/suggestions-card";
 import { SyncStatus } from "@/components/training/sync-status";
 import { buttonClass } from "@/components/ui";
@@ -23,6 +24,7 @@ export function TodayView() {
           <SuggestionsCard today={today} />
           <CycleCard today={today} />
           <WeightCard today={today} />
+          <NutritionCard today={today} />
         </>
       )}
       <Link href="/training" className={`${buttonClass} text-center`}>

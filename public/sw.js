@@ -13,6 +13,7 @@ const CACHEABLE_PATHS = [
   "/verlauf",
   "/zyklus",
   "/muster",
+  "/ernaehrung",
 ];
 const OFFLINE_FALLBACK = "/training";
 

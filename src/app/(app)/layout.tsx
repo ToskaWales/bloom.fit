@@ -14,6 +14,7 @@ async function Providers({ children }: { children: React.ReactNode }) {
       units={profile.units}
       cycleMode={profile.cycle_mode}
       hideWeight={profile.hide_weight}
+      nutritionMode={profile.nutrition_mode}
       enabled={Boolean(profile.onboarding_completed_at)}
     >
       {children}

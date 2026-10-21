@@ -99,6 +99,57 @@ export async function deleteAccount(
   return { done: true };
 }
 
+const NUTRITION_MODES = ["off", "log", "log_no_totals"] as const;
+
+export async function setNutritionMode(
+  _prev: StepState,
+  formData: FormData,
+): Promise<StepState> {
+  const { supabase, user } = await requireOnboarded();
+  const mode = String(formData.get("nutritionMode") ?? "");
+  if (!(NUTRITION_MODES as readonly string[]).includes(mode))
+    return { error: "Bitte wähle eine Option." };
+
+  if (mode !== "off") {
+    const { data: active, error: readError } = await supabase
+      .from("consents")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("kind", "nutrition")
+      .is("revoked_at", null);
+    if (readError) return { error: "Speichern hat nicht geklappt." };
+    if (!active?.length) {
+      if (formData.get("nutritionConsent") !== "on")
+        return {
+          error:
+            "Bitte willige ein, dass Bloom deine Ernährungseinträge speichert.",
+        };
+      const { error } = await supabase.from("consents").insert({
+        user_id: user.id,
+        kind: "nutrition",
+        version: CONSENT_VERSIONS.nutrition,
+      });
+      if (error) return { error: "Speichern hat nicht geklappt." };
+    }
+  } else {
+    // Turning it off also withdraws the consent; entries stay stored and exportable.
+    const { error } = await supabase
+      .from("consents")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("kind", "nutrition")
+      .is("revoked_at", null);
+    if (error) return { error: "Speichern hat nicht geklappt." };
+  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({ nutrition_mode: mode })
+    .eq("id", user.id);
+  if (error) return { error: "Speichern hat nicht geklappt." };
+  revalidatePath("/", "layout");
+  return {};
+}
+
 export async function setHideWeight(formData: FormData) {
   const { supabase, user } = await requireOnboarded();
   const { error } = await supabase

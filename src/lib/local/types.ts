@@ -79,3 +79,31 @@ export interface SuggestionRow extends WireRow {
   status: SuggestionStatus;
   reacted_at: string | null;
 }
+
+export interface FoodRow extends WireRow {
+  name: string;
+  brand: string | null;
+  barcode: string | null;
+  basis: "100g" | "portion";
+  portion_g: number | null;
+  kcal: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  source: "own" | "off";
+  favorite: boolean;
+}
+
+export type Meal = "morning" | "midday" | "evening" | "snack";
+
+export interface FoodLogRow extends WireRow {
+  day: string;
+  meal: Meal | null;
+  food_id: string | null;
+  name_snapshot: string;
+  amount_g: number | null;
+  kcal: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+}

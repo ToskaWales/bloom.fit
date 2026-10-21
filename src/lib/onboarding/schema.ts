@@ -15,6 +15,7 @@ export const CONSENT_VERSIONS = {
   terms: "2026-11-draft",
   health_data: "2026-11-draft",
   product_mail: "2026-11",
+  nutrition: "2026-11-draft",
 } as const;
 
 export const lbsToKg = (lbs: number) =>

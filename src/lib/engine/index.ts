@@ -12,6 +12,12 @@ export interface EngineInput {
   patterns: PatternAnalysis | null;
   /** null when cycle tracking is off. */
   safety: SafetyResult | null;
+  /** Safety notice for people without a period signal (nutrition logging on). */
+  energyNote?: {
+    active: boolean;
+    lowIntake: boolean;
+    lowEnergy: boolean;
+  } | null;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -26,9 +32,10 @@ export function buildCandidates({
   exerciseSessions,
   patterns,
   safety,
+  energyNote,
 }: EngineInput): Candidate[] {
   const out: Candidate[] = [];
-  const safetyActive = safety?.active === true;
+  const safetyActive = safety?.active === true || energyNote?.active === true;
 
   if (safety && safetyActive) {
     out.push({
@@ -38,6 +45,16 @@ export function buildCandidates({
         overdueDays: safety.overdueDays,
         lowEnergy: safety.lowEnergy,
         weightFall: safety.weightFall,
+        lowIntake: safety.lowIntake,
+      },
+    });
+  } else if (energyNote?.active) {
+    out.push({
+      kind: "safety",
+      subject: "energy",
+      params: {
+        lowIntake: energyNote.lowIntake,
+        lowEnergy: energyNote.lowEnergy,
       },
     });
   }

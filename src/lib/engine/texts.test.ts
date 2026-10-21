@@ -90,10 +90,18 @@ function grid(): Candidate[] {
         });
   for (const lowEnergy of [true, false])
     for (const weightFall of [true, false])
+      for (const lowIntake of [true, false])
+        out.push({
+          kind: "safety",
+          subject: "",
+          params: { overdueDays: 10, lowEnergy, weightFall, lowIntake },
+        });
+  for (const lowEnergy of [true, false])
+    for (const lowIntake of [true, false])
       out.push({
         kind: "safety",
-        subject: "",
-        params: { overdueDays: 10, lowEnergy, weightFall },
+        subject: "energy",
+        params: { overdueDays: 0, lowEnergy, lowIntake },
       });
   return out;
 }
@@ -234,7 +242,7 @@ describe("renderSuggestion: content", () => {
     expect(only.because.join(" ")).toMatch(/Periode/);
     expect(only.because.join(" ")).toMatch(/Energie/);
     expect(only.because.join(" ")).not.toMatch(/Gewicht/);
-    expect(only.body).toMatch(/Ärztin oder einem Arzt/);
+    expect(only.body).toMatch(/Ärztin, einem Arzt/);
     expect(only.body).toMatch(/keine Steigerung/);
   });
 });
