@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleLookup, type LookupDeps } from "./lookup-handler";
 
-const request = (body: unknown, type = "application/json") =>
-  new Request("http://localhost/api/food/lookup", {
+const request = (body: unknown, type = "application/json") => {
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  return new Request("http://localhost/api/food/lookup", {
     method: "POST",
-    headers: { "content-type": type },
-    body: typeof body === "string" ? body : JSON.stringify(body),
+    headers: {
+      "content-type": type,
+      "content-length": String(new TextEncoder().encode(text).length),
+    },
+    body: text,
   });
+};
 
 const food = {
   name: "Skyr",
@@ -39,6 +44,40 @@ describe("handleLookup", () => {
     const d = deps();
     await handleLookup(request({ barcode: "4006 3813-33931" }), d);
     expect(d.fetchProduct).toHaveBeenCalledWith("4006381333931");
+  });
+
+  it("looks up the 13-digit form of a UPC-A code", async () => {
+    const d = deps();
+    await handleLookup(request({ barcode: "036000291452" }), d);
+    expect(d.fetchProduct).toHaveBeenCalledWith("0036000291452");
+  });
+
+  it("refuses a body without or with a too large content-length before reading it", async () => {
+    const big = new Request("http://localhost/api/food/lookup", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": "5000000",
+      },
+      body: "{}",
+    });
+    const d = deps();
+    expect((await handleLookup(big, d)).status).toBe(400);
+    expect(big.bodyUsed).toBe(false); // refused without reading the body
+    expect(d.consume).not.toHaveBeenCalled();
+    const streamed = new Request("http://localhost/api/food/lookup", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": "10" },
+      body: JSON.stringify({ barcode: "4006381333931", pad: "x".repeat(2000) }),
+    });
+    expect((await handleLookup(streamed, d)).status).toBe(400);
+    const none = new Request("http://localhost/api/food/lookup", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ barcode: "4006381333931" }),
+    });
+    none.headers.delete("content-length");
+    expect((await handleLookup(none, deps())).status).toBe(400);
   });
 
   it("answers 401 without a session and does nothing else", async () => {

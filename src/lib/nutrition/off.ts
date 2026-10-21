@@ -82,7 +82,7 @@ export function normaliseOffProduct(json: unknown): OffResult {
   return {
     ok: true,
     food: {
-      name: name || "Produkt",
+      name,
       brand: brand || null,
       kcal: r(kcal),
       proteinG: r(protein),

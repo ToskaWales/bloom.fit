@@ -43,6 +43,16 @@ export const NUTRITION_TEXT = {
     "Die Suche klappt gerade nicht. Versuche es später noch einmal oder trag es von Hand ein.",
   barcodeLimited:
     "Du hast gerade viele Produkte gesucht. Bitte warte kurz oder trag es von Hand ein.",
+  barcodeLogin: "Bitte melde dich neu an und versuche es noch einmal.",
+  barcodeNotAllowed:
+    "Die Suche ist gerade nicht freigegeben. Prüfe in den Einstellungen, ob Ernährung eingeschaltet ist.",
+  barcodeDismiss: "Verwerfen",
+  cameraMissing:
+    "Es wurde keine Kamera gefunden. Du kannst die Ziffern eintippen.",
+  cameraBusy:
+    "Die Kamera wird gerade von etwas anderem genutzt. Du kannst die Ziffern eintippen.",
+  scannerLoadFailed:
+    "Der Scanner konnte nicht geladen werden. Du kannst die Ziffern eintippen.",
   barcodeOff:
     "Ernährung ist ausgeschaltet. Schalte sie in den Einstellungen ein, um zu suchen.",
   barcodeKnown: "Dieses Produkt hast du schon gespeichert:",

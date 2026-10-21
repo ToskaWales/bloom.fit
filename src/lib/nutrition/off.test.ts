@@ -131,14 +131,14 @@ describe("normaliseOffProduct", () => {
       reason: "unusable",
     });
   });
-  it("uses a placeholder name when the product has none but values exist", () => {
+  it("leaves the name empty when the product has none, so the person has to name it", () => {
     const r = normaliseOffProduct({
       status: 1,
       product: { nutriments: { "energy-kcal_100g": 50 } },
     });
     expect(r).toMatchObject({
       ok: true,
-      food: { name: "Produkt", brand: null },
+      food: { name: "", brand: null },
     });
   });
 });

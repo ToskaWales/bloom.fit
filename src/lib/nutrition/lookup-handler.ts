@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cleanBarcode, isValidBarcode } from "./barcode";
+import { cleanBarcode, normaliseBarcode } from "./barcode";
 import type { FetchOffResult } from "./off-fetch";
 import type { OffFood } from "./off";
 
@@ -17,6 +17,27 @@ const reply = (body: Body, status: number) =>
 const bodySchema = z.object({ barcode: z.string().max(40) });
 const MAX_BODY_BYTES = 1000;
 
+// A real request is tiny: refuse a declared or actual larger body before it is buffered.
+async function readBody(request: Request): Promise<string | null> {
+  const declared = Number(request.headers.get("content-length") ?? Number.NaN);
+  if (!Number.isFinite(declared) || declared > MAX_BODY_BYTES) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 // The request flow without any framework: easy to test with fakes. Nothing
 // here ever logs or echoes the barcode.
 export async function handleLookup(
@@ -28,8 +49,8 @@ export async function handleLookup(
   const user = await deps.getUser();
   if (!user) return reply({ success: false, error: "unauthorized" }, 401);
 
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES)
+  const text = await readBody(request);
+  if (text === null)
     return reply({ success: false, error: "bad request" }, 400);
   let barcode: string;
   try {
@@ -40,8 +61,9 @@ export async function handleLookup(
   } catch {
     return reply({ success: false, error: "bad request" }, 400);
   }
-  if (!isValidBarcode(barcode))
-    return reply({ success: false, error: "bad request" }, 400);
+  const normalised = normaliseBarcode(barcode);
+  if (!normalised) return reply({ success: false, error: "bad request" }, 400);
+  barcode = normalised;
 
   let allowed: "ok" | "limited" | "not_allowed";
   try {

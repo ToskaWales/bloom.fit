@@ -1,4 +1,5 @@
 import { addDays } from "@/lib/daily/day";
+import { normaliseBarcode } from "@/lib/nutrition/barcode";
 import {
   entryFromFood,
   validateFood,
@@ -120,15 +121,11 @@ export async function saveFood(
   if (!v.ok) return v;
   if ((options.brand?.trim().length ?? 0) > 80)
     return failed("Die Marke ist zu lang.");
-  const barcode = options.barcode ?? null;
-  if (barcode !== null) {
-    if (!BARCODE.test(barcode))
-      return failed("Der Barcode sieht nicht richtig aus.");
-    const taken = (
-      (await db.foods.where("barcode").equals(barcode).toArray()) as FoodRow[]
-    ).some((f) => !f.deleted_at);
-    if (taken) return failed("Dieses Produkt hast du schon gespeichert.");
-  }
+  const given = options.barcode ?? null;
+  if (given !== null && !BARCODE.test(given))
+    return failed("Der Barcode sieht nicht richtig aus.");
+  // UPC-A / EAN-13 / zero-padded GTIN-14 of one product become one stored form.
+  const barcode = given === null ? null : (normaliseBarcode(given) ?? given);
   const row: FoodRow = {
     id: crypto.randomUUID(),
     name: v.value.name,
@@ -144,7 +141,14 @@ export async function saveFood(
     favorite: false,
     deleted_at: null,
   };
-  await saveRow(db, "foods", row);
+  // Check and write in one transaction, so two quick saves cannot both pass the check.
+  const saved = await db.transaction("rw", db.foods, db.outbox, async () => {
+    if (barcode !== null && (await findFoodByBarcode(db, barcode)))
+      return false;
+    await saveRow(db, "foods", row);
+    return true;
+  });
+  if (!saved) return failed("Dieses Produkt hast du schon gespeichert.");
   return { ok: true, value: row };
 }
 
@@ -251,7 +255,8 @@ export async function findFoodByBarcode(
   db: LocalDb,
   barcode: string,
 ): Promise<FoodRow | undefined> {
+  const key = normaliseBarcode(barcode) ?? barcode;
   return (
-    (await db.foods.where("barcode").equals(barcode).toArray()) as FoodRow[]
+    (await db.foods.where("barcode").equals(key).toArray()) as FoodRow[]
   ).find((f) => !f.deleted_at);
 }

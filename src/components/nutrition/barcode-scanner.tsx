@@ -18,7 +18,13 @@ async function createDetector(): Promise<Detector> {
   const native = (
     globalThis as { BarcodeDetector?: new (o: object) => Detector }
   ).BarcodeDetector;
-  if (native) return new native({ formats: FORMATS });
+  if (native) {
+    try {
+      return new native({ formats: FORMATS });
+    } catch {
+      // unsupported formats: use the bundled detector instead
+    }
+  }
   const mod = await import("barcode-detector/ponyfill");
   mod.setZXingModuleOverrides({
     locateFile: (path: string, prefix: string) =>
@@ -39,6 +45,11 @@ export function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
+  // The latest callback, so a re-render of the parent never restarts the camera.
+  const onCodeRef = useRef(onCode);
+  useEffect(() => {
+    onCodeRef.current = onCode;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -60,49 +71,59 @@ export function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
     };
     document.addEventListener("visibilitychange", onHidden);
 
+    const fail = (text: string) => {
+      if (stopped) return;
+      setMessage(text);
+      stop();
+      setOpen(false);
+    };
+
     (async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setMessage(NUTRITION_TEXT.cameraUnavailable);
-        setOpen(false);
-        return;
-      }
+      if (!navigator.mediaDevices?.getUserMedia)
+        return fail(NUTRITION_TEXT.cameraUnavailable);
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
           audio: false,
         });
-      } catch {
-        setMessage(NUTRITION_TEXT.cameraDenied);
-        setOpen(false);
-        return;
+      } catch (err) {
+        const name = err instanceof DOMException ? err.name : "";
+        return fail(
+          name === "NotFoundError" || name === "OverconstrainedError"
+            ? NUTRITION_TEXT.cameraMissing
+            : name === "NotReadableError"
+              ? NUTRITION_TEXT.cameraBusy
+              : NUTRITION_TEXT.cameraDenied,
+        );
       }
       if (stopped || !video.current) return stop();
       video.current.srcObject = stream;
-      await video.current.play().catch(() => {});
+      try {
+        await video.current.play();
+      } catch {
+        return fail(NUTRITION_TEXT.cameraUnavailable);
+      }
       let detector: Detector;
       try {
         detector = await createDetector();
       } catch {
-        setMessage(NUTRITION_TEXT.cameraUnavailable);
-        stop();
-        setOpen(false);
-        return;
+        return fail(NUTRITION_TEXT.scannerLoadFailed);
       }
       const tick = async () => {
         if (stopped || !video.current) return;
         try {
           const found = await detector.detect(video.current);
           const code = found.map((f) => f.rawValue).find(isValidBarcode);
-          if (code) {
+          if (code && !stopped) {
             stop();
             setOpen(false);
-            onCode(code);
+            onCodeRef.current(code);
             return;
           }
         } catch {
           // a frame that cannot be read is skipped
         }
-        timer = setTimeout(tick, SCAN_INTERVAL_MS);
+        if (!stopped) timer = setTimeout(tick, SCAN_INTERVAL_MS);
       };
       void tick();
     })();
@@ -111,7 +132,7 @@ export function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
       document.removeEventListener("visibilitychange", onHidden);
       stop();
     };
-  }, [open, onCode]);
+  }, [open]);
 
   return (
     <div className="flex flex-col gap-2">

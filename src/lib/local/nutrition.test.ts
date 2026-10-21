@@ -266,3 +266,23 @@ describe("findFoodByBarcode", () => {
     );
   });
 });
+
+describe("barcode forms and double saves", () => {
+  it("finds a food saved as EAN-13 when the scanner reports the 12-digit UPC-A", async () => {
+    const f = await saveFood(db, oats, { barcode: "0036000291452" });
+    expect(f.ok).toBe(true);
+    expect((await findFoodByBarcode(db, "036000291452"))?.name).toBe(
+      "Haferflocken",
+    );
+    const dup = await saveFood(db, oats, { barcode: "036000291452" });
+    expect(dup.ok).toBe(false);
+  });
+  it("two saves at the same moment create only one food per barcode", async () => {
+    const [a, b] = await Promise.all([
+      saveFood(db, oats, { barcode: "4006381333931" }),
+      saveFood(db, oats, { barcode: "4006381333931" }),
+    ]);
+    expect([a.ok, b.ok].sort()).toEqual([false, true]);
+    expect(await db.foods.count()).toBe(1);
+  });
+});

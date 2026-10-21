@@ -45,7 +45,11 @@ export default function Datenschutz() {
           selbst suchst): Open Food Facts (openfoodfacts.org, Verein mit Sitz in
           Frankreich). Bloom schickt nur die Barcode-Nummer, über unseren
           Server, ohne deine IP-Adresse und ohne Kennung. Die Daten stehen unter
-          der Open Database License (ODbL).
+          der Open Database License (ODbL). Speicherst du ein Produkt, gehört
+          seine Barcode-Nummer zu deinen Ernährungsdaten (Einwilligung nach Art.
+          9 Abs. 2 lit. a DSGVO, die du beim Einschalten von Ernährung gibst):
+          Sie wird wie deine übrigen Einträge in der EU gespeichert und ist im
+          Export enthalten.
         </li>
         <li>
           Reichweitenmessung: [[Plausible Analytics (EU, ohne Cookies, ohne

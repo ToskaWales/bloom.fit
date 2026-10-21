@@ -25,9 +25,11 @@ const text = (n: number | null) =>
 export function FoodForm({
   onSaved,
   prefill,
+  onDismiss,
 }: {
   onSaved: () => void;
   prefill?: FoodPrefill;
+  onDismiss?: () => void;
 }) {
   const { db } = useLocal();
   const [name, setName] = useState(prefill?.name ?? "");
@@ -38,10 +40,11 @@ export function FoodForm({
   const [carbs, setCarbs] = useState(text(prefill?.carbsG ?? null));
   const [fat, setFat] = useState(text(prefill?.fatG ?? null));
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!db) return;
+    if (!db || saving) return;
     const parsed = parseFields({
       portion: basis === "portion" ? portion : "",
       kcal,
@@ -51,6 +54,7 @@ export function FoodForm({
     });
     if (!parsed.ok) return setError(parsed.error);
     const v = parsed.values;
+    setSaving(true);
     const r = await saveFood(
       db,
       {
@@ -70,6 +74,7 @@ export function FoodForm({
           }
         : {},
     );
+    setSaving(false);
     if (!r.ok) return setError(r.error);
     onSaved();
   }
@@ -164,7 +169,17 @@ export function FoodForm({
           {error}
         </p>
       )}
-      <button className={buttonClass}>Lebensmittel speichern</button>
+      {prefill?.brand && (
+        <p className="text-sm text-neutral-600">Marke: {prefill.brand}</p>
+      )}
+      <button disabled={saving} className={buttonClass}>
+        Lebensmittel speichern
+      </button>
+      {onDismiss && (
+        <button type="button" onClick={onDismiss} className="text-sm underline">
+          {NUTRITION_TEXT.barcodeDismiss}
+        </button>
+      )}
     </form>
   );
 }

@@ -42,6 +42,7 @@ export async function fetchOffProduct(
     const res = await fetchImpl(url, {
       method: "GET",
       redirect: "error",
+      cache: "no-store", // a barcode must never end up in a fetch cache
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: {
         accept: "application/json",

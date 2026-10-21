@@ -305,12 +305,11 @@ describe("barcode index", () => {
 });
 
 describe("consume_food_lookup", () => {
-  const consume = (u: string, w = 20, d = 100) =>
+  const consume = (u: string) =>
     asUser(
       db,
       u,
-      async () =>
-        (await q("select consume_food_lookup($1, $2) as r", [w, d])).rows[0].r,
+      async () => (await q("select consume_food_lookup() as r")).rows[0].r,
     );
 
   it("is not allowed while nutrition is off, without consent or without access", async () => {
@@ -322,25 +321,40 @@ describe("consume_food_lookup", () => {
     expect(await consume(pending)).toBe("not_allowed");
   });
 
-  it("counts per window and day, then limits", async () => {
+  it("takes no arguments, so a caller cannot choose the limits", async () => {
+    const a = await member("a@example.com");
+    await expect(
+      asUser(db, a, () => q("select consume_food_lookup(1000000, 1000000)")),
+    ).rejects.toThrow(/does not exist|function/);
+  });
+
+  it("allows 20 lookups per window, then limits; a new window starts after ten minutes", async () => {
     const a = await member("a@example.com");
     await asUser(db, a, () =>
       q("update profiles set nutrition_mode = 'log' where id = $1", [a]),
     );
-    expect(await consume(a, 3)).toBe("ok");
-    expect(await consume(a, 3)).toBe("ok");
-    expect(await consume(a, 3)).toBe("ok");
-    expect(await consume(a, 3)).toBe("limited");
-    // a new window starts after ten minutes
+    for (let i = 0; i < 20; i++) expect(await consume(a)).toBe("ok");
+    expect(await consume(a)).toBe("limited");
     await q(
       "update food_lookup_quota set window_start = now() - interval '11 minutes'",
     );
-    expect(await consume(a, 3)).toBe("ok");
-    // the daily limit holds across windows
+    expect(await consume(a)).toBe("ok");
+  });
+
+  it("holds a daily limit of 100 across windows", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () =>
+      q("update profiles set nutrition_mode = 'log' where id = $1", [a]),
+    );
+    expect(await consume(a)).toBe("ok");
     await q(
       "update food_lookup_quota set window_start = now() - interval '11 minutes', day_count = 100",
     );
-    expect(await consume(a, 3, 100)).toBe("limited");
+    expect(await consume(a)).toBe("limited");
+    await q(
+      "update food_lookup_quota set window_start = now() - interval '11 minutes', day_start = now() - interval '25 hours'",
+    );
+    expect(await consume(a)).toBe("ok");
   });
 
   it("keeps separate counters per user and the table is not readable by clients", async () => {
@@ -350,9 +364,12 @@ describe("consume_food_lookup", () => {
       await asUser(db, u, () =>
         q("update profiles set nutrition_mode = 'log' where id = $1", [u]),
       );
-    expect(await consume(a, 1)).toBe("ok");
-    expect(await consume(a, 1)).toBe("limited");
-    expect(await consume(b, 1)).toBe("ok");
+    await q(
+      "insert into food_lookup_quota (user_id, window_count) values ($1, 25)",
+      [a],
+    );
+    expect(await consume(a)).toBe("limited");
+    expect(await consume(b)).toBe("ok");
     await expect(
       asUser(db, a, () => q("select * from food_lookup_quota")),
     ).rejects.toThrow(/permission denied/);

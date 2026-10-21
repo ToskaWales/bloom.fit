@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
 import { FoodForm, type FoodPrefill } from "@/components/nutrition/food-form";
 import { useLocal } from "@/components/local-provider";
 import { buttonClass, inputClass } from "@/components/ui";
 import { findFoodByBarcode } from "@/lib/local/nutrition";
-import { cleanBarcode, isValidBarcode } from "@/lib/nutrition/barcode";
+import { cleanBarcode, normaliseBarcode } from "@/lib/nutrition/barcode";
 import { NUTRITION_TEXT } from "@/lib/nutrition/texts";
 
 const STATUS_TEXT: Record<number, string> = {
   400: NUTRITION_TEXT.barcodeInvalid,
-  403: NUTRITION_TEXT.barcodeOff,
+  401: NUTRITION_TEXT.barcodeLogin,
+  403: NUTRITION_TEXT.barcodeNotAllowed,
   404: NUTRITION_TEXT.barcodeNotFound,
   422: NUTRITION_TEXT.barcodeUnusable,
   429: NUTRITION_TEXT.barcodeLimited,
 };
+
+interface FoundFood {
+  name: string;
+  brand: string | null;
+  kcal: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+}
 
 export function BarcodeLookup({
   onKnown,
@@ -27,10 +37,12 @@ export function BarcodeLookup({
   /** True while a found product waits to be saved (the manual form steps aside). */
   onPrefillChange: (showing: boolean) => void;
 }) {
-  const { db, nutritionMode, online } = useLocal();
+  const { db, nutritionMode } = useLocal();
   const [digits, setDigits] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Only the newest search may show its result; older answers are dropped.
+  const latest = useRef(0);
   const [prefill, setPrefillState] = useState<FoodPrefill | null>(null);
   const setPrefill = (p: FoodPrefill | null) => {
     setPrefillState(p);
@@ -38,51 +50,47 @@ export function BarcodeLookup({
   };
 
   async function search(raw: string) {
+    if (busy) return;
+    const mine = ++latest.current;
+    const current = () => mine === latest.current;
     setMessage(null);
     setPrefill(null);
-    const code = cleanBarcode(raw);
-    if (!isValidBarcode(code)) return setMessage(NUTRITION_TEXT.barcodeInvalid);
+    const code = normaliseBarcode(cleanBarcode(raw));
+    if (!code) return setMessage(NUTRITION_TEXT.barcodeInvalid);
     if (!db) return;
-    // Already saved on this device: no request, works offline.
-    const known = await findFoodByBarcode(db, code);
-    if (known) {
-      setMessage(`${NUTRITION_TEXT.barcodeKnown} ${known.name}`);
-      return onKnown(known.id);
-    }
-    if (nutritionMode === "off") return setMessage(NUTRITION_TEXT.barcodeOff);
-    if (!online) return setMessage(NUTRITION_TEXT.barcodeOffline);
     setBusy(true);
     try {
+      // Already saved on this device: no request, works offline.
+      const known = await findFoodByBarcode(db, code);
+      if (!current()) return;
+      if (known) return onKnown(known.id);
+      if (nutritionMode === "off") return setMessage(NUTRITION_TEXT.barcodeOff);
+      if (!navigator.onLine) return setMessage(NUTRITION_TEXT.barcodeOffline);
       const res = await fetch("/api/food/lookup", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ barcode: code }),
         cache: "no-store",
+        signal: AbortSignal.timeout(8000),
       });
+      if (!current()) return;
       if (!res.ok)
         return setMessage(
           STATUS_TEXT[res.status] ?? NUTRITION_TEXT.barcodeUpstream,
         );
-      const body = (await res.json()) as {
-        data?: {
-          food: {
-            name: string;
-            brand: string | null;
-            kcal: number | null;
-            proteinG: number | null;
-            carbsG: number | null;
-            fatG: number | null;
-          };
-        };
-      };
+      const body = (await res.json()) as { data?: { food: FoundFood } };
+      if (!current()) return;
       if (!body.data) return setMessage(NUTRITION_TEXT.barcodeUpstream);
       setPrefill({ ...body.data.food, barcode: code });
     } catch {
-      setMessage(
-        online ? NUTRITION_TEXT.barcodeUpstream : NUTRITION_TEXT.barcodeOffline,
-      );
+      if (current())
+        setMessage(
+          navigator.onLine
+            ? NUTRITION_TEXT.barcodeUpstream
+            : NUTRITION_TEXT.barcodeOffline,
+        );
     } finally {
-      setBusy(false);
+      if (current()) setBusy(false);
     }
   }
 
@@ -131,12 +139,14 @@ export function BarcodeLookup({
       )}
       {prefill && (
         <FoodForm
+          key={prefill.barcode}
           prefill={prefill}
           onSaved={() => {
             setPrefill(null);
             setDigits("");
             onSaved();
           }}
+          onDismiss={() => setPrefill(null)}
         />
       )}
     </section>

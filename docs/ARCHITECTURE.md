@@ -129,4 +129,8 @@ Noch offen: N-2 (Barcode, Open Food Facts über eigene Server-Route), N-3 (weich
 - **Scanner:** der Detektor des Browsers (Chrome Android), sonst `barcode-detector` (MIT, zxing-cpp/Apache-2.0) per dynamischem Import, die WebAssembly-Datei kommt aus `/vendor/` der eigenen Domain (Kopie per `scripts/copy-zxing-wasm.mjs` vor Build und Dev, nicht im Repository). Die Kamera startet erst nach einem Tipp, stoppt beim Schließen und beim Verlassen der App, kein Bild wird gespeichert oder gesendet. Das Ziffernfeld ist immer verfügbar. Header `Permissions-Policy: camera=(self)`. Eine spätere CSP braucht `'wasm-unsafe-eval'`.
 - **Lizenz:** „Daten: Open Food Facts (ODbL)“ in der Oberfläche, im Export (`attribution`) und in der Datenschutzerklärung. Bloom veröffentlicht keine abgeleitete Datenbank.
 
+Barcodes werden einheitlich als 13-stellige Form gespeichert und gesucht (UPC-A, EAN-13 und GTIN-14 mit führenden Nullen sind dasselbe Produkt). Der Server liest den Request-Body nur bis 1000 Bytes und verlangt `content-length`.
+
+Bekannt: Es gibt noch keine Content-Security-Policy. Eine spätere CSP braucht `connect-src 'self' <Supabase>`, `script-src 'self' 'wasm-unsafe-eval'` und `frame-ancestors 'none'`; sie würde auch absichern, dass der Scanner seine WebAssembly-Datei nie von einem fremden CDN lädt (heute nur durch die Überschreibung in `barcode-scanner.tsx`). Ohne Netz startet der Scanner nur, wenn der Browser einen eigenen Barcode-Leser hat; die Ziffern-Eingabe geht immer.
+
 Noch offen: N-3 (weiche Hunger-Hinweise).
