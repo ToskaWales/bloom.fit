@@ -4,17 +4,39 @@ import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { buttonClass, inputClass } from "@/components/ui";
 import { parseFields } from "@/lib/nutrition/parse";
+import { NUTRITION_TEXT } from "@/lib/nutrition/texts";
 import { saveFood } from "@/lib/local/nutrition";
 
-export function FoodForm({ onSaved }: { onSaved: () => void }) {
+export interface FoodPrefill {
+  name: string;
+  brand: string | null;
+  barcode: string;
+  kcal: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+}
+
+const text = (n: number | null) =>
+  n === null ? "" : String(n).replace(".", ",");
+
+// With a prefill (an Open Food Facts product) the values are per 100 g and can
+// be corrected before saving; the source is remembered with the food.
+export function FoodForm({
+  onSaved,
+  prefill,
+}: {
+  onSaved: () => void;
+  prefill?: FoodPrefill;
+}) {
   const { db } = useLocal();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(prefill?.name ?? "");
   const [basis, setBasis] = useState<"100g" | "portion">("100g");
   const [portion, setPortion] = useState("");
-  const [kcal, setKcal] = useState("");
-  const [protein, setProtein] = useState("");
-  const [carbs, setCarbs] = useState("");
-  const [fat, setFat] = useState("");
+  const [kcal, setKcal] = useState(text(prefill?.kcal ?? null));
+  const [protein, setProtein] = useState(text(prefill?.proteinG ?? null));
+  const [carbs, setCarbs] = useState(text(prefill?.carbsG ?? null));
+  const [fat, setFat] = useState(text(prefill?.fatG ?? null));
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -29,15 +51,25 @@ export function FoodForm({ onSaved }: { onSaved: () => void }) {
     });
     if (!parsed.ok) return setError(parsed.error);
     const v = parsed.values;
-    const r = await saveFood(db, {
-      name,
-      basis,
-      portionG: v.portion,
-      kcal: v.kcal,
-      proteinG: v.protein,
-      carbsG: v.carbs,
-      fatG: v.fat,
-    });
+    const r = await saveFood(
+      db,
+      {
+        name,
+        basis,
+        portionG: v.portion,
+        kcal: v.kcal,
+        proteinG: v.protein,
+        carbsG: v.carbs,
+        fatG: v.fat,
+      },
+      prefill
+        ? {
+            barcode: prefill.barcode,
+            brand: prefill.brand ?? undefined,
+            source: "off",
+          }
+        : {},
+    );
     if (!r.ok) return setError(r.error);
     onSaved();
   }
@@ -56,23 +88,30 @@ export function FoodForm({ onSaved }: { onSaved: () => void }) {
         onChange={(e) => setName(e.target.value)}
         className={inputClass}
       />
-      <div
-        role="group"
-        aria-label="Werte beziehen sich auf"
-        className="flex gap-2"
-      >
-        {(["100g", "portion"] as const).map((b) => (
-          <button
-            type="button"
-            key={b}
-            aria-pressed={basis === b}
-            onClick={() => setBasis(b)}
-            className={`rounded-full border px-3 py-1.5 text-sm ${basis === b ? "border-rose-600 bg-rose-50 text-rose-800" : "border-neutral-300 bg-white"}`}
-          >
-            {b === "100g" ? "Pro 100 g" : "Pro Portion"}
-          </button>
-        ))}
-      </div>
+      {prefill ? (
+        <p className="text-sm text-neutral-700">
+          Werte pro 100 g (bei Getränken pro 100 ml).{" "}
+          {NUTRITION_TEXT.attribution}
+        </p>
+      ) : (
+        <div
+          role="group"
+          aria-label="Werte beziehen sich auf"
+          className="flex gap-2"
+        >
+          {(["100g", "portion"] as const).map((b) => (
+            <button
+              type="button"
+              key={b}
+              aria-pressed={basis === b}
+              onClick={() => setBasis(b)}
+              className={`rounded-full border px-3 py-1.5 text-sm ${basis === b ? "border-rose-600 bg-rose-50 text-rose-800" : "border-neutral-300 bg-white"}`}
+            >
+              {b === "100g" ? "Pro 100 g" : "Pro Portion"}
+            </button>
+          ))}
+        </div>
+      )}
       {basis === "portion" && (
         <input
           aria-label="Portionsgröße (g)"

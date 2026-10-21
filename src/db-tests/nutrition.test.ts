@@ -95,21 +95,14 @@ describe("foods", () => {
     );
   });
 
-  it("allows one active food per barcode and a new one after a soft delete", async () => {
+  it("only accepts digit-only barcodes", async () => {
     const a = await member("a@example.com");
-    const withCode = (id: string) =>
-      insertFood(a, id, "basis, kcal, barcode", "'100g', 100, '4001234567890'");
-    await asUser(db, a, () => withCode(F1));
-    await expect(asUser(db, a, () => withCode(F2))).rejects.toThrow(
-      /duplicate|unique/,
-    );
     await asUser(db, a, () =>
-      q("update foods set deleted_at = now() where id = $1", [F1]),
+      insertFood(a, F1, "basis, kcal, barcode", "'100g', 100, '4001234567890'"),
     );
-    await asUser(db, a, () => withCode(F2));
     await expect(
       asUser(db, a, () =>
-        insertFood(a, L1, "basis, kcal, barcode", "'100g', 1, 'abc'"),
+        insertFood(a, F2, "basis, kcal, barcode", "'100g', 1, 'abc'"),
       ),
     ).rejects.toThrow(/check/);
   });
@@ -297,6 +290,72 @@ describe("consent on the data tables", () => {
     expect(
       (await q("select kind from suggestions where deleted_at is null")).rows,
     ).toEqual([{ kind: "readiness" }]);
+  });
+});
+
+describe("barcode index", () => {
+  it("allows the same barcode twice (offline devices), duplicates are harmless", async () => {
+    const a = await member("a@example.com");
+    const withCode = (id: string) =>
+      insertFood(a, id, "basis, kcal, barcode", "'100g', 100, '4001234567890'");
+    await asUser(db, a, () => withCode(F1));
+    await asUser(db, a, () => withCode(F2));
+    expect((await q("select count(*)::int as n from foods")).rows[0].n).toBe(2);
+  });
+});
+
+describe("consume_food_lookup", () => {
+  const consume = (u: string, w = 20, d = 100) =>
+    asUser(
+      db,
+      u,
+      async () =>
+        (await q("select consume_food_lookup($1, $2) as r", [w, d])).rows[0].r,
+    );
+
+  it("is not allowed while nutrition is off, without consent or without access", async () => {
+    const a = await member("a@example.com");
+    expect(await consume(a)).toBe("not_allowed"); // mode off
+    const noConsent = await member("n@example.com", false);
+    expect(await consume(noConsent)).toBe("not_allowed");
+    const pending = await createUser(db, "p@example.com");
+    expect(await consume(pending)).toBe("not_allowed");
+  });
+
+  it("counts per window and day, then limits", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () =>
+      q("update profiles set nutrition_mode = 'log' where id = $1", [a]),
+    );
+    expect(await consume(a, 3)).toBe("ok");
+    expect(await consume(a, 3)).toBe("ok");
+    expect(await consume(a, 3)).toBe("ok");
+    expect(await consume(a, 3)).toBe("limited");
+    // a new window starts after ten minutes
+    await q(
+      "update food_lookup_quota set window_start = now() - interval '11 minutes'",
+    );
+    expect(await consume(a, 3)).toBe("ok");
+    // the daily limit holds across windows
+    await q(
+      "update food_lookup_quota set window_start = now() - interval '11 minutes', day_count = 100",
+    );
+    expect(await consume(a, 3, 100)).toBe("limited");
+  });
+
+  it("keeps separate counters per user and the table is not readable by clients", async () => {
+    const a = await member("a@example.com");
+    const b = await member("b@example.com");
+    for (const u of [a, b])
+      await asUser(db, u, () =>
+        q("update profiles set nutrition_mode = 'log' where id = $1", [u]),
+      );
+    expect(await consume(a, 1)).toBe("ok");
+    expect(await consume(a, 1)).toBe("limited");
+    expect(await consume(b, 1)).toBe("ok");
+    await expect(
+      asUser(db, a, () => q("select * from food_lookup_quota")),
+    ).rejects.toThrow(/permission denied/);
   });
 });
 

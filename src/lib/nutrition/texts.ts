@@ -27,6 +27,33 @@ export const NUTRITION_TEXT = {
   totalsHidden:
     "Summen sind ausgeblendet. Du kannst das in den Einstellungen ändern.",
   settingsLink: "Ernährung ein- oder ausschalten",
+  barcodeTitle: "Per Barcode hinzufügen",
+  barcodeHint: "Gib die Ziffern ein oder scanne den Strichcode.",
+  barcodeSearch: "Suchen",
+  barcodeScan: "Kamera starten",
+  barcodeScanClose: "Kamera schließen",
+  barcodeOffline: "Gerade offline, trag es kurz von Hand ein.",
+  barcodeInvalid:
+    "Diese Nummer sieht nicht richtig aus. Bitte prüfe die Ziffern.",
+  barcodeNotFound:
+    "Dieses Produkt kennt Open Food Facts nicht. Du kannst es von Hand eintragen.",
+  barcodeUnusable:
+    "Zu diesem Produkt gibt es keine brauchbaren Werte. Du kannst es von Hand eintragen.",
+  barcodeUpstream:
+    "Die Suche klappt gerade nicht. Versuche es später noch einmal oder trag es von Hand ein.",
+  barcodeLimited:
+    "Du hast gerade viele Produkte gesucht. Bitte warte kurz oder trag es von Hand ein.",
+  barcodeOff:
+    "Ernährung ist ausgeschaltet. Schalte sie in den Einstellungen ein, um zu suchen.",
+  barcodeKnown: "Dieses Produkt hast du schon gespeichert:",
+  cameraDenied:
+    "Die Kamera ist nicht freigegeben. Du kannst die Ziffern auch eintippen.",
+  cameraUnavailable:
+    "Auf diesem Gerät ist keine Kamera verfügbar. Du kannst die Ziffern eintippen.",
+  cameraHint:
+    "Halte den Strichcode ruhig und im Hellen vor die Kamera. Das Bild bleibt auf deinem Gerät.",
+  attribution:
+    "Daten: Open Food Facts (ODbL), openfoodfacts.org. Prüfe die Werte, bevor du speicherst.",
   note: "Die Werte sind das, was du einträgst. Bloom rechnet nichts hinzu und schätzt nichts.",
 } as const;
 

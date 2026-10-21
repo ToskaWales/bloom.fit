@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BarcodeLookup } from "@/components/nutrition/barcode-lookup";
 import { FoodForm } from "@/components/nutrition/food-form";
 import { MealSelect } from "@/components/nutrition/quick-add-form";
 import { useFoods } from "@/components/nutrition/use-nutrition";
@@ -18,6 +19,7 @@ export function FoodsList({ day }: { day: string }) {
   const { db } = useLocal();
   const foods = useFoods();
   const [adding, setAdding] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [meal, setMeal] = useState<Meal | null>(null);
@@ -126,7 +128,21 @@ export function FoodsList({ day }: { day: string }) {
         ))}
       </ul>
       {adding ? (
-        <FoodForm onSaved={() => setAdding(false)} />
+        <>
+          <BarcodeLookup
+            onKnown={(id) => {
+              setAdding(false);
+              setOpen(id);
+              setAmount("");
+            }}
+            onSaved={() => {
+              setPrefilled(false);
+              setAdding(false);
+            }}
+            onPrefillChange={setPrefilled}
+          />
+          {!prefilled && <FoodForm onSaved={() => setAdding(false)} />}
+        </>
       ) : (
         <button
           onClick={() => setAdding(true)}

@@ -78,6 +78,7 @@ Im Supabase SQL Editor nacheinander ausführen, jeweils nur einmal:
 7. `20261107000000_daily_tracking.sql` (Check-ins, Gewicht, Zyklus, Einstellung „Gewicht ausblenden“)
 8. `20261108000000_suggestions.sql` (Vorschläge der Anpassungs-Engine; ersetzt außerdem die Aufräumfunktion aus 6 um die neuen Tabellen)
 9. `20261109000000_nutrition.sql` (Ernährung: Lebensmittel, Einträge, Schalter `nutrition_mode`, eigene Einwilligung; erweitert die Aufräumfunktion erneut)
+10. `20261110000000_food_barcode.sql` (Barcode-Suche: lockerer Index, Abfrage-Limit pro Nutzerin)
 
 Hinweis: `accounts.sql` wurde nach dem ersten Einspielen noch gehärtet (has_access-Sperre, Einwilligungen, Onboarding-Regeln). Wenn dein Projekt die frühe Version hat, setze die Konten-Tabellen zurück (solange noch keine echten Nutzerinnen existieren: `drop table public.consents, public.invites, public.profiles cascade;` plus die Funktionen und Trigger, oder das Projekt neu anlegen) und spiele 2 und 3 neu ein.
 

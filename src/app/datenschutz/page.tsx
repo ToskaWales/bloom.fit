@@ -41,6 +41,13 @@ export default function Datenschutz() {
         </li>
         <li>Hosting: [[Anbieter, Region]]</li>
         <li>
+          Produktsuche per Barcode (nur wenn du Ernährung eingeschaltet hast und
+          selbst suchst): Open Food Facts (openfoodfacts.org, Verein mit Sitz in
+          Frankreich). Bloom schickt nur die Barcode-Nummer, über unseren
+          Server, ohne deine IP-Adresse und ohne Kennung. Die Daten stehen unter
+          der Open Database License (ODbL).
+        </li>
+        <li>
           Reichweitenmessung: [[Plausible Analytics (EU, ohne Cookies, ohne
           personenbezogene Daten) oder „keine“]]
         </li>

@@ -13,6 +13,7 @@ const FORBIDDEN: RegExp[] = [
   /erlaubt|verboten|gesund|ungesund|clean|schlecht|gut\b/i,
   /optimal|phase|luteal|follikel|cycle[ -]?sync/i,
   /du brauchst|du musst|du solltest/i,
+  /nutri-?score|nova|eco-?score|green-?score|ampel/i,
 ];
 
 describe("nutrition wording", () => {
@@ -53,6 +54,8 @@ describe("nutrition wording", () => {
       "Gut gemacht",
       "Kalorienüberschuss",
       "gesunde Wahl",
+      "Nutri-Score A",
+      "Eco-Score",
     ])
       expect(
         FORBIDDEN.some((r) => r.test(bad)),

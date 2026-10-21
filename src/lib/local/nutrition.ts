@@ -246,3 +246,12 @@ export async function wipeNutrition(db: LocalDb): Promise<void> {
     },
   );
 }
+
+export async function findFoodByBarcode(
+  db: LocalDb,
+  barcode: string,
+): Promise<FoodRow | undefined> {
+  return (
+    (await db.foods.where("barcode").equals(barcode).toArray()) as FoodRow[]
+  ).find((f) => !f.deleted_at);
+}

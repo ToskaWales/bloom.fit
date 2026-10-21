@@ -115,6 +115,18 @@ Optional und standardmäßig aus (`profiles.nutrition_mode`: `off`, `log`, `log_
 - **Darstellung**: eine neutrale Zeile „Heute eingetragen: …“ (ausblendbar), kein Ring, kein Balken, keine Farbe, kein Ziel, kein Vergleich. `src/lib/nutrition/texts.test.ts` prüft alle Texte und dass die Komponenten keine Signalfarben oder Fortschrittsanzeigen nutzen.
 - **Sicherheit** (`safety.ts`): „wenig eingetragen“ (Median unter 1200 kcal an mind. 7 sorgfältig geloggten Tagen der letzten 14, mind. 2 Einträge pro Tag) ist ein weiteres Signal neben der überfälligen Periode. Ohne Periodensignal (Pille, keine Angabe) gibt es denselben ruhigen Hinweis (`subject = energy`) bei niedriger Zufuhr, niedriger Energie und mind. 6 Trainingstagen in 14 Tagen. Der Schwellenwert ist ein interner Startwert ohne Anzeige und braucht eine fachliche Prüfung.
 
-Bekannt: Zwischengespeicherte Seiten tragen den Schalter; auf einem zweiten Gerät kann offline kurz der alte Stand erscheinen, die Datenbank lässt in dieser Zeit aber nichts mehr speichern. Beim Barcode (N-2) muss die Eindeutigkeit pro Barcode geräteübergreifend behandelt werden (Unique-Index kann bei zwei Geräten ablehnen).
+Bekannt: Zwischengespeicherte Seiten tragen den Schalter; auf einem zweiten Gerät kann offline kurz der alte Stand erscheinen, die Datenbank lässt in dieser Zeit aber nichts mehr speichern.
 
 Noch offen: N-2 (Barcode, Open Food Facts über eigene Server-Route), N-3 (weiche Hunger-Hinweise).
+
+### Barcode und Open Food Facts (Stand N-2)
+
+- **Route** `POST /api/food/lookup` (POST, damit der Barcode in keiner URL und keinem Zugriffslog steht): Login, Prüfziffer (GS1), dann `consume_food_lookup()` in der Datenbank. Sie erlaubt nur mit Zugang, eingeschalteter Ernährung und aktiver Einwilligung und zählt pro Nutzerin (20 je 10 Minuten, 100 je Tag; Tabelle `food_lookup_quota`, speichert keinen Barcode). Erst danach geht eine Anfrage an Open Food Facts.
+- **Abruf** (`off-fetch.ts`): feste Adresse, nur geprüfte Ziffern im Pfad, keine Cookies oder Client-Header, eigener User-Agent, `redirect: "error"`, Timeout 4 s, höchstens 200 KB. Fehler werden zu ruhigen Meldungen; der Barcode wird nie geloggt.
+- **Bereinigung** (`off.ts`): nur Werte pro 100 g (kJ wird umgerechnet), fehlende bleiben leer, unplausible werden verworfen, Namen werden von Steuerzeichen befreit und gekürzt. Nicht übernommen werden Bilder, Nutri-Score, NOVA, Eco-Score.
+- **Speichern:** Das Ergebnis erscheint als vorausgefülltes, änderbares Formular und wird als eigenes Lebensmittel (`source = 'off'`) gespeichert, danach offline nutzbar. Vor jeder Abfrage wird lokal nach dem Barcode gesucht. Ohne Netz: „Gerade offline, trag es kurz von Hand ein.“
+- **Barcode-Eindeutigkeit:** Migration `20261110` ersetzt den Unique-Index durch einen normalen Index. Doppelte Lebensmittel sind harmlos (Einträge tragen eigene Werte) und blockieren keinen Sync mehr.
+- **Scanner:** der Detektor des Browsers (Chrome Android), sonst `barcode-detector` (MIT, zxing-cpp/Apache-2.0) per dynamischem Import, die WebAssembly-Datei kommt aus `/vendor/` der eigenen Domain (Kopie per `scripts/copy-zxing-wasm.mjs` vor Build und Dev, nicht im Repository). Die Kamera startet erst nach einem Tipp, stoppt beim Schließen und beim Verlassen der App, kein Bild wird gespeichert oder gesendet. Das Ziffernfeld ist immer verfügbar. Header `Permissions-Policy: camera=(self)`. Eine spätere CSP braucht `'wasm-unsafe-eval'`.
+- **Lizenz:** „Daten: Open Food Facts (ODbL)“ in der Oberfläche, im Export (`attribution`) und in der Datenschutzerklärung. Bloom veröffentlicht keine abgeleitete Datenbank.
+
+Noch offen: N-3 (weiche Hunger-Hinweise).

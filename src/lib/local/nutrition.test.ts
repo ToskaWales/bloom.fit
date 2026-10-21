@@ -8,6 +8,7 @@ import {
   copyEntryTo,
   deleteEntry,
   deleteFood,
+  findFoodByBarcode,
   listFoods,
   logsForDay,
   recentEntries,
@@ -231,5 +232,37 @@ describe("recent entries", () => {
     const [gone] = await logsForDay(db, "2026-10-19");
     await deleteEntry(db, gone.id);
     expect(await recentEntries(db, day)).toEqual([]);
+  });
+});
+
+describe("findFoodByBarcode", () => {
+  it("finds a saved food by barcode, ignores deleted ones and unknown codes", async () => {
+    const f = await saveFood(db, oats, {
+      barcode: "4006381333931",
+      source: "off",
+    });
+    if (!f.ok) throw new Error("setup");
+    expect((await findFoodByBarcode(db, "4006381333931"))?.id).toBe(f.value.id);
+    expect(await findFoodByBarcode(db, "40170725")).toBeUndefined();
+    await deleteFood(db, f.value.id);
+    expect(await findFoodByBarcode(db, "4006381333931")).toBeUndefined();
+  });
+  it("stores source and brand from a lookup", async () => {
+    const f = await saveFood(db, oats, {
+      barcode: "4006381333931",
+      source: "off",
+      brand: "Kölln",
+    });
+    expect(f.ok && f.value).toMatchObject({
+      source: "off",
+      brand: "Kölln",
+      barcode: "4006381333931",
+    });
+    expect(f.ok && pushSchemas.foods.safeParse(f.value).success).toBe(true);
+  });
+  it("rejects a brand that is too long", async () => {
+    expect((await saveFood(db, oats, { brand: "x".repeat(81) })).ok).toBe(
+      false,
+    );
   });
 });

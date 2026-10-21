@@ -37,6 +37,10 @@ async function fetchAll(
   }
 }
 
+const foodsFromOff = (rows: unknown): boolean =>
+  Array.isArray(rows) &&
+  rows.some((r) => (r as { source?: string }).source === "off");
+
 // Data export (GDPR Art. 15/20): everything stored about the signed-in user,
 // including rows they deleted that haven't been purged yet. Read through RLS, so
 // it can only ever contain their own rows.
@@ -66,6 +70,13 @@ export async function GET() {
         sign_in_providers: data.user.app_metadata?.providers ?? [],
         profile: profile.data,
         consents: consents.data,
+        // Products taken from Open Food Facts carry its licence (ODbL).
+        ...(foodsFromOff(tables[TRAINING_TABLES.indexOf("foods")])
+          ? {
+              attribution:
+                "Einige Lebensmittel stammen aus Open Food Facts (openfoodfacts.org), Datenbanklizenz ODbL 1.0.",
+            }
+          : {}),
         training: Object.fromEntries(
           TRAINING_TABLES.map((t, i) => [t, tables[i]]),
         ),
