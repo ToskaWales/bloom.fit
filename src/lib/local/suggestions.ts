@@ -8,6 +8,7 @@ import {
   type PatternAnalysis,
   type PatternMetric,
 } from "@/lib/engine/patterns";
+import { detectHungerRise } from "@/lib/engine/hunger";
 import { performanceSeries } from "@/lib/engine/performance";
 import type { ExerciseSession } from "@/lib/engine/plateau";
 import {
@@ -43,7 +44,13 @@ const INTAKE_DAYS = 14;
 const TRAINING_WINDOW_DAYS = 14;
 
 // Engine kinds the refresh owns: it may remove its own stale hints, never others.
-const OWNED_KINDS = new Set(["readiness", "plateau", "pattern", "safety"]);
+const OWNED_KINDS = new Set([
+  "readiness",
+  "plateau",
+  "pattern",
+  "safety",
+  "hunger_note",
+]);
 
 const sameParams = (a: SuggestionRow["params"], b: SuggestionRow["params"]) => {
   const ka = Object.keys(a).sort();
@@ -341,6 +348,13 @@ async function doRefresh(
       patterns,
       safety,
       energyNote,
+      // only hunger ratings, training days and training performance: never weight or food entries
+      hunger: detectHungerRise({
+        today,
+        checkins: data.checkins.map((c) => ({ day: c.day, hunger: c.hunger })),
+        trainingDays: data.trainingDays,
+        performance: performanceSeries(data.exerciseSessions),
+      }),
     }),
     past,
     today,

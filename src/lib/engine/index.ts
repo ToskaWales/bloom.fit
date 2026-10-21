@@ -1,5 +1,6 @@
 import { computeReadiness, type ReadinessCheckin } from "./readiness";
 import { detectPlateau, type ExerciseSession } from "./plateau";
+import type { HungerRise } from "./hunger";
 import type { PatternAnalysis } from "./patterns";
 import type { SafetyResult } from "./safety";
 import type { Candidate } from "./select";
@@ -12,6 +13,8 @@ export interface EngineInput {
   patterns: PatternAnalysis | null;
   /** null when cycle tracking is off. */
   safety: SafetyResult | null;
+  /** A rise in her hunger ratings (hunger.ts). */
+  hunger?: HungerRise | null;
   /** Safety notice for people without a period signal (nutrition logging on). */
   energyNote?: {
     active: boolean;
@@ -33,6 +36,7 @@ export function buildCandidates({
   patterns,
   safety,
   energyNote,
+  hunger,
 }: EngineInput): Candidate[] {
   const out: Candidate[] = [];
   const safetyActive = safety?.active === true || energyNote?.active === true;
@@ -111,6 +115,22 @@ export function buildCandidates({
         cycles: f.cycles,
         windowAvg: round2(f.windowAvg),
         restAvg: round2(f.restAvg),
+      },
+    });
+  }
+  // A hunger pattern around the period already says it; no second card for the same thing.
+  const hungerPattern =
+    patterns?.status === "found" &&
+    patterns.findings.some((f) => f.metric === "hunger");
+  if (hunger && !hungerPattern) {
+    out.push({
+      kind: "hunger_note",
+      subject: "",
+      params: {
+        recent: hunger.recent,
+        before: hunger.before,
+        trainingDays: hunger.trainingDays,
+        ...(hunger.perfDrop !== null ? { perfDrop: hunger.perfDrop } : {}),
       },
     });
   }

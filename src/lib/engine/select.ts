@@ -23,11 +23,13 @@ const SAFETY_QUIET_DAYS = 7;
 const ONCE_PER_DAYS: Partial<Record<SuggestionKind, number>> = {
   plateau: 14,
   pattern: 28,
+  hunger_note: 28,
 };
 // One of a kind per day keeps the card calm (a second plateau waits for another day).
 const PER_KIND_CAP: Partial<Record<SuggestionKind, number>> = {
   plateau: 1,
   pattern: 1,
+  hunger_note: 1,
 };
 
 const PRIORITY: Record<SuggestionKind, number> = {

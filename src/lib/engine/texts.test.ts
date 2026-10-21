@@ -18,6 +18,7 @@ const FORBIDDEN: RegExp[] = [
   /science|wissenschaft|studie|forschung zeigt|belegt|bewiesen|garantiert|beweist|nachweislich/i,
   /\bmusst\b|\bsolltest\b|\bsollst\b|\bunbedingt\b/i,
   /\b(trainiere|mach|nimm|iss|hör|verzichte|schau|probiere|reduziere|steigere)\b/i, // imperatives
+  /\bweniger\b|weniger\s+ess|eiweiß|eiweiss/i,
   /diagnos|krankheit|störung|essstörung/i,
   /abnehm|diät|defizit|zunehm/i,
 ];
@@ -96,6 +97,17 @@ function grid(): Candidate[] {
           subject: "",
           params: { overdueDays: 10, lowEnergy, weightFall, lowIntake },
         });
+  for (const perfDrop of [undefined, 5])
+    out.push({
+      kind: "hunger_note",
+      subject: "",
+      params: {
+        recent: 4,
+        before: 2.5,
+        trainingDays: 6,
+        ...(perfDrop ? { perfDrop } : {}),
+      },
+    });
   for (const lowEnergy of [true, false])
     for (const lowIntake of [true, false])
       out.push({
@@ -273,5 +285,71 @@ describe("describeFinding: wording rules", () => {
         cycles: 2,
       }).value(-0.06),
     ).toBe("−6 %");
+  });
+});
+
+describe("renderSuggestion: hunger", () => {
+  const note = (params: Candidate["params"]): Candidate => ({
+    kind: "hunger_note",
+    subject: "",
+    params,
+  });
+  it("states her numbers, offers eating more only softly and never gives a number", () => {
+    const r = renderSuggestion(
+      note({ recent: 4, before: 2.5, trainingDays: 6 }),
+      metric,
+    );
+    expect(r?.title).toBe("Hunger: zuletzt höher als sonst");
+    expect(r?.body).toMatch(/Hunger ist ein Signal, kein Fehler/);
+    expect(r?.body).toMatch(/Wenn du magst/);
+    expect(r?.because).toEqual([
+      "Hunger in den letzten 7 Tagen meist 4, bei dir sonst meist 2,5",
+      "Verglichen mit deinen Check-ins der vier Wochen davor",
+      "Dazu hast du in den letzten zwei Wochen an 6 Tagen trainiert",
+    ]);
+  });
+  it("adds the performance line only when it is in the data", () => {
+    const r = renderSuggestion(
+      note({ recent: 4, before: 2.5, trainingDays: 6, perfDrop: 5 }),
+      metric,
+    );
+    expect(r?.because.at(-1)).toBe(
+      "Deine Trainingsleistung lag zuletzt etwa 5 % unter deinem üblichen Niveau",
+    );
+  });
+  it("renders nothing for unusable params (no invented numbers)", () => {
+    expect(renderSuggestion(note({}), metric)).toBeNull();
+    expect(
+      renderSuggestion(note({ recent: 4, before: 2.5 }), metric),
+    ).toBeNull();
+    expect(
+      renderSuggestion(
+        note({ recent: "x", before: 2, trainingDays: 5 }),
+        metric,
+      ),
+    ).toBeNull();
+  });
+  it("a pattern about higher hunger adds the soft sentence, other patterns do not", () => {
+    const pattern = (metricName: string, effect: number): Candidate => ({
+      kind: "pattern",
+      subject: `${metricName}:before`,
+      params: {
+        metric: metricName,
+        window: "before",
+        effect,
+        cycles: 3,
+        windowAvg: 4,
+        restAvg: 3,
+      },
+    });
+    expect(renderSuggestion(pattern("hunger", 1), metric)?.body).toMatch(
+      /Wenn du magst, kannst du an diesen Tagen etwas mehr oder öfter essen/,
+    );
+    expect(renderSuggestion(pattern("hunger", -1), metric)?.body).not.toMatch(
+      /essen/,
+    );
+    expect(renderSuggestion(pattern("energy", 1), metric)?.body).not.toMatch(
+      /essen/,
+    );
   });
 });

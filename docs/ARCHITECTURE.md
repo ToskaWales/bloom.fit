@@ -104,7 +104,7 @@ Läuft ausschließlich auf dem Gerät (`src/lib/engine`, reine Funktionen, keine
 
 Nur Art, Gegenstand, wenige Zahlen und Reaktion werden gespeichert; die Zahlen unter „Warum sehe ich das?“ für Bereitschaft werden lokal neu berechnet. Eine Reaktion kann serverseitig nicht auf „shown“ zurückgesetzt werden (Trigger `suggestions_keep_reaction`).
 
-Noch offen: Ernährungs-Hinweise (Hunger-Muster fließen bereits ein; Kalorien/Protein erst mit Ernährungs-Logging, nur als weiche Option).
+Noch offen: Kalorien-/Protein-Anpassungen gibt es bewusst nicht; frühestens nach der Validierung und nur als weiche Option.
 
 ## Ernährung (Stand N-1)
 
@@ -133,4 +133,10 @@ Barcodes werden einheitlich als 13-stellige Form gespeichert und gesucht (UPC-A,
 
 Bekannt: Es gibt noch keine Content-Security-Policy. Eine spätere CSP braucht `connect-src 'self' <Supabase>`, `script-src 'self' 'wasm-unsafe-eval'` und `frame-ancestors 'none'`; sie würde auch absichern, dass der Scanner seine WebAssembly-Datei nie von einem fremden CDN lädt (heute nur durch die Überschreibung in `barcode-scanner.tsx`). Ohne Netz startet der Scanner nur, wenn der Browser einen eigenen Barcode-Leser hat; die Ziffern-Eingabe geht immer.
 
-Noch offen: N-3 (weiche Hunger-Hinweise).
+### Hunger-Hinweis (Stand N-3)
+
+`hunger.ts`: Der Median ihrer Hunger-Einträge der letzten 7 Tage (mind. 4 Werte) liegt mindestens 1 Punkt über ihrem Median der 4 Wochen davor (mind. 10 Werte), und sie hat in 14 Tagen an mindestens 4 Tagen trainiert. Startwerte, nicht belegt. Optional kommt eine „weil“-Zeile dazu, wenn die Trainingsleistung der letzten zwei Wochen mindestens 4 % unter ihrem üblichen Niveau liegt. Gewicht und Ernährungs-Einträge werden dafür nie gelesen, es gilt für alle Zyklus-Modi und ohne Ernährungs-Logging.
+
+- Der Text beobachtet („Hunger ist ein Signal, kein Fehler“) und bietet nur weich an („Wenn du magst, kannst du an Trainingstagen etwas mehr oder öfter essen“), nie eine Zahl, nie „weniger“. Tests verbieten „weniger“, „Eiweiß“ und Zahlen mit kcal/g in allen Engine-Texten.
+- Höchstens alle 28 Tage, egal wie sie reagiert; Rang unter Bereitschaft, Muster und Plateau; bei aktivem Sicherheitshinweis nie. Gibt es ein gefundenes Hunger-Muster rund um die Periode, entfällt dieser Hinweis (das Muster sagt es schon und trägt denselben weichen Satz bei steigendem Hunger).
+- Gespeichert werden nur `recent`, `before`, `trainingDays` und ggf. `perfDrop`.

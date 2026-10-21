@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays } from "@/lib/daily/day";
 import {
   selectSuggestions,
   type Candidate,
@@ -207,5 +208,38 @@ describe("selectSuggestions: safety subjects", () => {
         "2026-11-05",
       ),
     ).toHaveLength(1);
+  });
+});
+
+describe("selectSuggestions: hunger note", () => {
+  const note: Candidate = { kind: "hunger_note", subject: "", params: {} };
+  it("is raised at most every 28 days, whatever the reaction", () => {
+    const ago = (days: number, status: "shown" | "accepted" | "dismissed") => [
+      {
+        kind: "hunger_note" as const,
+        subject: "",
+        day: addDays("2026-10-30", -days),
+        status,
+      },
+    ];
+    for (const status of ["shown", "accepted", "dismissed"] as const) {
+      expect(selectSuggestions([note], ago(10, status), "2026-10-30")).toEqual(
+        [],
+      );
+      expect(selectSuggestions([note], ago(27, status), "2026-10-30")).toEqual(
+        [],
+      );
+      expect(selectSuggestions([note], ago(28, status), "2026-10-30")).toEqual([
+        note,
+      ]);
+    }
+  });
+  it("ranks below readiness, pattern and plateau", () => {
+    const out = selectSuggestions(
+      [note, plateauBench, readiness],
+      [],
+      "2026-10-30",
+    );
+    expect(out.map((c) => c.kind)).toEqual(["readiness", "plateau"]);
   });
 });

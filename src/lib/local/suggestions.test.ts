@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { pushSchemas } from "@/lib/sync/tables";
 import { createLocalDb, type LocalDb } from "./db";
-import { patchCheckin, saveCheckin, saveCycleEvent } from "./daily";
+import { patchCheckin, saveCheckin, saveCycleEvent, saveWeight } from "./daily";
 import { addQuickEntry, wipeNutrition } from "./nutrition";
 import { saveRow } from "./repo";
 import {
@@ -170,27 +170,20 @@ describe("refreshSuggestions", () => {
     expect(await db.outbox.count()).toBe(queued);
   });
 
-  it("does not remove hints the refresh does not own, and keeps reacted ones", async () => {
+  it("removes a stale hint nobody reacted to, but keeps one she accepted", async () => {
     await history();
     await saveCheckin(db, USER, today, values(2, 1, 2));
-    await saveRow(db, "suggestions", {
-      id: "22222222-aaaa-4aaa-8aaa-222222222222",
-      kind: "hunger_note",
-      day: today,
-      subject: "x",
-      params: {},
-      status: "shown",
-      reacted_at: null,
-      deleted_at: null,
-    } satisfies SuggestionRow);
     await refreshSuggestions(db, { userId: USER, today });
+    const [row] = (await suggestionsForDay(db, today)) as SuggestionRow[];
+    await reactToSuggestion(db, row.id, "accepted");
     await db.checkins
       .where("day")
       .equals(today)
       .modify({ deleted_at: "2026-10-30T20:00:00.000Z" });
     await refreshSuggestions(db, { userId: USER, today });
-    const left = await suggestionsForDay(db, today);
-    expect(left.map((r) => r.kind)).toEqual(["hunger_note"]);
+    expect((await suggestionsForDay(db, today)).map((r) => r.status)).toEqual([
+      "accepted",
+    ]);
   });
 
   it("ignores bodyweight sets (0 kg) and workouts that are still running", async () => {
@@ -465,5 +458,91 @@ describe("refreshSuggestions: nutrition", () => {
     });
     expect(await engineSignature(db, today, false, "off")).toBe(off);
     expect(await engineSignature(db, today, false, "log")).not.toBe(on);
+  });
+});
+
+describe("refreshSuggestions: hunger note", () => {
+  const hungerValues = (hunger: number) => ({ ...values(3, 3, 3), hunger });
+  async function risingHunger(target: LocalDb) {
+    for (let i = 1; i <= 34; i++)
+      await saveCheckin(
+        target,
+        USER,
+        addDays(today, -i),
+        hungerValues(i <= 6 ? 4 : 2),
+      );
+    await saveCheckin(target, USER, today, hungerValues(4));
+  }
+  async function trainDays(target: LocalDb, days: number) {
+    const was = db;
+    db = target;
+    for (let i = 1; i <= days; i++)
+      await benchSession(addDays(today, -i), 60, 5);
+    db = was;
+  }
+
+  it("raises a note when hunger rose and she trains regularly, for every cycle mode and without nutrition logging", async () => {
+    for (const cycleMode of ["none", "hormonal", "natural", null] as const) {
+      const target = createLocalDb(`hunger-${++n}`);
+      await risingHunger(target);
+      await trainDays(target, 6);
+      await refreshSuggestions(target, {
+        userId: USER,
+        today,
+        cycleMode,
+        nutritionMode: "off",
+      });
+      const kinds = (await suggestionsForDay(target, today)).map((r) => r.kind);
+      expect(kinds, String(cycleMode)).toContain("hunger_note");
+    }
+  });
+
+  it("stays quiet without regular training or while a safety notice is active", async () => {
+    await risingHunger(db);
+    await trainDays(db, 2);
+    await refreshSuggestions(db, { userId: USER, today });
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("hunger_note");
+  });
+
+  it("does not read weight or food entries for it", async () => {
+    await risingHunger(db);
+    await trainDays(db, 6);
+    await saveWeight(db, USER, addDays(today, -1), 64);
+    await addQuickEntry(db, {
+      day: today,
+      meal: null,
+      name: "x",
+      kcal: 500,
+      proteinG: null,
+    });
+    const reads: string[] = [];
+    db.foods.hook("reading", (o) => (reads.push("foods"), o));
+    db.food_logs.hook("reading", (o) => (reads.push("food_logs"), o));
+    db.bodyweight_entries.hook("reading", (o) => (reads.push("weight"), o));
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "off",
+      hideWeight: true,
+    });
+    expect(reads).toEqual([]);
+  });
+
+  it("removes today's note when the data no longer supports it", async () => {
+    await risingHunger(db);
+    await trainDays(db, 6);
+    await refreshSuggestions(db, { userId: USER, today });
+    expect((await suggestionsForDay(db, today)).map((r) => r.kind)).toContain(
+      "hunger_note",
+    );
+    for (let i = 0; i <= 6; i++)
+      await saveCheckin(db, USER, addDays(today, -i), hungerValues(2));
+    await refreshSuggestions(db, { userId: USER, today });
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("hunger_note");
   });
 });

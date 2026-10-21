@@ -159,7 +159,11 @@ export function renderSuggestion(
     );
     return {
       title: `${metric.label}: meist ${direction} in ${window}`,
-      body: `In deinen letzten ${cycles} Zyklen war ${metric.possessive} in ${window} im Schnitt ${size} ${direction} als an den übrigen Tagen. Das ist ein Muster in deinen Daten, kein allgemeines Gesetz: Bei anderen Frauen kann es ganz anders aussehen.`,
+      body: `In deinen letzten ${cycles} Zyklen war ${metric.possessive} in ${window} im Schnitt ${size} ${direction} als an den übrigen Tagen. Das ist ein Muster in deinen Daten, kein allgemeines Gesetz: Bei anderen Frauen kann es ganz anders aussehen.${
+        p.metric === "hunger" && effect > 0
+          ? " Wenn du magst, kannst du an diesen Tagen etwas mehr oder öfter essen. Bloom gibt dir dabei keine Zahl vor."
+          : ""
+      }`,
       because,
       acceptLabel: "Verstanden",
     };
@@ -215,7 +219,30 @@ export function renderSuggestion(
     };
   }
 
-  return null; // hunger_note and anything newer
+  if (c.kind === "hunger_note") {
+    const recent = num(p.recent);
+    const before = num(p.before);
+    const training = num(p.trainingDays);
+    if (recent === null || before === null || training === null) return null;
+    const perfDrop = num(p.perfDrop);
+    return {
+      title: "Hunger: zuletzt höher als sonst",
+      body: "Dein Hunger lag in den letzten sieben Tagen über deinem üblichen Niveau. Hunger ist ein Signal, kein Fehler. Wenn du magst, kannst du an Trainingstagen etwas mehr oder öfter essen. Bloom gibt dir dabei keine Zahl vor, du entscheidest.",
+      because: [
+        `Hunger in den letzten 7 Tagen meist ${fmt(recent)}, bei dir sonst meist ${fmt(before)}`,
+        "Verglichen mit deinen Check-ins der vier Wochen davor",
+        `Dazu hast du in den letzten zwei Wochen an ${training} ${training === 1 ? "Tag" : "Tagen"} trainiert`,
+        ...(perfDrop !== null
+          ? [
+              `Deine Trainingsleistung lag zuletzt etwa ${perfDrop} % unter deinem üblichen Niveau`,
+            ]
+          : []),
+      ],
+      acceptLabel: "Verstanden",
+    };
+  }
+
+  return null; // anything newer
 }
 
 export interface FindingText {

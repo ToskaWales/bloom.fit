@@ -235,4 +235,58 @@ describe("buildCandidates", () => {
     );
     expect(out[0]).toMatchObject({ kind: "safety", subject: "energy" });
   });
+
+  describe("hunger note", () => {
+    const rise = { recent: 4, before: 2.5, trainingDays: 6, perfDrop: null };
+    it("emits a hunger note with her numbers and nothing else stored", () => {
+      const [c] = buildCandidates(input({ hunger: rise }));
+      expect(c).toMatchObject({
+        kind: "hunger_note",
+        subject: "",
+        params: { recent: 4, before: 2.5, trainingDays: 6 },
+      });
+      expect(Object.keys(c.params).sort()).toEqual([
+        "before",
+        "recent",
+        "trainingDays",
+      ]);
+    });
+    it("stores a performance drop only when there is one", () => {
+      const [c] = buildCandidates(input({ hunger: { ...rise, perfDrop: 5 } }));
+      expect(c.params.perfDrop).toBe(5);
+    });
+    it("is held back while any safety notice is active", () => {
+      expect(
+        buildCandidates(input({ hunger: rise, safety: active })).map(
+          (c) => c.kind,
+        ),
+      ).toEqual(["safety"]);
+      expect(
+        buildCandidates(
+          input({
+            hunger: rise,
+            safety: null,
+            energyNote: { active: true, lowIntake: true, lowEnergy: true },
+          }),
+        ).map((c) => c.kind),
+      ).toEqual(["safety"]);
+    });
+    it("leaves it to the pattern card when a hunger pattern around the period was found", () => {
+      const hungerPattern: PatternAnalysis = {
+        status: "found",
+        usableCycles: 3,
+        findings: [{ ...finding, metric: "hunger", effect: 1.1 }],
+      };
+      expect(
+        buildCandidates(input({ hunger: rise, patterns: hungerPattern })).map(
+          (c) => c.kind,
+        ),
+      ).toEqual(["pattern"]);
+      expect(
+        buildCandidates(input({ hunger: rise, patterns: found })).map(
+          (c) => c.kind,
+        ),
+      ).toEqual(["pattern", "hunger_note"]);
+    });
+  });
 });

@@ -2,7 +2,7 @@
 
 Trainings- und Ernährungs-App für Frauen, die ernsthaft Krafttraining machen (3x+/Woche, Muskelaufbau/Recomp), Markt DACH, Solo-Gründer (Tech). Preis 6,99 €/Monat. Ziel jetzt: **Validierung** (zahlen DACH-Lifterinnen dafür?), kein Full Launch.
 
-**Status:** Phase 0 (Landingpage/Warteliste), 1a (Auth/Onboarding), 1b (Training offline, Vorlagen, PRs, Hevy/Strong-Import) 1c (Check-ins, Gewicht, Zyklus, Verlauf) und 1d (Anpassungs-Engine: Bereitschaft, Plateau, Muster rund um die Periode, Sicherheitsregel) sind gebaut. Ernährung N-1 (optionales Logging, Sicherheitssignal) ist gebaut. Offen: N-2 (Barcode/Open Food Facts), N-3 (weiche Hunger-Hinweise). Stack: Next.js (PWA, offline-first) + Supabase (EU-Region, Postgres, Auth, RLS) + TypeScript. Architektur und Entscheidungen: `docs/ARCHITECTURE.md`, Setup-Schritte: `docs/SETUP.md`.
+**Status:** Phase 0 (Landingpage/Warteliste), 1a (Auth/Onboarding), 1b (Training offline, Vorlagen, PRs, Hevy/Strong-Import) 1c (Check-ins, Gewicht, Zyklus, Verlauf) und 1d (Anpassungs-Engine: Bereitschaft, Plateau, Muster rund um die Periode, Sicherheitsregel) sind gebaut. Ernährung (optionales Logging, Sicherheitssignal, Barcode/Open Food Facts, weicher Hunger-Hinweis) ist gebaut. Offen: Validierung mit echten Nutzerinnen. Stack: Next.js (PWA, offline-first) + Supabase (EU-Region, Postgres, Auth, RLS) + TypeScript. Architektur und Entscheidungen: `docs/ARCHITECTURE.md`, Setup-Schritte: `docs/SETUP.md`.
 
 ## Kernmechanismus
 
