@@ -89,13 +89,75 @@ describe("detectHungerRise", () => {
     expect(detectHungerRise(input(4, 2, { performance: perf }))?.perfDrop).toBe(
       5,
     );
-    const small = [{ day: addDays(today, -3), value: -0.02 }];
+    const small = [
+      { day: addDays(today, -3), value: -0.02 },
+      { day: addDays(today, -4), value: -0.02 },
+    ];
     expect(
       detectHungerRise(input(4, 2, { performance: small }))?.perfDrop,
     ).toBeNull();
-    const better = [{ day: addDays(today, -3), value: 0.05 }];
+    const better = [
+      { day: addDays(today, -3), value: 0.05 },
+      { day: addDays(today, -4), value: 0.05 },
+    ];
     expect(
       detectHungerRise(input(4, 2, { performance: better }))?.perfDrop,
     ).toBeNull();
+  });
+
+  it("splits recent and before exactly between day 6 and day 7, and ends the earlier window after day 34", () => {
+    const at = (offset: number, hunger: number) => ({
+      day: addDays(today, -offset),
+      hunger,
+    });
+    // day 7 belongs to "before": four recent values (days 0..3) at 4, ten earlier at 2 (days 7..16)
+    const base = [0, 1, 2, 3].map((o) => at(o, 4));
+    const earlier = Array.from({ length: 10 }, (_, i) => at(7 + i, 2));
+    expect(
+      detectHungerRise({
+        today,
+        checkins: [...base, ...earlier],
+        trainingDays: 5,
+      }),
+    ).not.toBeNull();
+    // moving one high value from day 6 to day 7 takes it out of the recent window
+    const tooFew = [0, 1, 2, 7].map((o) => at(o, 4));
+    expect(
+      detectHungerRise({
+        today,
+        checkins: [
+          ...tooFew,
+          ...Array.from({ length: 10 }, (_, i) => at(8 + i, 2)),
+        ],
+        trainingDays: 5,
+      }),
+    ).toBeNull();
+    // day 35 is too old for the earlier window: only nine values remain
+    const old = [
+      ...Array.from({ length: 9 }, (_, i) => at(26 + i, 2)),
+      at(35, 2),
+    ];
+    expect(
+      detectHungerRise({ today, checkins: [...base, ...old], trainingDays: 5 }),
+    ).toBeNull();
+    const fine = [...Array.from({ length: 10 }, (_, i) => at(25 + i, 2))];
+    expect(
+      detectHungerRise({
+        today,
+        checkins: [...base, ...fine],
+        trainingDays: 5,
+      }),
+    ).not.toBeNull();
+  });
+
+  it("needs performance on at least two days before it names a performance drop", () => {
+    const one = [{ day: addDays(today, -3), value: -0.2 }];
+    expect(
+      detectHungerRise(input(4, 2, { performance: one }))?.perfDrop,
+    ).toBeNull();
+    const two = [...one, { day: addDays(today, -5), value: -0.2 }];
+    expect(detectHungerRise(input(4, 2, { performance: two }))?.perfDrop).toBe(
+      20,
+    );
   });
 });

@@ -161,7 +161,7 @@ export function renderSuggestion(
       title: `${metric.label}: meist ${direction} in ${window}`,
       body: `In deinen letzten ${cycles} Zyklen war ${metric.possessive} in ${window} im Schnitt ${size} ${direction} als an den übrigen Tagen. Das ist ein Muster in deinen Daten, kein allgemeines Gesetz: Bei anderen Frauen kann es ganz anders aussehen.${
         p.metric === "hunger" && effect > 0
-          ? " Wenn du magst, kannst du an diesen Tagen etwas mehr oder öfter essen. Bloom gibt dir dabei keine Zahl vor."
+          ? " Wenn du magst, kannst du deinem Hunger an diesen Tagen Raum geben, zum Beispiel mit regelmäßigen Mahlzeiten. Bloom gibt dir dabei keine Zahl vor."
           : ""
       }`,
       because,
@@ -227,7 +227,7 @@ export function renderSuggestion(
     const perfDrop = num(p.perfDrop);
     return {
       title: "Hunger: zuletzt höher als sonst",
-      body: "Dein Hunger lag in den letzten sieben Tagen über deinem üblichen Niveau. Hunger ist ein Signal, kein Fehler. Wenn du magst, kannst du an Trainingstagen etwas mehr oder öfter essen. Bloom gibt dir dabei keine Zahl vor, du entscheidest.",
+      body: "Dein Hunger lag in den letzten sieben Tagen über deinem üblichen Niveau. Hunger ist ein normales Signal. Wenn du magst, kannst du ihm in diesen Tagen Raum geben, zum Beispiel mit regelmäßigen Mahlzeiten. Bloom gibt dir dabei keine Zahl vor, du entscheidest.",
       because: [
         `Hunger in den letzten 7 Tagen meist ${fmt(recent)}, bei dir sonst meist ${fmt(before)}`,
         "Verglichen mit deinen Check-ins der vier Wochen davor",

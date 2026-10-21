@@ -119,9 +119,10 @@ export function buildCandidates({
     });
   }
   // A hunger pattern around the period already says it; no second card for the same thing.
-  const hungerPattern =
-    patterns?.status === "found" &&
-    patterns.findings.some((f) => f.metric === "hunger");
+  // The pattern card shows the strongest finding only; it carries the hunger
+  // sentence when that finding is a rise in hunger.
+  const top = patterns?.status === "found" ? patterns.findings[0] : undefined;
+  const hungerPattern = top?.metric === "hunger" && top.effect > 0;
   if (hunger && !hungerPattern) {
     out.push({
       kind: "hunger_note",

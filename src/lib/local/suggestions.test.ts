@@ -497,7 +497,7 @@ describe("refreshSuggestions: hunger note", () => {
     }
   });
 
-  it("stays quiet without regular training or while a safety notice is active", async () => {
+  it("stays quiet without regular training", async () => {
     await risingHunger(db);
     await trainDays(db, 2);
     await refreshSuggestions(db, { userId: USER, today });
@@ -506,7 +506,60 @@ describe("refreshSuggestions: hunger note", () => {
     ).not.toContain("hunger_note");
   });
 
-  it("does not read weight or food entries for it", async () => {
+  it("a note that was shown and then removed the same day does not come back the next day", async () => {
+    await risingHunger(db);
+    await trainDays(db, 6);
+    await refreshSuggestions(db, { userId: USER, today });
+    expect((await suggestionsForDay(db, today)).map((r) => r.kind)).toContain(
+      "hunger_note",
+    );
+    for (let i = 0; i <= 6; i++)
+      await saveCheckin(db, USER, addDays(today, -i), hungerValues(2));
+    await refreshSuggestions(db, { userId: USER, today });
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("hunger_note");
+    // tomorrow the rise shows again, but the 28-day rest still holds
+    const tomorrow = addDays(today, 1);
+    for (let i = 0; i <= 6; i++)
+      await saveCheckin(db, USER, addDays(tomorrow, -i), hungerValues(4));
+    await refreshSuggestions(db, { userId: USER, today: tomorrow });
+    expect(
+      (await suggestionsForDay(db, tomorrow)).map((r) => r.kind),
+    ).not.toContain("hunger_note");
+  });
+
+  it("does not depend on weight or food entries", async () => {
+    const withData = createLocalDb(`hunger-extra-${++n}`);
+    for (const target of [db, withData]) {
+      await risingHunger(target);
+      await trainDays(target, 6);
+    }
+    await saveWeight(withData, USER, addDays(today, -1), 64);
+    await addQuickEntry(withData, {
+      day: today,
+      meal: null,
+      name: "x",
+      kcal: 300,
+      proteinG: null,
+    });
+    const options = {
+      userId: USER,
+      today,
+      cycleMode: "none" as const,
+      nutritionMode: "log" as const,
+    };
+    await refreshSuggestions(db, options);
+    await refreshSuggestions(withData, options);
+    const note = async (target: LocalDb) =>
+      (await suggestionsForDay(target, today)).find(
+        (r) => r.kind === "hunger_note",
+      )?.params;
+    expect(await note(db)).toBeDefined();
+    expect(await note(withData)).toEqual(await note(db));
+  });
+
+  it("reads no weight or food rows when both are switched off", async () => {
     await risingHunger(db);
     await trainDays(db, 6);
     await saveWeight(db, USER, addDays(today, -1), 64);

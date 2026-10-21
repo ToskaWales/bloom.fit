@@ -28,6 +28,7 @@ export const MIN_RISE = 1; // points on the 1-5 scale
 export const MIN_TRAINING_DAYS = 4;
 export const PERF_WINDOW_DAYS = 14;
 export const MIN_PERF_DROP = 0.04;
+export const MIN_PERF_DAYS = 2; // one bad session is not a trend
 
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -75,6 +76,9 @@ export function detectHungerRise({
     recent: round1(recentMedian),
     before: round1(beforeMedian),
     trainingDays,
-    perfDrop: avg <= -MIN_PERF_DROP ? Math.round(-avg * 100) : null,
+    perfDrop:
+      lately.length >= MIN_PERF_DAYS && avg <= -MIN_PERF_DROP
+        ? Math.round(-avg * 100)
+        : null,
   };
 }

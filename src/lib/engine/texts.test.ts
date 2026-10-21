@@ -18,7 +18,8 @@ const FORBIDDEN: RegExp[] = [
   /science|wissenschaft|studie|forschung zeigt|belegt|bewiesen|garantiert|beweist|nachweislich/i,
   /\bmusst\b|\bsolltest\b|\bsollst\b|\bunbedingt\b/i,
   /\b(trainiere|mach|nimm|iss|hör|verzichte|schau|probiere|reduziere|steigere)\b/i, // imperatives
-  /\bweniger\b|weniger\s+ess|eiweiß|eiweiss/i,
+  /\bweniger\b|eiweiß|eiweiss/i,
+  /einschränk|verzicht|zurückhalt|kleinere portion|heißhunger|kontrolle|disziplin|verdien|belohn|an trainingstagen/i,
   /diagnos|krankheit|störung|essstörung/i,
   /abnehm|diät|defizit|zunehm/i,
 ];
@@ -157,6 +158,11 @@ describe("renderSuggestion: wording rules", () => {
       "du brauchst mehr kcal",
       "optimal für dich",
       "Studien zeigen",
+      "weniger essen",
+      "30 g Eiweiß",
+      "Heißhunger",
+      "Disziplin",
+      "nur an Trainingstagen",
       "Trainiere heute",
       "Lutealphase",
       "Zyklusbasiertes Training",
@@ -300,7 +306,7 @@ describe("renderSuggestion: hunger", () => {
       metric,
     );
     expect(r?.title).toBe("Hunger: zuletzt höher als sonst");
-    expect(r?.body).toMatch(/Hunger ist ein Signal, kein Fehler/);
+    expect(r?.body).toMatch(/Hunger ist ein normales Signal/);
     expect(r?.body).toMatch(/Wenn du magst/);
     expect(r?.because).toEqual([
       "Hunger in den letzten 7 Tagen meist 4, bei dir sonst meist 2,5",
@@ -343,7 +349,7 @@ describe("renderSuggestion: hunger", () => {
       },
     });
     expect(renderSuggestion(pattern("hunger", 1), metric)?.body).toMatch(
-      /Wenn du magst, kannst du an diesen Tagen etwas mehr oder öfter essen/,
+      /Wenn du magst, kannst du deinem Hunger an diesen Tagen Raum geben/,
     );
     expect(renderSuggestion(pattern("hunger", -1), metric)?.body).not.toMatch(
       /essen/,

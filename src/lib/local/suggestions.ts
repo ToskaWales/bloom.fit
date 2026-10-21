@@ -320,12 +320,12 @@ async function doRefresh(
         })
       : null;
 
-  const pastRows = (
-    (await db.suggestions
-      .where("day")
-      .between(addDays(today, -PAST_DAYS), today, true, true)
-      .toArray()) as SuggestionRow[]
-  ).filter((r) => !r.deleted_at);
+  // Removed hints count for the cooldown too: a note that disappeared again
+  // after her next check-in was still shown once, and must not come back tomorrow.
+  const pastRows = (await db.suggestions
+    .where("day")
+    .between(addDays(today, -PAST_DAYS), today, true, true)
+    .toArray()) as SuggestionRow[];
   const past: PastSuggestion[] = pastRows.map((r) => ({
     kind: r.kind,
     subject: r.subject,
