@@ -4,7 +4,7 @@ import { addDays } from "@/lib/daily/day";
 import { pushSchemas } from "@/lib/sync/tables";
 import { createLocalDb, type LocalDb } from "./db";
 import { patchCheckin, saveCheckin, saveCycleEvent } from "./daily";
-import { addQuickEntry } from "./nutrition";
+import { addQuickEntry, wipeNutrition } from "./nutrition";
 import { saveRow } from "./repo";
 import {
   engineSignature,
@@ -334,6 +334,64 @@ describe("refreshSuggestions: nutrition", () => {
     });
     for (const r of rows.filter((r) => r.kind === "readiness"))
       expect(r.params.canPush).toBe(false);
+  });
+
+  it("counts training days from finished workouts, also with high-rep and bodyweight-only sets", async () => {
+    await lowIntakeAndEnergy(db);
+    for (let i = 1; i <= 8; i++) {
+      const w = await startWorkout(db);
+      await saveRow(db, "workouts", {
+        ...w,
+        started_at: new Date(`${addDays(today, -i)}T12:00:00`).toISOString(),
+      });
+      const e = await addExercise(db, w.id, "barbell-bench-press");
+      const set = await addSet(db, e.id);
+      await updateSet(db, set.id, { weight_kg: 0, reps: 20, completed: true }); // no e1RM possible
+      await finishWorkout(db, w.id);
+    }
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "log",
+    });
+    expect((await suggestionsForDay(db, today)).map((r) => r.kind)).toContain(
+      "safety",
+    );
+  });
+
+  it("people tracking a natural cycle but without any logged period still get the intake notice", async () => {
+    await lowIntakeAndEnergy(db);
+    await trainDays(db, 8);
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "natural",
+      nutritionMode: "log",
+    });
+    expect(
+      (await suggestionsForDay(db, today)).find((r) => r.kind === "safety")
+        ?.subject,
+    ).toBe("energy");
+  });
+
+  it("wipes nutrition data and derived hints from the device when consent is withdrawn", async () => {
+    await lowIntakeAndEnergy(db);
+    await trainDays(db, 8);
+    await refreshSuggestions(db, {
+      userId: USER,
+      today,
+      cycleMode: "none",
+      nutritionMode: "log",
+    });
+    await wipeNutrition(db);
+    expect(await db.food_logs.count()).toBe(0);
+    expect(await db.outbox.filter((e) => e.table === "food_logs").count()).toBe(
+      0,
+    );
+    expect(
+      (await suggestionsForDay(db, today)).map((r) => r.kind),
+    ).not.toContain("safety");
   });
 
   it("never reads food entries when nutrition is off", async () => {

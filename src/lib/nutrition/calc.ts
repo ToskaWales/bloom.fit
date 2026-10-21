@@ -31,6 +31,7 @@ const MAX_FOOD_G = 500;
 const MAX_KCAL_PER_100G = 900;
 const MAX_KCAL_PER_PORTION = 5000;
 
+const orNull = (n: number | null) => (n === null ? null : round1(n));
 const isNum = (n: unknown): n is number =>
   typeof n === "number" && Number.isFinite(n);
 const within = (n: number | null, min: number, max: number) =>
@@ -59,7 +60,7 @@ export function entryFromFood(
       food.portionG !== null ? round1(food.portionG * amount.portions) : null;
   }
   const scale = (v: number | null) => (v === null ? null : round1(v * factor));
-  return {
+  const entry: EntryValues = {
     nameSnapshot: food.name,
     amountG: grams,
     kcal: scale(food.kcal),
@@ -67,6 +68,17 @@ export function entryFromFood(
     carbsG: scale(food.carbsG),
     fatG: scale(food.fatG),
   };
+  // The scaled result must stay inside the same limits the database enforces,
+  // otherwise it would be saved locally and then rejected on sync.
+  if (
+    !within(entry.kcal, 0, MAX_ENTRY_KCAL) ||
+    !within(entry.proteinG, 0, MAX_ENTRY_G) ||
+    !within(entry.carbsG, 0, MAX_ENTRY_G) ||
+    !within(entry.fatG, 0, MAX_ENTRY_G) ||
+    !within(entry.amountG, 0, MAX_AMOUNT_G)
+  )
+    return null;
+  return entry;
 }
 
 export interface QuickEntry {
@@ -86,7 +98,11 @@ export function validateQuickEntry(input: QuickEntry): Validated<QuickEntry> {
     return { ok: false, error: "Das Eiweiß sieht nicht plausibel aus." };
   return {
     ok: true,
-    value: { name, kcal: input.kcal, proteinG: input.proteinG },
+    value: {
+      name,
+      kcal: orNull(input.kcal),
+      proteinG: orNull(input.proteinG),
+    },
   };
 }
 
@@ -108,13 +124,26 @@ export function validateFood(input: FoodValues): Validated<FoodValues> {
   for (const v of [input.proteinG, input.carbsG, input.fatG])
     if (!within(v, 0, MAX_FOOD_G))
       return { ok: false, error: "Ein Nährwert sieht nicht plausibel aus." };
-  return { ok: true, value: { ...input, name } };
+  return {
+    ok: true,
+    value: {
+      ...input,
+      name,
+      portionG: orNull(input.portionG),
+      kcal: orNull(input.kcal),
+      proteinG: orNull(input.proteinG),
+      carbsG: orNull(input.carbsG),
+      fatG: orNull(input.fatG),
+    },
+  };
 }
 
 export interface DayTotals {
   kcal: number;
   proteinG: number;
   entries: number;
+  /** At least one entry has calories (a protein-only day is not "0 kcal"). */
+  hasKcal: boolean;
 }
 
 export function dayTotals(
@@ -129,5 +158,6 @@ export function dayTotals(
     kcal: Math.round(live.reduce((s, l) => s + (l.kcal ?? 0), 0)),
     proteinG: Math.round(live.reduce((s, l) => s + (l.protein_g ?? 0), 0)),
     entries: live.length,
+    hasKcal: live.some((l) => l.kcal !== null),
   };
 }

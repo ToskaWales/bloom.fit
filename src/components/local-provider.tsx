@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";
+import { wipeNutrition } from "@/lib/local/nutrition";
 import { clearPageCache } from "@/lib/local/wipe";
 import { requeueRejected, syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
@@ -112,11 +113,13 @@ export function LocalProvider({
         setStatus(r.status === "ok" ? "ok" : r.status);
         // Session ended: don't keep personalised pages around.
         if (r.status === "unauthorized") void clearPageCache();
+        // Consent withdrawn: nutrition data does not stay on this device.
+        if (nutritionMode === "off") void wipeNutrition(db).catch(() => {});
       })
       .finally(() => {
         running.current = false;
       });
-  }, [db, enabled]);
+  }, [db, enabled, nutritionMode]);
 
   useEffect(() => {
     const up = () => syncNow();

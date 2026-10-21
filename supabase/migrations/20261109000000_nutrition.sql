@@ -102,12 +102,43 @@ language plpgsql security definer set search_path = public as $$
 begin
   if new.kind = 'nutrition' then
     update public.profiles set nutrition_mode = 'off' where id = new.user_id;
+    -- Withdrawal removes the entries (purged for good by purge_deleted_rows)
+    -- and the hints that were derived from them.
+    update public.food_logs set deleted_at = now() where user_id = new.user_id and deleted_at is null;
+    update public.foods set deleted_at = now() where user_id = new.user_id and deleted_at is null;
+    update public.suggestions set deleted_at = now()
+      where user_id = new.user_id and deleted_at is null and kind = 'safety' and params ? 'lowIntake';
   end if;
   return new;
 end $$;
 create trigger consents_revoked_reset_nutrition after update of revoked_at on public.consents
   for each row when (new.revoked_at is not null)
   execute function public.consents_revoked_reset_nutrition();
+
+-- Nutrition rows may only be written while a nutrition consent is active.
+-- Soft deletes always go through, so a withdrawal never blocks removing data.
+create function public.has_nutrition_consent() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.consents
+    where user_id = auth.uid() and kind = 'nutrition' and revoked_at is null
+  )
+$$;
+revoke all on function public.has_nutrition_consent() from public, anon;
+grant execute on function public.has_nutrition_consent() to authenticated;
+
+create function public.require_nutrition_consent_for_rows() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if new.deleted_at is null and not public.has_nutrition_consent() then
+    raise exception 'nutrition consent required';
+  end if;
+  return new;
+end $$;
+create trigger foods_consent before insert or update on public.foods
+  for each row execute function public.require_nutrition_consent_for_rows();
+create trigger food_logs_consent before insert or update on public.food_logs
+  for each row execute function public.require_nutrition_consent_for_rows();
 
 -- Purge also covers the nutrition tables (replaces the function from 20261108).
 create or replace function public.purge_deleted_rows(older_than_days integer default 30) returns integer

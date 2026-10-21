@@ -10,9 +10,14 @@ beforeEach(async () => {
 const q = (sql: string, params: unknown[] = []) =>
   db.query<Record<string, unknown>>(sql, params);
 
-async function member(email: string) {
+async function member(email: string, consent = true) {
   const id = await createUser(db, email);
   await q("update profiles set access_granted_at = now() where id = $1", [id]);
+  if (consent)
+    await q(
+      "insert into consents (user_id, kind, version) values ($1, 'nutrition', 'v1')",
+      [id],
+    );
   return id;
 }
 
@@ -62,7 +67,7 @@ describe("foods", () => {
     const pending = await createUser(db, "p@example.com");
     await expect(
       asUser(db, pending, () => insertFood(pending)),
-    ).rejects.toThrow(/row-level security/);
+    ).rejects.toThrow(/row-level security|nutrition consent required/);
   });
 
   it("requires kcal or protein, and rejects implausible values", async () => {
@@ -173,7 +178,7 @@ describe("food_logs", () => {
 
 describe("nutrition_mode and consent", () => {
   it("is off by default and cannot be turned on without an active nutrition consent", async () => {
-    const a = await member("a@example.com");
+    const a = await member("a@example.com", false);
     expect(
       (await q("select nutrition_mode from profiles where id = $1", [a]))
         .rows[0].nutrition_mode,
@@ -202,7 +207,7 @@ describe("nutrition_mode and consent", () => {
   });
 
   it("is switched off again when the consent is revoked", async () => {
-    const a = await member("a@example.com");
+    const a = await member("a@example.com", false);
     await asUser(db, a, () =>
       q(
         "insert into consents (user_id, kind, version) values ($1, 'nutrition', 'v1')",
@@ -225,8 +230,8 @@ describe("nutrition_mode and consent", () => {
   });
 
   it("can be changed for yourself only", async () => {
-    const a = await member("a@example.com");
-    const b = await member("b@example.com");
+    const a = await member("a@example.com", false);
+    const b = await member("b@example.com", false);
     await asUser(db, a, () =>
       q(
         "insert into consents (user_id, kind, version) values ($1, 'nutrition', 'v1')",
@@ -240,6 +245,58 @@ describe("nutrition_mode and consent", () => {
       ),
     );
     expect(other.rows).toHaveLength(0);
+  });
+});
+
+describe("consent on the data tables", () => {
+  it("rejects writes without an active consent, but lets soft deletes through", async () => {
+    const a = await member("a@example.com", false);
+    await expect(asUser(db, a, () => insertFood(a))).rejects.toThrow(
+      /nutrition consent required/,
+    );
+    await expect(asUser(db, a, () => insertLog(a))).rejects.toThrow(
+      /nutrition consent required/,
+    );
+    await q(
+      "insert into consents (user_id, kind, version) values ($1, 'nutrition', 'v1')",
+      [a],
+    );
+    await asUser(db, a, () => insertLog(a));
+    await q(
+      "update consents set revoked_at = now() where user_id = $1 and kind = 'nutrition'",
+      [a],
+    );
+    await expect(
+      asUser(db, a, () =>
+        q("update food_logs set deleted_at = null where id = $1", [L1]),
+      ),
+    ).rejects.toThrow(/nutrition consent required/);
+    await asUser(db, a, () =>
+      q("update food_logs set deleted_at = now() where id = $1", [L1]),
+    );
+  });
+
+  it("withdrawing the consent soft-deletes entries, foods and intake-derived hints, and leaves other data alone", async () => {
+    const a = await member("a@example.com");
+    await asUser(db, a, () => insertFood(a));
+    await asUser(db, a, () => insertLog(a));
+    await q(
+      `insert into suggestions (id, user_id, kind, day, subject, params) values
+       ('77777777-7777-4777-8777-777777777777', $1, 'safety', '2026-10-02', 'energy', '{"lowIntake":true}'),
+       ('88888888-8888-4888-8888-888888888888', $1, 'readiness', '2026-10-02', 'lower', '{"level":"lower"}')`,
+      [a],
+    );
+    await asUser(db, a, () =>
+      q("update consents set revoked_at = now() where kind = 'nutrition'"),
+    );
+    const live = async (t: string) =>
+      (await q(`select count(*)::int as n from ${t} where deleted_at is null`))
+        .rows[0].n;
+    expect(await live("food_logs")).toBe(0);
+    expect(await live("foods")).toBe(0);
+    expect(
+      (await q("select kind from suggestions where deleted_at is null")).rows,
+    ).toEqual([{ kind: "readiness" }]);
   });
 });
 

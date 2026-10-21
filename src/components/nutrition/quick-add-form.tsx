@@ -5,12 +5,8 @@ import { useLocal } from "@/components/local-provider";
 import { inputClass, buttonClass } from "@/components/ui";
 import { addQuickEntry } from "@/lib/local/nutrition";
 import type { Meal } from "@/lib/local/types";
+import { parseFields } from "@/lib/nutrition/parse";
 import { MEAL_LABEL, NUTRITION_TEXT } from "@/lib/nutrition/texts";
-
-const num = (v: string): number | null => {
-  const n = Number(v.replace(",", "."));
-  return v.trim() === "" || !Number.isFinite(n) ? null : n;
-};
 
 export function MealSelect({
   value,
@@ -47,12 +43,14 @@ export function QuickAddForm({ day }: { day: string }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!db) return;
+    const parsed = parseFields({ kcal, protein });
+    if (!parsed.ok) return setError(parsed.error);
     const r = await addQuickEntry(db, {
       day,
       meal,
       name,
-      kcal: num(kcal),
-      proteinG: num(protein),
+      kcal: parsed.values.kcal,
+      proteinG: parsed.values.protein,
     });
     if (!r.ok) return setError(r.error);
     setError(null);

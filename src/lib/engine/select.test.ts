@@ -183,3 +183,29 @@ describe("selectSuggestions", () => {
     ]); // 29 days
   });
 });
+
+describe("selectSuggestions: safety subjects", () => {
+  it("a read notice stays quiet for a week whichever variant (period / energy) it was", () => {
+    const past = [
+      {
+        kind: "safety" as const,
+        subject: "energy",
+        day: "2026-10-25",
+        status: "accepted" as const,
+      },
+    ];
+    const out = selectSuggestions(
+      [{ kind: "safety", subject: "", params: {} }],
+      past,
+      "2026-10-28",
+    );
+    expect(out).toEqual([]);
+    expect(
+      selectSuggestions(
+        [{ kind: "safety", subject: "", params: {} }],
+        past,
+        "2026-11-05",
+      ),
+    ).toHaveLength(1);
+  });
+});

@@ -201,15 +201,15 @@ export function renderSuggestion(
         : []),
       ...(lowIntake
         ? [
-            "An mindestens sieben der letzten vierzehn Tage hast du mehrere Einträge gemacht, die zusammen eher klein ausfallen",
+            "Deine Einträge der letzten zwei Wochen sprechen dafür, dass die Energie knapp sein könnte",
           ]
         : []),
       ...(c.subject === "energy" ? ["Dazu trainierst du regelmäßig"] : []),
     ];
-    if (because.length === 0) return null;
+    if (because.length === 0 || signals.length === 0) return null;
     return {
       title: "Mehrere Hinweise, die dir wichtig sein könnten",
-      body: `Bei dir passt gerade zusammen: ${signals.join(", ")}. Das kann viele Gründe haben, zum Beispiel Stress, wenig Schlaf, zu wenig Energie bei viel Training oder dass nicht alles im Protokoll steht. Wenn es anhält, sprich bitte mit einer Ärztin, einem Arzt oder einer Ernährungsfachkraft. Bloom schlägt dir in dieser Zeit keine Steigerung vor.`,
+      body: `Bei dir passt gerade zusammen: ${signals.join(", ")}. Das kann viele Gründe haben, zum Beispiel Stress, wenig Schlaf, zu wenig Energie bei viel Training${lowIntake ? " oder dass nicht alles im Protokoll steht" : ""}. Wenn es anhält, sprich bitte mit einer Ärztin, einem Arzt oder einer Ernährungsfachkraft. Bloom schlägt dir in dieser Zeit keine Steigerung vor.`,
       because,
       acceptLabel: "Habe ich gelesen",
     };

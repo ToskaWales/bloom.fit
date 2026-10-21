@@ -108,11 +108,13 @@ Noch offen: Ernährungs-Hinweise (Hunger-Muster fließen bereits ein; Kalorien/P
 
 ## Ernährung (Stand N-1)
 
-Optional und standardmäßig aus (`profiles.nutrition_mode`: `off`, `log`, `log_no_totals`). Einschalten braucht eine eigene Einwilligung (`consents.kind = 'nutrition'`, per Trigger erzwungen; Widerruf schaltet aus). Bei `off` gibt es keine Karte, keinen Menüpunkt, und die Engine liest keine Essensdaten.
+Optional und standardmäßig aus (`profiles.nutrition_mode`: `off`, `log`, `log_no_totals`). Einschalten braucht eine eigene Einwilligung (`consents.kind = 'nutrition'`). Die Datenbank erzwingt sie auch auf den Datentabellen (Schreiben ohne aktive Einwilligung wird abgelehnt, Soft-Delete geht immer). Widerruf schaltet aus, löscht Einträge, Lebensmittel und aus der Zufuhr abgeleitete Hinweise (endgültig nach der Aufbewahrungsfrist der Aufräumfunktion), und jedes Gerät löscht seine lokale Kopie beim nächsten Sync. Bei `off` gibt es keine Karte, keinen Menüpunkt, und die Engine liest keine Essensdaten.
 
 - **Daten** (`foods`, `food_logs`, Migration `20261109`): pro Nutzerin, gleiche Sync-/RLS-Muster wie die übrigen Tabellen. Jeder Eintrag kopiert die Werte (Snapshot), damit Verlauf und Export ein gelöschtes Lebensmittel überleben. Pflicht ist nur kcal oder Eiweiß, Kohlenhydrate und Fett sind optional.
 - **Logik** (`src/lib/nutrition/calc.ts`, `src/lib/local/nutrition.ts`): nichts wird geschätzt; Grenzen sind in Zod, SQL-Checks und Eingabeprüfung gleich.
 - **Darstellung**: eine neutrale Zeile „Heute eingetragen: …“ (ausblendbar), kein Ring, kein Balken, keine Farbe, kein Ziel, kein Vergleich. `src/lib/nutrition/texts.test.ts` prüft alle Texte und dass die Komponenten keine Signalfarben oder Fortschrittsanzeigen nutzen.
 - **Sicherheit** (`safety.ts`): „wenig eingetragen“ (Median unter 1200 kcal an mind. 7 sorgfältig geloggten Tagen der letzten 14, mind. 2 Einträge pro Tag) ist ein weiteres Signal neben der überfälligen Periode. Ohne Periodensignal (Pille, keine Angabe) gibt es denselben ruhigen Hinweis (`subject = energy`) bei niedriger Zufuhr, niedriger Energie und mind. 6 Trainingstagen in 14 Tagen. Der Schwellenwert ist ein interner Startwert ohne Anzeige und braucht eine fachliche Prüfung.
+
+Bekannt: Zwischengespeicherte Seiten tragen den Schalter; auf einem zweiten Gerät kann offline kurz der alte Stand erscheinen, die Datenbank lässt in dieser Zeit aber nichts mehr speichern. Beim Barcode (N-2) muss die Eindeutigkeit pro Barcode geräteübergreifend behandelt werden (Unique-Index kann bei zwei Geräten ablehnen).
 
 Noch offen: N-2 (Barcode, Open Food Facts über eigene Server-Route), N-3 (weiche Hunger-Hinweise).

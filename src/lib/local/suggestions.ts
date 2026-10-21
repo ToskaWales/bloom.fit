@@ -148,15 +148,26 @@ export function refreshSuggestions(
   return run;
 }
 
-function trainingDays(
-  sessions: Map<string, ExerciseSession[]>,
+// Distinct days with a finished, non-deleted workout. Independent of 1RM data,
+// so bodyweight work and high-rep sets count as training too.
+async function finishedWorkoutDays(
+  db: LocalDb,
   today: string,
-): number {
+): Promise<number> {
+  const lower = new Date(
+    `${addDays(today, -TRAINING_WINDOW_DAYS)}T00:00:00`,
+  ).toISOString();
+  const rows = (await db.workouts
+    .where("started_at")
+    .aboveOrEqual(lower)
+    .toArray()) as WorkoutRow[];
   const days = new Set<string>();
-  for (const list of sessions.values())
-    for (const s of list)
-      if (s.day <= today && s.day > addDays(today, -TRAINING_WINDOW_DAYS))
-        days.add(s.day);
+  for (const w of rows) {
+    if (w.deleted_at || w.ended_at === null) continue;
+    const day = localDay(new Date(w.started_at));
+    if (day <= today && day > addDays(today, -TRAINING_WINDOW_DAYS))
+      days.add(day);
+  }
   return days.size;
 }
 
@@ -173,6 +184,8 @@ export interface EngineData {
   cycleEvents: CycleEventRow[];
   weights: WeightPoint[];
   intake: IntakeEntry[] | null;
+  /** Days with a finished workout in the last two weeks (any exercise, any rep range). */
+  trainingDays: number;
   exerciseSessions: Map<string, ExerciseSession[]>;
 }
 
@@ -212,10 +225,12 @@ export async function loadEngineData(
         )
           .filter((l) => !l.deleted_at)
           .map((l) => ({ day: l.day, kcal: l.kcal }));
+  const trainingDays = await finishedWorkoutDays(db, today);
   return {
     checkins,
     cycleEvents,
     intake,
+    trainingDays,
     starts: cycleEvents
       .filter((e) => e.kind === "period_start")
       .map((e) => e.day),
@@ -289,12 +304,12 @@ async function doRefresh(
   const patterns = tracksCycle ? patternsFrom(data, today) : null;
   // Without a period signal, careful intake logging can raise the same calm notice.
   const energyNote =
-    !tracksCycle && data.intake
+    (!tracksCycle || data.starts.length === 0) && data.intake
       ? evaluateEnergyNote({
           today,
           checkins: data.checkins,
           intake: data.intake,
-          trainingDays: trainingDays(data.exerciseSessions, today),
+          trainingDays: data.trainingDays,
         })
       : null;
 

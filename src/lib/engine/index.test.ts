@@ -225,4 +225,14 @@ describe("buildCandidates", () => {
       ),
     ).toEqual([]);
   });
+
+  it("falls back to the energy note when a cycle result exists but is inactive", () => {
+    const out = buildCandidates(
+      input({
+        safety: inactive,
+        energyNote: { active: true, lowIntake: true, lowEnergy: true },
+      }),
+    );
+    expect(out[0]).toMatchObject({ kind: "safety", subject: "energy" });
+  });
 });

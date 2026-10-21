@@ -132,7 +132,8 @@ export async function setNutritionMode(
       if (error) return { error: "Speichern hat nicht geklappt." };
     }
   } else {
-    // Turning it off also withdraws the consent; entries stay stored and exportable.
+    // Turning it off withdraws the consent; the database then soft-deletes the
+    // entries and hints derived from them, and devices wipe their local copy.
     const { error } = await supabase
       .from("consents")
       .update({ revoked_at: new Date().toISOString() })

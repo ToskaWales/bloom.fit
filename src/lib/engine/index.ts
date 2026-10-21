@@ -37,7 +37,7 @@ export function buildCandidates({
   const out: Candidate[] = [];
   const safetyActive = safety?.active === true || energyNote?.active === true;
 
-  if (safety && safetyActive) {
+  if (safety?.active) {
     out.push({
       kind: "safety",
       subject: "",

@@ -78,7 +78,10 @@ export default async function Settings() {
         <h2 className="text-lg font-semibold">Ernährung</h2>
         <p className="text-sm text-neutral-700">
           Optional: Du kannst eintragen, was du isst. Bloom gibt dir dazu kein
-          Tagesziel vor und bewertet nichts. Du kannst es jederzeit ausschalten.
+          Tagesziel vor und bewertet nichts. Wenn du nur die Summen nicht sehen
+          möchtest, wähle „Nur Einträge, ohne Summen“. Wenn du Ernährung
+          ausschaltest, löscht Bloom deine Ernährungseinträge und widerruft die
+          Einwilligung.
         </p>
         <ClearCacheOnSubmit>
           <StepForm action={setNutritionMode} label="Speichern">

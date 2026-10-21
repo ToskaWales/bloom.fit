@@ -8,6 +8,7 @@ import { useLocal } from "@/components/local-provider";
 import { inputClass, secondaryButtonClass } from "@/components/ui";
 import { addFoodEntry, deleteFood, setFavorite } from "@/lib/local/nutrition";
 import type { FoodRow, Meal } from "@/lib/local/types";
+import { NUMBER_HELP, parseDecimal } from "@/lib/nutrition/parse";
 import { NUTRITION_TEXT } from "@/lib/nutrition/texts";
 
 const detail = (f: FoodRow) =>
@@ -24,7 +25,9 @@ export function FoodsList({ day }: { day: string }) {
 
   async function log(food: FoodRow) {
     if (!db) return;
-    const n = Number(amount.replace(",", "."));
+    const parsed = parseDecimal(amount);
+    if (!parsed.ok || parsed.value === null) return setError(NUMBER_HELP);
+    const n = parsed.value;
     const r = await addFoodEntry(
       db,
       food,

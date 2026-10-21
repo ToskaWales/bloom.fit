@@ -30,11 +30,23 @@ export const NUTRITION_TEXT = {
   note: "Die Werte sind das, was du einträgst. Bloom rechnet nichts hinzu und schätzt nichts.",
 } as const;
 
-export function totalsLine(t: DayTotals): string {
+const dayLabel = (day: string) =>
+  new Date(`${day}T12:00:00`).toLocaleDateString("de-DE", {
+    day: "numeric",
+    month: "long",
+  });
+
+// A plain statement of what was entered; no comparison, no target.
+export function totalsLine(t: DayTotals, day?: string, today?: string): string {
   if (t.entries === 0) return NUTRITION_TEXT.empty;
-  const parts = [`${de(t.kcal)} kcal`];
+  const parts: string[] = [];
+  if (t.hasKcal) parts.push(`${de(t.kcal)} kcal`);
   if (t.proteinG > 0) parts.push(`${de(t.proteinG)} g Eiweiß`);
-  return `Heute eingetragen: ${parts.join(" · ")}`;
+  const when =
+    day && today && day !== today
+      ? `Am ${dayLabel(day)} eingetragen`
+      : "Heute eingetragen";
+  return `${when}: ${parts.join(" · ")}`;
 }
 
 export function entryLine(e: {
@@ -54,9 +66,15 @@ export function allNutritionTexts(): string[] {
   return [
     ...Object.values(NUTRITION_TEXT),
     ...Object.values(MEAL_LABEL),
-    totalsLine({ kcal: 1640, proteinG: 95, entries: 3 }),
-    totalsLine({ kcal: 300, proteinG: 0, entries: 1 }),
-    totalsLine({ kcal: 0, proteinG: 0, entries: 0 }),
+    totalsLine({ kcal: 1640, proteinG: 95, entries: 3, hasKcal: true }),
+    totalsLine({ kcal: 300, proteinG: 0, entries: 1, hasKcal: true }),
+    totalsLine({ kcal: 0, proteinG: 30, entries: 1, hasKcal: false }),
+    totalsLine(
+      { kcal: 300, proteinG: 0, entries: 1, hasKcal: true },
+      "2026-10-20",
+      "2026-10-21",
+    ),
+    totalsLine({ kcal: 0, proteinG: 0, entries: 0, hasKcal: false }),
     entryLine({ kcal: 250, protein_g: 12, amount_g: 60 }),
   ];
 }

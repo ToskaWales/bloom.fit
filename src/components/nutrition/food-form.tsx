@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { buttonClass, inputClass } from "@/components/ui";
+import { parseFields } from "@/lib/nutrition/parse";
 import { saveFood } from "@/lib/local/nutrition";
-
-const num = (v: string): number | null => {
-  const n = Number(v.replace(",", "."));
-  return v.trim() === "" || !Number.isFinite(n) ? null : n;
-};
 
 export function FoodForm({ onSaved }: { onSaved: () => void }) {
   const { db } = useLocal();
@@ -24,14 +20,23 @@ export function FoodForm({ onSaved }: { onSaved: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!db) return;
+    const parsed = parseFields({
+      portion: basis === "portion" ? portion : "",
+      kcal,
+      protein,
+      carbs,
+      fat,
+    });
+    if (!parsed.ok) return setError(parsed.error);
+    const v = parsed.values;
     const r = await saveFood(db, {
       name,
       basis,
-      portionG: basis === "portion" ? num(portion) : null,
-      kcal: num(kcal),
-      proteinG: num(protein),
-      carbsG: num(carbs),
-      fatG: num(fat),
+      portionG: v.portion,
+      kcal: v.kcal,
+      proteinG: v.protein,
+      carbsG: v.carbs,
+      fatG: v.fat,
     });
     if (!r.ok) return setError(r.error);
     onSaved();

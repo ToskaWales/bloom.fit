@@ -118,6 +118,8 @@ export async function saveFood(
 ): Promise<Validated<FoodRow>> {
   const v = validateFood(values);
   if (!v.ok) return v;
+  if ((options.brand?.trim().length ?? 0) > 80)
+    return failed("Die Marke ist zu lang.");
   const barcode = options.barcode ?? null;
   if (barcode !== null) {
     if (!BARCODE.test(barcode))
@@ -219,5 +221,28 @@ export async function copyEntryTo(
       fatG: src.fat_g,
     },
     src.food_id,
+  );
+}
+
+// Withdrawing consent deletes nutrition data on this device too: the entries,
+// the foods, anything still waiting to sync, and the hints derived from intake.
+export async function wipeNutrition(db: LocalDb): Promise<void> {
+  await db.transaction(
+    "rw",
+    [db.foods, db.food_logs, db.suggestions, db.outbox],
+    async () => {
+      await db.foods.clear();
+      await db.food_logs.clear();
+      await db.outbox
+        .filter((e) => e.table === "foods" || e.table === "food_logs")
+        .delete();
+      const derived = (await db.suggestions.toArray()).filter(
+        (s) =>
+          s.kind === "safety" &&
+          s.params &&
+          "lowIntake" in (s.params as object),
+      );
+      for (const s of derived) await db.suggestions.delete(s.id);
+    },
   );
 }

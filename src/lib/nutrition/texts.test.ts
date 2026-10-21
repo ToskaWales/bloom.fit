@@ -23,13 +23,26 @@ describe("nutrition wording", () => {
   });
 
   it("the daily line is a plain statement with no comparison", () => {
-    expect(totalsLine({ kcal: 1640, proteinG: 95, entries: 3 })).toBe(
-      "Heute eingetragen: 1.640 kcal · 95 g Eiweiß",
-    );
-    expect(totalsLine({ kcal: 0, proteinG: 0, entries: 0 })).toBe(
-      "Noch nichts eingetragen.",
-    );
+    expect(
+      totalsLine({ kcal: 1640, proteinG: 95, entries: 3, hasKcal: true }),
+    ).toBe("Heute eingetragen: 1.640 kcal · 95 g Eiweiß");
+    expect(
+      totalsLine({ kcal: 0, proteinG: 0, entries: 0, hasKcal: false }),
+    ).toBe("Noch nichts eingetragen.");
     expect(entryLine({ kcal: null, protein_g: null, amount_g: null })).toBe("");
+  });
+
+  it("names the day for past days and never shows zero calories for a protein-only day", () => {
+    expect(
+      totalsLine(
+        { kcal: 300, proteinG: 0, entries: 1, hasKcal: true },
+        "2026-10-20",
+        "2026-10-21",
+      ),
+    ).toBe("Am 20. Oktober eingetragen: 300 kcal");
+    expect(
+      totalsLine({ kcal: 0, proteinG: 30, entries: 1, hasKcal: false }),
+    ).toBe("Heute eingetragen: 30 g Eiweiß");
   });
 
   it("the checks themselves catch what they should", () => {

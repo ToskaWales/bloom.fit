@@ -12,15 +12,16 @@ import { SyncStatus } from "@/components/training/sync-status";
 import { secondaryButtonClass } from "@/components/ui";
 import { copyEntryTo } from "@/lib/local/nutrition";
 import { dayTotals } from "@/lib/nutrition/calc";
-import { NUTRITION_TEXT, totalsLine } from "@/lib/nutrition/texts";
+import { entryLine, NUTRITION_TEXT, totalsLine } from "@/lib/nutrition/texts";
 
 export function NutritionView() {
   const { db, nutritionMode } = useLocal();
   const today = useToday();
   const [picked, setPicked] = useState<string | null>(null);
   const day = picked ?? today;
-  const logs = useDayLogs(day);
-  const recent = useRecent(day);
+  const queryDay = nutritionMode === "off" ? "" : day;
+  const logs = useDayLogs(queryDay);
+  const recent = useRecent(queryDay);
 
   if (nutritionMode === "off") {
     return (
@@ -62,7 +63,7 @@ export function NutritionView() {
         <>
           {nutritionMode === "log" ? (
             <p className="text-sm text-neutral-700">
-              {totalsLine(dayTotals(logs))}
+              {totalsLine(dayTotals(logs), day, today)}
             </p>
           ) : (
             <p className="text-sm text-neutral-600">
@@ -93,6 +94,9 @@ export function NutritionView() {
                   className={secondaryButtonClass}
                 >
                   {r.name_snapshot || "Eintrag"}
+                  <span className="ml-1 font-normal text-neutral-600">
+                    {entryLine(r)}
+                  </span>
                 </button>
               </li>
             ))}

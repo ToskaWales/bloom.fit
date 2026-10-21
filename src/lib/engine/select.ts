@@ -47,8 +47,12 @@ export function selectSuggestions(
   today: string,
 ): Candidate[] {
   const allowed = candidates.filter((c) => {
+    // The two safety variants (late period / low energy) count as one notice.
     const earlier = past.filter(
-      (p) => p.kind === c.kind && p.subject === c.subject && p.day !== today,
+      (p) =>
+        p.kind === c.kind &&
+        (c.kind === "safety" || p.subject === c.subject) &&
+        p.day !== today,
     );
     // A safety notice is never silenced by a dismissal; once she has marked it as read it waits a week.
     if (c.kind === "safety")

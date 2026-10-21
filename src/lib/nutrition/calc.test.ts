@@ -50,6 +50,22 @@ describe("entryFromFood", () => {
     expect(e?.kcal).toBeNull();
     expect(e?.proteinG).toBe(13.5);
   });
+  it("rejects a result that would break the entry limits (typo like 2000 g of nut butter)", () => {
+    const butter: FoodValues = {
+      ...oats,
+      name: "Nussmus",
+      kcal: 600,
+      proteinG: 25,
+    };
+    expect(entryFromFood(butter, { grams: 200 })).not.toBeNull();
+    expect(entryFromFood(butter, { grams: 2000 })).toBeNull(); // 12,000 kcal
+    expect(
+      entryFromFood({ ...bar, portionG: 250 }, { portions: 13 }),
+    ).toBeNull(); // 3,250 g
+    expect(
+      entryFromFood({ ...oats, kcal: null, proteinG: 60 }, { grams: 2000 }),
+    ).toBeNull(); // 1,200 g protein
+  });
   it("rejects non-positive or absurd amounts", () => {
     expect(entryFromFood(oats, { grams: 0 })).toBeNull();
     expect(entryFromFood(oats, { grams: -5 })).toBeNull();
@@ -71,6 +87,14 @@ describe("validateQuickEntry", () => {
     expect(validateQuickEntry({ name: "", kcal: null, proteinG: 30 }).ok).toBe(
       true,
     );
+  });
+  it("rounds to one decimal like the database stores them", () => {
+    expect(
+      validateQuickEntry({ name: "", kcal: 100.26, proteinG: 12.345 }),
+    ).toEqual({
+      ok: true,
+      value: { name: "", kcal: 100.3, proteinG: 12.3 },
+    });
   });
   it("needs at least one value and keeps both inside plausible limits", () => {
     expect(
@@ -116,9 +140,27 @@ describe("dayTotals", () => {
         { kcal: 450.5, protein_g: null, deleted_at: null },
         { kcal: 999, protein_g: 99, deleted_at: "2026-10-02T10:00:00Z" },
       ]),
-    ).toEqual({ kcal: 751, proteinG: 20, entries: 2 });
+    ).toEqual({ kcal: 751, proteinG: 20, entries: 2, hasKcal: true });
+  });
+  it("reports whether any entry had calories, so a protein-only day is not shown as zero calories", () => {
+    expect(
+      dayTotals([{ kcal: null, protein_g: 30, deleted_at: null }]),
+    ).toEqual({
+      kcal: 0,
+      proteinG: 30,
+      entries: 1,
+      hasKcal: false,
+    });
+    expect(
+      dayTotals([{ kcal: 0, protein_g: 30, deleted_at: null }]).hasKcal,
+    ).toBe(true);
   });
   it("is empty for no entries", () => {
-    expect(dayTotals([])).toEqual({ kcal: 0, proteinG: 0, entries: 0 });
+    expect(dayTotals([])).toEqual({
+      kcal: 0,
+      proteinG: 0,
+      entries: 0,
+      hasKcal: false,
+    });
   });
 });
