@@ -2,7 +2,7 @@
 // - /_next/static assets: cache-first (content-hashed, immutable)
 // - an explicit allowlist of app pages: network-first, falling back to the last
 //   cached copy. Nothing else (settings, admin, data export, API, auth) is cached.
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 3000;
@@ -151,7 +151,13 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/_next/static/")) {
+  // The barcode scanner's WebAssembly file (about 1 MB): kept after first use so the
+  // scanner also starts offline. It is not content-hashed, so a new VERSION above
+  // replaces it when the library is upgraded.
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname === "/vendor/zxing_reader.wasm"
+  ) {
     event.respondWith(cacheFirst(request));
     return;
   }

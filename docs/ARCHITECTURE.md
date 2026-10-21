@@ -131,7 +131,7 @@ Noch offen: N-2 (Barcode, Open Food Facts über eigene Server-Route), N-3 (weich
 
 Barcodes werden einheitlich als 13-stellige Form gespeichert und gesucht (UPC-A, EAN-13 und GTIN-14 mit führenden Nullen sind dasselbe Produkt). Der Server liest den Request-Body nur bis 1000 Bytes und verlangt `content-length`.
 
-Bekannt: Es gibt noch keine Content-Security-Policy. Eine spätere CSP braucht `connect-src 'self' <Supabase>`, `script-src 'self' 'wasm-unsafe-eval'` und `frame-ancestors 'none'`; sie würde auch absichern, dass der Scanner seine WebAssembly-Datei nie von einem fremden CDN lädt (heute nur durch die Überschreibung in `barcode-scanner.tsx`). Ohne Netz startet der Scanner nur, wenn der Browser einen eigenen Barcode-Leser hat; die Ziffern-Eingabe geht immer.
+Bekannt: Es gibt noch keine Content-Security-Policy. Eine spätere CSP braucht `connect-src 'self' <Supabase>`, `script-src 'self' 'wasm-unsafe-eval'` und `frame-ancestors 'none'`; sie würde auch absichern, dass der Scanner seine WebAssembly-Datei nie von einem fremden CDN lädt (heute nur durch die Überschreibung in `barcode-scanner.tsx`). Der Service Worker behält die Scanner-Datei nach der ersten Nutzung (Cache-first, wird bei Erhöhung von `VERSION` in `public/sw.js` ersetzt), damit der Scanner danach auch offline startet; ohne vorherige Nutzung geht offline nur die Ziffern-Eingabe.
 
 ### Hunger-Hinweis (Stand N-3)
 
