@@ -44,6 +44,8 @@ Security-Review (`security-reviewer`), RLS-Tests, E2E (`e2e-runner`) für Kernfl
 
 ## Phase 3 – Closed Beta & Validierung (ab Woche 5)
 
+Ablauf, Checkliste, Metriken und Fragen: `docs/BETA.md`.
+
 - 20–50 Nutzerinnen aus Warteliste. Metriken: Aktivierung (7-Tage-Logging), W4-Retention, Check-in-Quote, Trial→bezahlt.
 - Preistest 6,99 / 9,99 / Jahresplan. Teardown Lunaletics + Drop It.
 - Go/No-Go-Schwellen (mit dir festlegen): ≥X Warteliste, ≥Y % Aktivierung, ≥Z zahlend.
