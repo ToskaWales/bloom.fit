@@ -6,6 +6,7 @@ Ziel: beantworten, ob Lifterinnen in DACH für Bloom zahlen würden. Gebaut ist 
 
 - [ ] Migrationen 01 bis 11 im Supabase SQL-Editor, Reihenfolge in `docs/SETUP.md` §9.
 - [ ] Hosting, Umgebungsvariablen (`docs/SETUP.md`), `npm run build` als Build-Befehl (kopiert die Scanner-Datei).
+- [ ] Eigenes SMTP (Resend) in Supabase einrichten, dann die Vorlagen **Magic Link** und **Confirm signup** auf den Code umstellen (Betreff `Dein Bloom-Code`, Text mit `{{ .Token }}`). Ohne eigenes SMTP sind die Vorlagen gesperrt und die Mails enthalten nur einen Link.
 - [ ] Login-Anbieter aktivieren (Google, Apple braucht ein Entwicklerkonto), Resend für Mails.
 - [ ] `purge_deleted_rows(30)` per pg_cron planen.
 - [ ] Impressum und Datenschutz: alle `[[...]]`-Platzhalter ausfüllen.

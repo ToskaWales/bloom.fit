@@ -42,7 +42,10 @@ Supabase Dashboard → Authentication.
 **Allgemein**
 
 - URL Configuration: Site URL `https://bloom.fit`, Redirect URLs `https://bloom.fit/auth/callback` (lokal zusätzlich `http://localhost:3000/auth/callback`).
-- Email: Provider „Email“ aktiv, **E-Mail-Bestätigung per Code**, OTP-Länge **6**, Magic-Link-Template auf den Code (`{{ .Token }}`) umstellen. SMTP auf Resend umstellen (Absender `hallo@bloom.fit`).
+- Email: Provider „Email“ aktiv, **E-Mail-Bestätigung per Code**, OTP-Länge **6**. **Zuerst SMTP auf Resend umstellen** (Authentication → Emails → SMTP Settings, Absender `hallo@bloom.fit`): Neuere Supabase-Projekte erlauben das Bearbeiten der Vorlagen nur mit eigenem SMTP, und ohne geänderte Vorlage enthält die Mail nur einen Link statt des Codes, den Bloom braucht. Danach die Vorlagen **Magic Link** und **Confirm signup** auf den Code (`{{ .Token }}`) umstellen (Text in `docs/BETA.md` §1).
+
+  Nur für den ersten eigenen Test, ohne verifizierte Domain: Resend erlaubt den Absender `onboarding@resend.dev`, aber nur an die E-Mail-Adresse deines Resend-Kontos. SMTP-Werte bei Resend: Host `smtp.resend.com`, Port `465`, Benutzername `resend`, Passwort = API-Key.
+
 - Rate Limits für E-Mail/OTP niedrig lassen.
 
 **Google**
