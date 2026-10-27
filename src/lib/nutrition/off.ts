@@ -3,6 +3,7 @@
 // from outside is treated as untrusted and range-checked. Fetching is
 // ./off-fetch; the values later become a saved food (./calc).
 import { round1 } from "@/lib/math";
+import { MAX_KCAL_PER_100G } from "./calc";
 
 /** A product as we keep it: per 100 g, null where OFF has no usable value. */
 export interface OffFood {
@@ -20,7 +21,6 @@ export type OffResult =
 
 // Implausible values from the (crowd-sourced) database are dropped, not corrected.
 // 900 kcal per 100 g is about pure fat; macros may sum to 100 g plus 2 g rounding.
-const MAX_KCAL_PER_100G = 900;
 const MAX_G_PER_100G = 100;
 const MACRO_TOLERANCE_G = 2;
 const KJ_PER_KCAL = 4.184;

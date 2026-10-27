@@ -20,7 +20,7 @@ export function ScaleInput({ label, low, high, value, onChange }: Props) {
     <div
       role="group"
       aria-label={label}
-      aria-describedby={`${hintId}`}
+      aria-describedby={hintId}
       className="flex flex-col gap-1"
     >
       <div className="flex items-baseline justify-between">

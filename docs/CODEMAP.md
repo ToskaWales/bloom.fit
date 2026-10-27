@@ -35,7 +35,7 @@ API-Routen: `api/sync/` (Synchronisation), `api/food/lookup/` (Barcode-Suche bei
 Allgemein: `ui.tsx` (Buttons, Eingabefelder, Meldungen, Seitenrahmen), `step-form.tsx` (Formular mit Server-Aktion), `local-provider.tsx` (lokale Datenbank, Sync-Takt, Online-Status, Einstellungen als Kontext), `login-form.tsx`, `waitlist-form.tsx`, `confirm-form.tsx`, `invite-form.tsx`, `delete-account-form.tsx`, `hide-weight-form.tsx`, `logout-button.tsx`, `clear-cache-on-submit.tsx` (leert zwischengespeicherte Seiten nach Einstellungs-Änderung).
 
 - `daily/`: `today-view.tsx` (Startseite), `checkin-card.tsx`, `scale-input.tsx` (1–5-Auswahl), `weight-card.tsx`, `cycle-card.tsx`, `cycle-view.tsx`, `overview-view.tsx` und `overview-chart.tsx` (Verlauf), `use-today.ts` (heutiger Tag, sicher beim Seitenaufbau), `use-daily-data.ts`.
-- `training/`: `training-home.tsx`, `session-view.tsx` (laufendes Workout), `exercise-picker.tsx`, `rest-timer.tsx`, `import-view.tsx`, `sync-status.tsx` („Alles gesichert“).
+- `training/`: `training-home.tsx`, `session-view.tsx` (laufendes Workout), `exercise-card.tsx` (eine Übung mit ihren Sätzen), `exercise-picker.tsx`, `rest-timer.tsx`, `import-view.tsx`, `sync-status.tsx` („Alles gesichert“).
 - `engine/`: `suggestions-card.tsx` (Karte „Für dich heute“), `session-hint.tsx` (eine Zeile im Workout), `muster-view.tsx` (Seite Muster), `use-suggestions.ts` (stößt die Berechnung an).
 - `nutrition/`: `nutrition-view.tsx`, `quick-add-form.tsx`, `entry-list.tsx`, `foods-list.tsx`, `food-form.tsx`, `barcode-lookup.tsx`, `barcode-scanner.tsx`, `nutrition-card.tsx`, `use-nutrition.ts`. Regel: keine Signalfarben, keine Fortschrittsbalken (ein Test prüft das).
 
@@ -55,15 +55,15 @@ Allgemein: `ui.tsx` (Buttons, Eingabefelder, Meldungen, Seitenrahmen), `step-for
 | `hunger.ts`      | Hunger-Anstieg                                                                |
 | `texts.ts`       | **einziger Ort für Hinweis-Texte**, getestet gegen Verbotslisten              |
 
-**`daily/`**: `day.ts` (Tage als `YYYY-MM-DD`), `cycle.ts` (Zykluslängen, Vorhersage, überfällig), `weight.ts` (Gewichts-Trend), `overview.ts` (Daten für den Verlauf), `validate.ts` (erlaubte Tage), `symptoms.ts`.
+**`daily/`**: `day.ts` (Tage als `YYYY-MM-DD`), `cycle.ts` (Zykluslängen, Vorhersage, überfällig), `weight.ts` (Gewichts-Trend), `overview.ts` (Daten für den Verlauf), `chart-geometry.ts` (Zeichenhilfen für das Diagramm, getestet), `validate.ts` (erlaubte Tage), `symptoms.ts`.
 
-**`local/`** (lokale Datenbank): `db.ts` (Schema und Versionen), `types.ts`, `repo.ts` (Schreiben + Outbox), `workouts.ts`, `templates.ts`, `prs.ts`, `daily.ts`, `nutrition.ts`, `suggestions.ts` (Engine anwenden), `overview-data.ts`, `wipe.ts` (alles lokal löschen beim Abmelden).
+**`local/`** (lokale Datenbank): `db.ts` (Schema und Versionen), `types.ts`, `repo.ts` (Schreiben + Outbox), `workouts.ts`, `templates.ts`, `prs.ts`, `daily.ts`, `nutrition.ts`, `engine-data.ts` (liest die eigenen Daten für die Engine: Übungseinheiten, Check-ins, Zyklus, Gewicht, Essen; prüft per Signatur, ob sich etwas geändert hat), `suggestions.ts` (Engine anwenden und die Hinweise speichern), `overview-data.ts`, `wipe.ts` (alles lokal löschen beim Abmelden).
 
 **`sync/`**: `tables.ts` (Tabellenliste und erlaubte Felder), `client.ts` (Gerät), `server.ts` (Prüfung und Speichern), `supabase-db.ts` (Anbindung an Supabase).
 
 **`nutrition/`**: `calc.ts` (Mengen umrechnen, Summen), `parse.ts` (Zahleneingabe), `texts.ts` (Texte, getestet), `barcode.ts`, `off.ts` (Open-Food-Facts-Daten bereinigen), `off-fetch.ts` (Abruf), `lookup-handler.ts` (Ablauf der Server-Route).
 
-**Weitere**: `workout/` (PR, Statistik, Einheiten), `exercises/` (Übungskatalog, Namenssuche), `import/` (Hevy/Strong lesen), `onboarding/`, `waitlist/`, `invites/`, `auth/` (Zugriffsprüfung, Admin, sichere Weiterleitung), `supabase/` (Clients, Cookie-Härtung), `ids.ts` (stabile IDs), `math.ts` (Median, Runden), `hooks.ts` (Überschriften-Varianten der Landingpage).
+**Weitere**: `workout/` (PR, Statistik, Einheiten), `exercises/` (Übungskatalog, Namenssuche), `import/` (Hevy/Strong lesen), `onboarding/`, `waitlist/`, `invites/`, `auth/` (Zugriffsprüfung, Admin, sichere Weiterleitung), `supabase/` (Clients, Cookie-Härtung), `ids.ts` (stabile IDs), `math.ts` (Median, Runden; der Zyklus rundet Median-Tage zusätzlich, siehe `daily/cycle.ts`), `hooks.ts` (Überschriften-Varianten der Landingpage).
 
 ## Weitere Ordner
 

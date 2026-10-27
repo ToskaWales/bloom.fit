@@ -27,7 +27,7 @@ Einmalige Einrichtung (Supabase, Login-Mail, Hosting, Migrationen): `docs/SETUP.
 - **Offline-first**: Alles Tägliche (Training, Check-in, Ernährung) wird zuerst in der lokalen Datenbank (Dexie/IndexedDB) gespeichert und im Hintergrund synchronisiert. Die Seiten lesen nur lokal.
 - **Anpassungs-Engine**: reine Funktionen, die auf dem Gerät aus den eigenen Daten Hinweise berechnen (Bereitschaft, Plateau, Muster rund um die Periode, Sicherheitshinweis, Hunger). Keine externe KI.
 
-Das ausführliche Bild steht in `docs/ARCHITECTURE.md`, jede Datei und jeder Ordner in `docs/CODEMAP.md`.
+Das ausführliche Bild steht in `docs/ARCHITECTURE.md`, jede Datei und jeder Ordner in `docs/CODEMAP.md`. Jede Quelldatei beginnt mit einem Kommentar, der sagt, wofür sie da ist und was nicht in sie gehört.
 
 ## Wo finde ich was?
 

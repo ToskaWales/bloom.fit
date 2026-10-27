@@ -36,7 +36,8 @@ const MAX_AMOUNT_G = 3000;
 const MAX_ENTRY_KCAL = 10000;
 const MAX_ENTRY_G = 1000;
 const MAX_FOOD_G = 500;
-const MAX_KCAL_PER_100G = 900;
+/** Largest plausible energy density: pure fat is about 900 kcal per 100 g. */
+export const MAX_KCAL_PER_100G = 900;
 const MAX_KCAL_PER_PORTION = 5000;
 
 const orNull = (n: number | null) => (n === null ? null : round1(n));

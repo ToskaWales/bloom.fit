@@ -61,7 +61,7 @@ export function RestTimer({
     return () => clearTimeout(t);
   }, [remaining, onChange]);
 
-  const mm = String(Math.floor(remaining / 60)).padStart(1, "0");
+  const mm = String(Math.floor(remaining / 60));
   const ss = String(remaining % 60).padStart(2, "0");
   return (
     <div

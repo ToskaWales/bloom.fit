@@ -160,17 +160,7 @@ export function evaluateSafety({
 }: SafetyInput): SafetyResult {
   const overdueDays = overdueFor(cycle, today);
 
-  const recentEnergy = checkins
-    .filter(
-      (c) =>
-        c.energy !== null &&
-        c.day <= today &&
-        daysBetween(c.day, today) < ENERGY_WINDOW_DAYS,
-    )
-    .map((c) => c.energy as number);
-  const lowEnergy =
-    recentEnergy.length >= MIN_ENERGY_VALUES &&
-    median(recentEnergy) <= LOW_ENERGY_MEDIAN;
+  const lowEnergy = energyIsLow(today, checkins);
 
   let weightFall = false;
   if (weights) {
