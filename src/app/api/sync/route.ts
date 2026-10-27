@@ -3,7 +3,7 @@
 // Supabase session, so RLS limits every read/write to their own data.
 // Security order: content type, then auth check, then size caps (1 MB), then
 // schema validation. Never logs row contents because they are health data.
-// Route handler (not a server action) because the service worker/client calls it.
+// Route handler (not a server action) because the client sync loop (lib/sync/client.ts) calls it with fetch.
 import { runSync, SyncRequestError } from "@/lib/sync/server";
 import { supabaseSyncDb } from "@/lib/sync/supabase-db";
 import { syncRequestSchema } from "@/lib/sync/tables";

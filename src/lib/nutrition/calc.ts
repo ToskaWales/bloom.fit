@@ -2,8 +2,8 @@
 // and daily totals. Values are only ever what the person entered or scanned:
 // nothing is estimated, no targets or judgement. Parsing typed text is ./parse,
 // scanned products are ./off; wording of the screens is ./texts.
-import { round1 } from "@/lib/math";
 // Missing values stay missing (null), they are never filled in.
+import { round1 } from "@/lib/math";
 
 /** A saved food. Values are per 100 g or per portion, depending on `basis`. */
 export interface FoodValues {

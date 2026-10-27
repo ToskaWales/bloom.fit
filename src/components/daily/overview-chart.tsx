@@ -2,7 +2,7 @@
 
 // Hand-drawn SVG behind the Verlauf screen: mood lines, optional weight trend, training volume and period shading.
 // Pure presentation of the rows it is given (props only, no database); the table in overview-view.tsx is the text alternative.
-// Neighbours: overview-view.tsx, lib/daily/overview (OverviewRow), CSS variables --series-* and --viz-*.
+// Neighbours: overview-view.tsx, lib/daily/overview (OverviewRow), lib/daily/chart-geometry (line and label helpers), CSS variables --series-* and --viz-*.
 
 import { useId, useState } from "react";
 import { SYMPTOM_LABELS, type Symptom } from "@/lib/daily/symptoms";

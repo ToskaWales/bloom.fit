@@ -23,11 +23,11 @@ Einmalige Einrichtung (Supabase, Login-Mail, Hosting, Migrationen): `docs/SETUP.
 ## Wie die App aufgebaut ist
 
 - **Next.js 16 (App Router) + TypeScript**, Oberfläche auf Deutsch, Code und Kommentare auf Englisch.
-- **Supabase (EU)**: Postgres mit Zeilen-Sicherheit (RLS), Login per E-Mail-Code, Einladungspflicht.
-- **Offline-first**: Alles Tägliche (Training, Check-in, Ernährung) wird zuerst in der lokalen Datenbank (Dexie/IndexedDB) gespeichert und im Hintergrund synchronisiert. Die Seiten lesen nur lokal.
+- **Supabase (EU)**: Postgres mit Zeilen-Sicherheit (RLS), Login per E-Mail-Code (optional Google/Apple), Einladungspflicht.
+- **Offline-first**: Alles Tägliche (Training, Check-in, Ernährung) wird zuerst in der lokalen Datenbank (Dexie/IndexedDB) gespeichert und im Hintergrund synchronisiert. Die App-Seiten (Training, Heute, Verlauf, Zyklus, Muster, Ernährung) lesen nur lokal.
 - **Anpassungs-Engine**: reine Funktionen, die auf dem Gerät aus den eigenen Daten Hinweise berechnen (Bereitschaft, Plateau, Muster rund um die Periode, Sicherheitshinweis, Hunger). Keine externe KI.
 
-Das ausführliche Bild steht in `docs/ARCHITECTURE.md`, jede Datei und jeder Ordner in `docs/CODEMAP.md`. Jede Quelldatei beginnt mit einem Kommentar, der sagt, wofür sie da ist und was nicht in sie gehört.
+Das ausführliche Bild steht in `docs/ARCHITECTURE.md`, jeder Ordner und die wichtigsten Dateien in `docs/CODEMAP.md`. Jede Quelldatei beginnt mit einem Kommentar, der sagt, wofür sie da ist und was nicht in sie gehört.
 
 ## Wo finde ich was?
 

@@ -1,7 +1,7 @@
 "use client";
 
 // 'Für dich heute' card on the Today screen: hints from the on-device engine, each with a 'why' and accept/dismiss.
-// Reads stored suggestion rows and exercise names from the local database; reactions are saved locally, no server calls.
+// Reads stored suggestion rows and exercise names from the local database; reactions are saved locally first (and synced later through the outbox); this component makes no server calls.
 // Neighbours: use-suggestions.ts (refreshes the engine), session-hint.tsx, muster-view.tsx, lib/engine.
 
 import { useLiveQuery } from "dexie-react-hooks";

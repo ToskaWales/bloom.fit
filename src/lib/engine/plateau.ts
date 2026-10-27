@@ -1,5 +1,5 @@
 // Detects a stalled exercise from its estimated-1RM history. Pure function; the
-// wording ("Stagnation gehoert dazu") lives in ./texts.ts and the cooldown in
+// wording ("Stagnation gehört dazu") lives in ./texts.ts and the cooldown in
 // ./select.ts. Per-session e1rm values come from @/lib/workout/stats.
 import { daysBetween } from "@/lib/daily/day";
 

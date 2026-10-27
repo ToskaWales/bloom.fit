@@ -18,6 +18,13 @@ Stand nach den Reviews zu 1d, N-1, N-2 und N-3. Nichts davon blockiert die gesch
 
 ## Qualität, wenn Zeit ist
 
+Aus dem Aufräumen und den Reviews (kleine Auffälligkeiten, nichts davon dringend):
+
+- **Sync-Abruf:** Der Cursor nutzt „größer oder gleich“. Hätten mehr als 500 Zeilen exakt denselben Zeitstempel, käme ein Abruf nicht weiter (`lib/sync/supabase-db.ts`). Sehr unwahrscheinlich, aber behebbar.
+- **Login mit Google/Apple:** Ohne `NEXT_PUBLIC_SITE_URL` entsteht eine ungültige Rücksprung-Adresse (`app/login/actions.ts`). Fallback oder Startprüfung ergänzen.
+- **Doppelter Code:** Zyklus speichern (Einstellungen und Onboarding), Einwilligungen lesen und anlegen (`einstellungen/actions.ts`), Hinweis-Block in `session-hint.tsx` und `suggestions-card.tsx`, Datumsformatierung in mehreren Komponenten, Übungsnamen-Suche in `exercise-picker.tsx` und `suggestions-card.tsx`.
+- **Kleine Konsistenz:** `ui.tsx` nennt eine Meldung „info“ in Grün (wirkt wie Erfolg); `waitlist-form.tsx` und `confirm-form.tsx` wiederholen Stil-Klassen aus `ui.tsx`; `setProductMail` wirft bei Fehlern, die Schwester-Aktionen geben einen Fehlerzustand zurück; Dauer-Konstanten in `texts.ts` spiegeln `patterns.ts` (`WINDOW_DAYS`).
+
 9. **Komponententests** für Scanner, Barcode-Suche, Muster-Seite und Formulare (Kamera- und Fetch-Mocks). Die Logik darunter ist getestet, die Oberfläche bisher nur per Browser-Stichprobe. Braucht eine Testumgebung mit DOM.
 10. **Simulation der Mustererkennung** um aufeinanderfolgende Tage und fehlende Tage erweitern (`docs/ENGINE-EVALUATION.md`, Bekannte Grenzen).
 11. **Seitenkopf-Schalter auf zweiten Geräten:** Zwischengespeicherte Seiten tragen den Ernährungs- und Gewichts-Schalter; offline kann kurz der alte Stand erscheinen (Daten werden dabei serverseitig trotzdem nicht gespeichert). Lösung: Schalter aus dem lokalen Speicher lesen, den der Sync aktualisiert.

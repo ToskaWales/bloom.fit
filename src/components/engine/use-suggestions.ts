@@ -1,7 +1,8 @@
 "use client";
 
 // Hooks that run the pure engine (lib/engine) against the local database and return today's stored hints.
-// Used by suggestions-card.tsx and session-hint.tsx; everything stays on the device, nothing is sent to the server.
+// Used by suggestions-card.tsx and session-hint.tsx; the engine itself runs on the device; only the resulting hint rows (kind,
+// subject, a few numbers, her reaction) are stored like any other row and sync later.
 // Neighbours: lib/local/suggestions (storage + refresh), use-today.ts for the day argument.
 
 import { useLiveQuery } from "dexie-react-hooks";

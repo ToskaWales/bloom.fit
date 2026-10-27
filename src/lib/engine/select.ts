@@ -50,7 +50,7 @@ const PRIORITY: Record<SuggestionKind, number> = {
   hunger_note: 4,
 };
 
-// Returns at most MAX_PER_DAY candidates. Few, calm hints. A dismissed kind stays quiet for two weeks; a plateau is
+// Returns at most MAX_PER_DAY candidates. Few, calm hints. A dismissed kind and subject stays quiet for two weeks; a plateau is
 // raised once per exercise per two weeks whatever the reaction; a safety notice
 // is never silenced by an earlier dismissal.
 export function selectSuggestions(

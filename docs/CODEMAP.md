@@ -6,10 +6,10 @@ Zum Nachschlagen: Was liegt wo, und warum. Die Namen der Dateien stehen so, wie 
 
 1. **Eingabe**: `components/daily/checkin-card.tsx` ruft `lib/local/daily.ts`.
 2. **Lokal speichern**: `lib/local/repo.ts` schreibt die Zeile in die lokale Datenbank (`lib/local/db.ts`, IndexedDB über Dexie) und legt sie gleichzeitig in die **Outbox** (die Liste „muss noch hochgeladen werden“).
-3. **Anzeige**: Seiten lesen nur lokal und aktualisieren sich von selbst (`useLiveQuery`), auch ohne Netz.
+3. **Anzeige**: Die App-Seiten (Heute, Training, Verlauf, Zyklus, Muster, Ernährung) lesen nur lokal und aktualisieren sich von selbst (`useLiveQuery`), auch ohne Netz.
 4. **Sync**: `components/local-provider.tsx` startet regelmäßig `lib/sync/client.ts`. Das schickt die Outbox an `app/api/sync/route.ts`, das über `lib/sync/server.ts` prüft (Zod-Schemas aus `lib/sync/tables.ts`) und in Supabase schreibt. Zurück kommen geänderte Zeilen anderer Geräte.
 5. **Datenbank**: `supabase/migrations/` legt Tabellen, Zeilen-Sicherheit (RLS) und Trigger fest. Selbst ein manipulierter Client kommt nicht an fremde Daten.
-6. **Hinweise**: `lib/local/suggestions.ts` lädt die lokalen Daten, ruft die reine Engine (`lib/engine/`), speichert die Auswahl, `components/engine/` zeigt sie an.
+6. **Hinweise**: `lib/local/engine-data.ts` lädt die lokalen Daten, `lib/local/suggestions.ts` ruft die reine Engine (`lib/engine/`) und speichert die Auswahl, `components/engine/` zeigt sie an.
 
 ## `src/app/` – Seiten und Routen
 
@@ -70,4 +70,5 @@ Allgemein: `ui.tsx` (Buttons, Eingabefelder, Meldungen, Seitenrahmen), `step-for
 - `supabase/migrations/`: Datenbank in Reihenfolge, nur anhängend. `supabase/queries/`: Auswertung für die Beta.
 - `src/db-tests/`: Datenbank-Regeln gegen ein eingebettetes Postgres (läuft ohne echtes Supabase).
 - `public/`: Service Worker `sw.js` (Offline-Seiten), Icons. `scripts/`: Hilfsskripte für den Build.
-- `docs/`: Plan, Architektur, Setup, Beta, Backlog, Auswertung, Lizenzen.
+- `src/proxy.ts`: läuft vor jeder Seite, erneuert die Anmeldung und leitet nicht angemeldete Besucher um.
+- `docs/`: Plan, Architektur, Setup, Beta, Backlog, Auswertung, Interviews, Lizenzen.

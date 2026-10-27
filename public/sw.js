@@ -9,13 +9,13 @@
  *     The .wasm is not hashed; bumping VERSION below replaces it.
  *  2. An explicit allowlist of app pages (CACHEABLE_PATHS): network-first. If the
  *     network answers within NETWORK_TIMEOUT_MS the fresh page is used and cached;
- *     otherwise the last cached copy is shown. Offline training pages fall back to /training.
+ *     otherwise the last cached copy is shown. An uncached /training/session falls back to the cached /training page.
  *  3. Everything else (settings, admin, data export, API, auth, other origins,
  *     non-GET) is never touched or cached, because it contains personal data
  *     or must always be live.
  *
  * Safety: only plain successful HTML is stored (storable); a redirect to /login
- * means the session ended, so ALL cached pages are dropped. A "clear-pages" message
+ * means the session ended, so ALL cached pages are dropped. An optional "clear-pages" message (not sent by the app today; logout calls clearPageCache itself)
  * does the same on request (on logout the app also deletes the caches directly,
  * see clearPageCache in src/lib/local/wipe.ts).
  * Changing VERSION makes the old caches disappear on activate.
@@ -35,7 +35,7 @@ const CACHEABLE_PATHS = [
   "/muster",
   "/ernaehrung",
 ];
-// Shown for an uncached /training/* page while offline.
+// Shown instead of an uncached /training/* page when the network is offline or slower than the timeout.
 const OFFLINE_FALLBACK = "/training";
 
 // Take over immediately instead of waiting for all tabs to close, so a fixed
@@ -54,7 +54,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Messages from the page: "clear-pages" (logout) and {type:"warm", paths} (prefetch).
+// Messages from the page: "clear-pages" (optional, currently unused) and {type:"warm", paths} (prefetch).
 self.addEventListener("message", (event) => {
   if (event.data === "clear-pages") event.waitUntil(caches.delete(PAGES));
   // The page asks us to fetch a route and the assets it needs, so it opens offline.

@@ -1,7 +1,7 @@
 // POST /api/food/lookup: barcode -> product data from Open Food Facts.
 // Signed-in users only, with a per-user quota decided in the database
-// (consume_food_lookup). The handler (lib/nutrition/lookup-handler) checks auth
-// first, caps the body at 1 KB, and never logs or echoes the barcode.
+// (consume_food_lookup). The handler (lib/nutrition/lookup-handler) checks the
+// content type and auth first, caps the body at 1 KB, and never logs or echoes the barcode.
 // Server-side so the browser never talks to the third party directly.
 import { fetchOffProduct } from "@/lib/nutrition/off-fetch";
 import { handleLookup } from "@/lib/nutrition/lookup-handler";

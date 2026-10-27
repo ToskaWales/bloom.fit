@@ -1,7 +1,8 @@
 // Server half of sync, written against the small SyncDb interface so it can be
 // tested without a database (the real one is supabase-db.ts). Per request: validate
 // and store pushed rows per table, then return everything changed since each
-// cursor. Auth and rate limiting happen in the route (src/app/api/sync/route.ts),
+// cursor. Auth and size caps happen in the route (src/app/api/sync/route.ts); there is no
+// rate limiting yet (see docs/BACKLOG.md);
 // the device side is client.ts, the row rules are in tables.ts.
 import {
   MAX_ROWS_TOTAL,

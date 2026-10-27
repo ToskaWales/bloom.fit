@@ -69,7 +69,7 @@ Eingänge: Check-ins, Sätze (Last, Wdh., RPE), Gewichtstrend, Zyklusereignisse,
 - Einwilligung für Gesundheitsdaten explizit und versioniert (`consents`), widerrufbar.
 - Export (JSON/CSV) und Konto-Löschung (Kaskade) als Kernfunktion, nicht Nachgedanke.
 - Keine Gesundheitsdaten in Server-Logs, Fehlertracking oder Analytics; Fehlertracking mit Scrubbing.
-- Rate-Limiting auf Auth- und Sync-Routen; Eingabevalidierung (Zod) an jeder Server-Grenze.
+- Rate-Limiting auf Auth- und Sync-Routen (noch offen, siehe `docs/BACKLOG.md`; die Barcode-Suche hat eines); Eingabevalidierung (Zod) an jeder Server-Grenze.
 - Wartelisten-Mails: Double-Opt-in, Tokens nur gehasht gespeichert, Antwort verrät nicht, ob eine Adresse existiert.
 
 ## Entscheidungen (ADR-Kurzform)

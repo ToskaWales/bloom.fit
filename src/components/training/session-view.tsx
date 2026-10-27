@@ -2,7 +2,7 @@
 
 // Screen /training/session?id=...: log a workout (exercises, sets, rest timer, PR hints, save as template).
 // Every edit is written to the local database immediately and shown through live queries; sync runs later in the background.
-// Neighbours: exercise-picker.tsx, rest-timer.tsx, engine/session-hint.tsx, training-home.tsx, lib/local/workouts and prs.
+// Neighbours: exercise-card.tsx (one exercise with its sets and PR badges), exercise-picker.tsx, rest-timer.tsx, engine/session-hint.tsx, training-home.tsx, lib/local/workouts and prs.
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter, useSearchParams } from "next/navigation";
