@@ -1,3 +1,5 @@
+// Pins down catalog integrity (unique ids, no import-breaking alias clashes) and
+// matching/search behaviour used by the CSV importers and the exercise picker.
 import { describe, expect, it } from "vitest";
 import { CATALOG, getCatalogExercise } from "./catalog";
 import { matchExercise, searchExercises } from "./match";

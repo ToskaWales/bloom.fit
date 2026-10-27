@@ -1,5 +1,9 @@
 "use client";
 
+// Live-query hooks over the local food tables: entries for a day, saved foods, recent entries.
+// Pass an empty day to skip the query (used while nutrition is off). undefined means the database is still opening.
+// Neighbours: nutrition-card.tsx, nutrition-view.tsx, foods-list.tsx, lib/local/nutrition.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useLocal } from "@/components/local-provider";
 import { listFoods, logsForDay, recentEntries } from "@/lib/local/nutrition";

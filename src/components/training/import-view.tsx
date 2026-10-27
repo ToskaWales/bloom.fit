@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /training/import: load a Hevy or Strong CSV export and import it into the local database.
+// Parsing and writing run entirely on the device (lib/import); the file is never uploaded. Importing again creates no duplicates.
+// Neighbours: lib/import/parsers and build, training-home.tsx (link in), sync-status via LocalProvider.
+
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -24,10 +28,12 @@ export function ImportView() {
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [failed, setFailed] = useState(false);
 
+  // Re-parses when the file or the chosen unit changes (Strong exports do not say kg or lbs).
   const parsed = useMemo(
     () => (text ? parseWorkoutFile(text, units) : null),
     [text, units],
   );
+  // Preview numbers; unmatched names become custom exercises on import.
   const stats = useMemo(() => {
     if (!parsed || parsed.workouts.length === 0) return null;
     const names = new Set(

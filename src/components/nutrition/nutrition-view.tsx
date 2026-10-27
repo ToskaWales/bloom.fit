@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /ernaehrung: optional food log for a chosen day with quick add, recent items and saved foods.
+// Reads and writes the local database only. With nutrition off it shows a pointer to settings and reads no food data.
+// Deliberately no targets, no progress bars, no red/green; totals appear only in 'log' mode. Neighbours: the other nutrition/ files.
+
 import Link from "next/link";
 import { useState } from "react";
 import { useToday } from "@/components/daily/use-today";
@@ -19,6 +23,7 @@ export function NutritionView() {
   const today = useToday();
   const [picked, setPicked] = useState<string | null>(null);
   const day = picked ?? today;
+  // Empty day = the hooks do not query, so nothing is read while nutrition is off.
   const queryDay = nutritionMode === "off" ? "" : day;
   const logs = useDayLogs(queryDay);
   const recent = useRecent(queryDay);

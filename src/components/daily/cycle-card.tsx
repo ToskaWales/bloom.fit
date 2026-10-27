@@ -1,5 +1,9 @@
 "use client";
 
+// Card on the Today screen for people who track their cycle (natural or irregular): cycle day and a hedged next-period range.
+// Reads cycle events from the local database via useCycleEvents; one tap logs a period start locally.
+// Neighbours: cycle-view.tsx (full log), lib/daily/cycle (summarizeCycle does the maths). Renders nothing otherwise.
+
 import Link from "next/link";
 import { useLocal } from "@/components/local-provider";
 import { useCycleEvents } from "@/components/daily/use-daily-data";
@@ -20,6 +24,7 @@ export function CycleCard({ today }: { today: string }) {
   if (!events) return null;
 
   const s = summarizeCycle(events, today);
+  // Every status gets a neutral sentence; predictions are only ever a range and an estimate, never a phase claim.
   let line: string;
   if (s.status === "no_data")
     line =

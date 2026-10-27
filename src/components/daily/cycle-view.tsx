@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /zyklus: log period start/end and ovulation test by date, see typical lengths, delete entries.
+// Reads cycle events from the local database (useCycleEvents) and writes them there; no server calls.
+// Neighbours: cycle-card.tsx (summary on Today), lib/daily/validate (the date rules), engine/muster-view.tsx.
+
 import Link from "next/link";
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -12,6 +16,7 @@ import { addDays, daysBetween } from "@/lib/daily/day";
 import { isValidCycleDay, isValidPeriodEnd } from "@/lib/daily/validate";
 import { removeCycleEvent, saveCycleEvent } from "@/lib/local/daily";
 
+// Event kinds are stored as these keys; the German labels are display only.
 const LABEL: Record<CycleEvent["kind"], string> = {
   period_start: "Periode begonnen",
   period_end: "Periode zu Ende",
@@ -48,9 +53,11 @@ export function CycleView() {
     );
   }
 
+  // useToday() is empty during hydration, so render a placeholder instead of a date-dependent screen.
   if (!today) return <p className="p-8 text-neutral-600">Lädt …</p>;
   const summary = summarizeCycle(events ?? [], today);
 
+  // Validation lives here (not in the db layer) so the message can be shown next to the buttons.
   async function log(kind: CycleEvent["kind"]) {
     if (!db) return;
     if (!isValidCycleDay(day, today))
@@ -84,6 +91,7 @@ export function CycleView() {
     await saveCycleEvent(db, userId, kind, day);
   }
 
+  // Newest first, capped to keep the list short.
   const list = [...(events ?? [])]
     .sort((a, b) => (a.day < b.day ? 1 : -1))
     .slice(0, 40);

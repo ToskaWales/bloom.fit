@@ -1,3 +1,7 @@
+// Workout templates (saved routines): create one from a finished workout, start a
+// workout from one, delete one. Built on the generic row writers in repo.ts and the
+// workout helpers in workouts.ts; templates only store exercises and set counts,
+// never weights (those are copied from the last performance when a workout starts).
 import type { LocalDb } from "./db";
 import { saveRow } from "./repo";
 import type {
@@ -9,6 +13,7 @@ import type {
 } from "./types";
 import { addExercise, lastPerformance, startWorkout } from "./workouts";
 
+// Same limit as set_count in sync/tables.ts and the database check.
 const MAX_SETS = 20;
 const everything = (db: LocalDb) => [
   db.workouts,
@@ -19,6 +24,8 @@ const everything = (db: LocalDb) => [
   db.outbox,
 ];
 
+// // Warm-up sets are not counted: a template describes the working sets. The name
+// // is trimmed and cut to 80 characters (the server limit); an empty name throws.
 export async function saveWorkoutAsTemplate(
   db: LocalDb,
   workoutId: string,
@@ -102,6 +109,7 @@ export async function startWorkoutFromTemplate(
   });
 }
 
+// // Soft-deletes the template and its exercise rows in one transaction.
 export async function deleteTemplate(
   db: LocalDb,
   templateId: string,

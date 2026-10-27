@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /verlauf: one chart (mood, weight trend, training volume, period days) over 4, 8 or 12 weeks, plus a table.
+// Reads a merged per-day view from the local database (loadOverview via useLiveQuery); no server calls.
+// Neighbours: overview-chart.tsx, use-today.ts, lib/local/overview-data.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,6 +21,7 @@ const WINDOWS = [4, 8, 12] as const;
 export function OverviewView() {
   const { db, units, hideWeight, cycleMode } = useLocal();
   const [weeks, setWeeks] = useState<(typeof WINDOWS)[number]>(8);
+  // to is empty before hydration; the query below then yields nothing useful, so it is simply not drawn yet.
   const to = useToday();
   const from = to ? addDays(to, -(weeks * 7 - 1)) : "";
 
@@ -24,6 +29,7 @@ export function OverviewView() {
     () => (db ? loadOverview(db, { from, to, hideWeight }) : undefined),
     [db, from, to, hideWeight],
   );
+  // Distinguishes 'no entries in this window' from 'still loading' (rows === undefined).
   const hasData = rows?.some(
     (r) =>
       r.energy !== null ||
@@ -88,6 +94,7 @@ export function OverviewView() {
         </div>
       ) : null}
 
+      {/* The table repeats every chart value as text, for screen readers and exact numbers. */}
       {rows && hasData && (
         <details className="rounded-2xl border border-neutral-200 bg-white p-3 text-sm">
           <summary className="cursor-pointer font-medium">

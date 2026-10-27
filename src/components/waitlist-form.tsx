@@ -1,5 +1,9 @@
 "use client";
 
+// Landing page sign-up (marketing, app/page.tsx): e-mail plus explicit consent, double opt-in follows by mail.
+// Calls the joinWaitlist server action; variant and source are hidden fields for hook/channel tracking.
+// Neighbours: confirm-form.tsx (confirmation step), app/actions.
+
 import { useActionState } from "react";
 import { joinWaitlist, type FormState } from "@/app/actions";
 

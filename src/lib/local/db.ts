@@ -1,12 +1,21 @@
+// The on-device database (IndexedDB via Dexie): one table per synced server table,
+// holding rows in their "wire" shape, plus two local-only tables, `outbox` and `meta`.
+// No reading/writing helpers live here (see repo.ts and the feature files) and no
+// network code (see src/lib/sync/client.ts).
 import Dexie, { type EntityTable } from "dexie";
 import type { TableName, WireRow } from "@/lib/sync/tables";
 
+// // One pending upload: "row `id` of `table` changed and the server has not
+// // confirmed it yet". It stores only a pointer; the current row content is read
+// // at push time, so several edits of one row collapse into one upload.
 export interface OutboxEntry {
   seq?: number;
   table: TableName;
   id: string;
 }
 
+// // Small key/value store: per-table pull cursors ("cursor:<table>") and the list
+// // of rows the server rejected ("rejected"). Never synced.
 export interface MetaEntry {
   key: string;
   value: string | null;
@@ -29,6 +38,10 @@ export type LocalDb = Dexie & {
   meta: EntityTable<MetaEntry, "key">;
 };
 
+// // One database per signed-in user (callers pass a "bloom-<userId>" style name, see
+// // wipe.ts), so data of different accounts on a shared device never mixes.
+// // Versions only ever ADD stores (never edit an old version), because existing
+// // installations upgrade step by step. Only indexed fields are listed.
 export function createLocalDb(name = "bloom"): LocalDb {
   const db = new Dexie(name) as LocalDb;
   db.version(1).stores({

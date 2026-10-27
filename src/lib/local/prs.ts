@@ -1,3 +1,6 @@
+// Reads the local workout history to find which sets of a workout were personal
+// records. The comparison itself is a pure function in src/lib/workout/prs.ts; this
+// file only gathers the data (earlier, non-deleted workouts of the same exercise).
 import type { LocalDb } from "./db";
 import type { SetRow, WorkoutExerciseRow, WorkoutRow } from "./types";
 import { findPRs, type PrKind } from "@/lib/workout/prs";
@@ -36,7 +39,7 @@ export async function prsForWorkout(
           .sortBy("position")) as SetRow[]),
       );
     }
-    // Earlier occurrences, fetched in bulk: one query for the rows, one for their
+    // Earlier occurrences (older start time only), fetched in bulk: one query for the rows, one for their
     // workouts and one for all their sets (history can span thousands of sets).
     const earlier = (
       (await db.workout_exercises

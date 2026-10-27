@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /training/session?id=...: log a workout (exercises, sets, rest timer, PR hints, save as template).
+// Every edit is written to the local database immediately and shown through live queries; sync runs later in the background.
+// Neighbours: exercise-picker.tsx, rest-timer.tsx, engine/session-hint.tsx, training-home.tsx, lib/local/workouts and prs.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -39,6 +43,7 @@ import {
   type Units,
 } from "@/lib/workout/units";
 
+// Default rest after each completed set.
 const REST_SECONDS = 90;
 
 export function SessionView() {
@@ -80,8 +85,10 @@ export function SessionView() {
     [db, id],
   );
 
+  // Stable identity, so RestTimer's effect does not re-run on every parent render.
   const onRest = useCallback((v: number | null) => setRestEndsAt(v), []);
 
+  // Early returns come after all hooks; they cover missing id, database not ready, loading and not found.
   if (!id) return <Message>Kein Training ausgewählt.</Message>;
   if (!db) return <StorageGate />;
   if (workout === undefined) return <Message>Lädt …</Message>;
@@ -213,6 +220,7 @@ function Message({ children }: { children: React.ReactNode }) {
   return <p className="p-8 text-neutral-600">{children}</p>;
 }
 
+// One exercise with its sets; looks up the name from the catalog or her custom exercises and shows the last performance.
 function ExerciseCard({
   db,
   exercise,
@@ -322,6 +330,7 @@ function ExerciseCard({
 
 const cell = `${inputClass} w-full px-2 py-2 text-center`;
 
+// Inputs are uncontrolled and committed on blur; the key changes when the stored value changes, so synced edits show up.
 function SetLine({
   db,
   set,
@@ -348,6 +357,7 @@ function SetLine({
     }
     if (kg !== set.weight_kg) updateSet(db, set.id, { weight_kg: kg });
   }
+  // Invalid input is reverted instead of saved; unchanged text writes nothing.
   function commitReps(e: React.FocusEvent<HTMLInputElement>) {
     const text = e.currentTarget.value.trim();
     if (text === (set.reps == null ? "" : String(set.reps))) return;

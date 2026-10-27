@@ -1,5 +1,9 @@
 "use client";
 
+// One-line readiness hint at the top of a running workout (training/session-view.tsx).
+// Reads stored suggestions from the local database without recomputing them; details live on the Today screen.
+// Neighbours: use-suggestions.ts, suggestions-card.tsx, lib/engine/texts.
+
 import {
   useReadinessParts,
   useSuggestions,
@@ -14,6 +18,7 @@ export function SessionHint() {
   const { units } = useLocal();
   const rows = useSuggestions(today, { refresh: false }); // the home card refreshes; not mid-workout
   const parts = useReadinessParts(today);
+  // Mirrors SuggestionsCard: an active safety hint changes how the readiness text is phrased.
   const safetyActive = (rows ?? []).some(
     (r) => r.kind === "safety" && r.status !== "dismissed",
   );

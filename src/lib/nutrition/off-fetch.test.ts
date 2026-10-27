@@ -1,3 +1,5 @@
+// Pins down the outgoing Open Food Facts request: fixed host, no extra headers,
+// timeout and size limits. Matters for privacy and for not being steerable from the browser.
 import { describe, expect, it, vi } from "vitest";
 import { fetchOffProduct, OFF_HOST } from "./off-fetch";
 

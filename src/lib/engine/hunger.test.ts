@@ -1,3 +1,6 @@
+// Pins down the hunger-rise rule: only a clear rise over her own earlier level,
+// with enough ratings and regular training, counts. Matters so the soft hunger hint
+// never fires on noise or for people who barely train.
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { detectHungerRise, type HungerInput } from "./hunger";

@@ -1,3 +1,5 @@
+// Pins down the daily cap, priority order and cooldowns. Matters for the
+// "calm, no spam" promise, and that a safety notice is never silenced by a dismissal.
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import {

@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /training: start or continue a workout, start from a template, open the import, browse recent workouts.
+// Reads workouts, sets and templates from the local database (useLiveQuery), so it works offline; no server calls.
+// Neighbours: session-view.tsx (the workout screen it links to), import-view.tsx, lib/local/templates and workouts.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,6 +28,7 @@ export function TrainingHome() {
   const { db, units } = useLocal();
   const router = useRouter();
 
+  // Last 40 workouts with exercise and set totals computed per row (n+1 queries, fine at this size).
   const workouts = useLiveQuery(async () => {
     if (!db) return undefined;
     const rows = (await db.workouts
@@ -69,6 +74,7 @@ export function TrainingHome() {
     );
   }, [db]);
 
+  // Only one workout can run at a time; templates are disabled meanwhile.
   const running = workouts?.find((w) => !w.workout.ended_at);
 
   return (

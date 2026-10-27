@@ -1,5 +1,10 @@
 "use client";
 
+// Add-food helper: type or scan a barcode, find the product, then confirm it in the food form.
+// Checks local foods first (works offline); only then asks our own /api/food/lookup route (Open Food Facts). The one
+// nutrition component that talks to the server, and only on an explicit search.
+// Neighbours: barcode-scanner.tsx, food-form.tsx, foods-list.tsx, lib/nutrition/texts.
+
 import { useRef, useState } from "react";
 import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
 import { FoodForm, type FoodPrefill } from "@/components/nutrition/food-form";
@@ -9,6 +14,7 @@ import { findFoodByBarcode } from "@/lib/local/nutrition";
 import { cleanBarcode, normaliseBarcode } from "@/lib/nutrition/barcode";
 import { NUTRITION_TEXT } from "@/lib/nutrition/texts";
 
+// Maps API status codes to calm messages; unknown failures fall back to the generic upstream text.
 const STATUS_TEXT: Record<number, string> = {
   400: NUTRITION_TEXT.barcodeInvalid,
   401: NUTRITION_TEXT.barcodeLogin,

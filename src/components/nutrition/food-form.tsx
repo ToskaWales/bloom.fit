@@ -1,5 +1,9 @@
 "use client";
 
+// Form to save a food (name, kcal, protein, optional carbs/fat) per 100 g or per portion, or to confirm a barcode result.
+// Writes to the local food table (saveFood); values are text until parsed, so German decimal commas work.
+// Neighbours: foods-list.tsx, barcode-lookup.tsx (prefill from Open Food Facts), lib/nutrition/parse.
+
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { buttonClass, inputClass } from "@/components/ui";
@@ -17,6 +21,7 @@ export interface FoodPrefill {
   fatG: number | null;
 }
 
+// Number to input text with a decimal comma.
 const text = (n: number | null) =>
   n === null ? "" : String(n).replace(".", ",");
 

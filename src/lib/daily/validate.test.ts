@@ -1,3 +1,5 @@
+// Pins down the input limits for check-in days, cycle days, period ends and weight,
+// so typos and bad imports are rejected before they are saved.
 import { describe, expect, it } from "vitest";
 import {
   isValidCheckinDay,

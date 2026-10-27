@@ -1,3 +1,5 @@
+// Pins down the relative-performance series (each session vs. that exercise's own
+// recent median), which feeds pattern and hunger detection.
 import { describe, expect, it } from "vitest";
 import { performanceSeries } from "./performance";
 import type { ExerciseSession } from "./plateau";

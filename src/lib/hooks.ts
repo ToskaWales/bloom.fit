@@ -1,3 +1,6 @@
+// Landing-page headline copy for the pre-launch A/B/C test (Phase 0). Pure data
+// plus a tiny parser; the page rendering lives in src/app/(marketing) and the
+// variant is persisted with each signup by src/lib/waitlist (HookVariant).
 import type { HookVariant } from "@/lib/waitlist/types";
 
 // Landing-page headline variants for the pre-launch A/B/C test.
@@ -8,6 +11,8 @@ export const HOOKS: Record<HookVariant, string> = {
   c: "Dein Trainingsplan kennt deinen Zyklus nicht. Bloom lernt ihn kennen.",
 };
 
+// Turns the raw ?h= query value into a known variant. Anything unknown or missing
+// falls back to "a", so a mistyped flyer link still shows a headline.
 export function pickVariant(value: string | string[] | undefined): HookVariant {
   const v = Array.isArray(value) ? value[0] : value;
   return v === "b" || v === "c" ? v : "a";

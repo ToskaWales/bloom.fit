@@ -1,3 +1,5 @@
+// Pins down kg/lbs display and input parsing. Matters because weights are stored in
+// kg and a conversion slip would corrupt training history.
 import { describe, expect, it } from "vitest";
 import { formatWeight, parseWeightInput } from "./units";
 

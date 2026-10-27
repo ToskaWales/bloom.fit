@@ -1,5 +1,9 @@
 "use client";
 
+// Full-screen search dialog for adding an exercise to a running workout (opened from session-view.tsx).
+// Searches the built-in catalog plus her custom exercises from the local database; can create a custom exercise.
+// No server calls. Neighbours: lib/exercises (catalog, match), lib/local/repo (saveRow).
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -9,6 +13,7 @@ import { searchExercises } from "@/lib/exercises/match";
 import type { CustomExerciseRow } from "@/lib/local/types";
 import { saveRow } from "@/lib/local/repo";
 
+// Case- and space-insensitive comparison for the 'already exists' check.
 const norm = (s: string) => s.trim().toLowerCase();
 
 export function ExercisePicker({
@@ -33,6 +38,7 @@ export function ExercisePicker({
   const customMatches = (custom ?? []).filter(
     (e) => !query || norm(e.name).includes(norm(query)),
   );
+  // Hides the 'create custom exercise' row when the typed name already exists.
   const exact = [
     ...catalog.map((e) => e.name),
     ...(custom ?? []).map((e) => e.name),

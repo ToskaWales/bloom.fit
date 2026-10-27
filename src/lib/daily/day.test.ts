@@ -1,3 +1,5 @@
+// Pins down the calendar-day helpers, especially across month, year and daylight-saving
+// changes, because every other date calculation relies on them.
 import { describe, expect, it } from "vitest";
 import { addDays, dayRange, daysBetween, localDay } from "./day";
 

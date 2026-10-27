@@ -1,3 +1,5 @@
+// Pins down personal-record detection: only against earlier history, ties do not
+// count, and warm-up or unfinished sets are ignored.
 import { describe, expect, it } from "vitest";
 import { findPRs } from "./prs";
 

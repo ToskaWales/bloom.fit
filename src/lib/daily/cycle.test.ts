@@ -1,3 +1,5 @@
+// Pins down the cycle statistics: lengths, cycle day, prediction window, and
+// robustness to missed logs. Matters because a wrong "late" status feeds the safety rule.
 import { describe, expect, it } from "vitest";
 import {
   periodDaySet,

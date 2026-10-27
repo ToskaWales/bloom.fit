@@ -1,5 +1,9 @@
 "use client";
 
+// Marketing flow: the button on /bestaetigen that confirms a waitlist sign-up (double opt-in).
+// Gets the token as a prop and calls the confirmWaitlist server action; no local database involved.
+// Neighbours: waitlist-form.tsx (the first step), app/actions.
+
 import { useActionState } from "react";
 import { confirmWaitlist, type FormState } from "@/app/actions";
 

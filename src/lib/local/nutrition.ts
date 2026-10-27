@@ -1,3 +1,7 @@
+// Local food log: quick entries, saved foods, re-logging recent entries, and the
+// wipe that runs when nutrition consent is withdrawn. Validation and scaling maths
+// are pure functions in src/lib/nutrition/*; this file only stores results through
+// repo.ts. Nothing here judges or scores intake (see CLAUDE.md on eating disorders).
 import { addDays } from "@/lib/daily/day";
 import { normaliseBarcode } from "@/lib/nutrition/barcode";
 import {
@@ -27,6 +31,8 @@ const failed = (error: string): { ok: false; error: string } => ({
   error,
 });
 
+// Writes one log row with its own copy of the numbers (a snapshot): history and
+// export stay correct even if the food is edited or deleted later.
 async function writeEntry(
   db: LocalDb,
   where: Where,
@@ -50,6 +56,7 @@ async function writeEntry(
   return row;
 }
 
+// // Free-form entry (name plus kcal and/or protein) without a saved food.
 export async function addQuickEntry(
   db: LocalDb,
   input: QuickEntry & Where,
@@ -72,6 +79,7 @@ export async function addQuickEntry(
   return { ok: true, value: row };
 }
 
+// // Logs `amount` of a saved food; returns an error result when the amount is implausible.
 export async function addFoodEntry(
   db: LocalDb,
   food: FoodRow,
@@ -94,6 +102,7 @@ export async function addFoodEntry(
   return { ok: true, value: await writeEntry(db, where, entry, food.id) };
 }
 
+// // Live entries of one day in the order they were added.
 export async function logsForDay(
   db: LocalDb,
   day: string,
@@ -112,6 +121,9 @@ export async function deleteEntry(db: LocalDb, id: string): Promise<void> {
   }));
 }
 
+// // Saves a new food. A barcode that is already stored (in any form) is refused, so
+// // scanning twice does not create duplicates; the server tolerates duplicates from
+// // two offline devices (see docs/ARCHITECTURE.md).
 export async function saveFood(
   db: LocalDb,
   values: FoodValues,
@@ -152,6 +164,7 @@ export async function saveFood(
   return { ok: true, value: row };
 }
 
+// // Favorites first, then alphabetical (German collation).
 export async function listFoods(db: LocalDb): Promise<FoodRow[]> {
   return ((await db.foods.toArray()) as FoodRow[])
     .filter((f) => !f.deleted_at)
@@ -206,6 +219,7 @@ export async function recentEntries(
   return out;
 }
 
+// // Re-logs an existing entry (same numbers) on another day/meal.
 export async function copyEntryTo(
   db: LocalDb,
   id: string,
@@ -230,6 +244,8 @@ export async function copyEntryTo(
 
 // Withdrawing consent deletes nutrition data on this device too: the entries,
 // the foods, anything still waiting to sync, and the hints derived from intake.
+// Rows are removed outright (not soft-deleted) on purpose: the server side is
+// already cleared by the consent withdrawal, so nothing needs to be uploaded.
 export async function wipeNutrition(db: LocalDb): Promise<void> {
   await db.transaction(
     "rw",
@@ -251,6 +267,7 @@ export async function wipeNutrition(db: LocalDb): Promise<void> {
   );
 }
 
+// // Looks up a saved food by barcode, comparing the normalised 13-digit form.
 export async function findFoodByBarcode(
   db: LocalDb,
   barcode: string,

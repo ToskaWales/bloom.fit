@@ -1,5 +1,9 @@
 "use client";
 
+// Hooks that run the pure engine (lib/engine) against the local database and return today's stored hints.
+// Used by suggestions-card.tsx and session-hint.tsx; everything stays on the device, nothing is sent to the server.
+// Neighbours: lib/local/suggestions (storage + refresh), use-today.ts for the day argument.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -21,6 +25,7 @@ export function useSuggestions(
 ): SuggestionRow[] | undefined {
   const { db, userId, cycleMode, hideWeight, nutritionMode } = useLocal();
 
+  // A cheap fingerprint of the inputs the engine reads; the effect below only re-runs the engine when it changes, not on every render.
   const signature = useLiveQuery(
     async () =>
       db && today

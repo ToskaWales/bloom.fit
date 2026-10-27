@@ -1,3 +1,5 @@
+// Pins down barcode cleaning, GS1 check-digit validation and the single stored form.
+// Matters because only valid digits may ever reach the outgoing URL.
 import { describe, expect, it } from "vitest";
 import { cleanBarcode, isValidBarcode, normaliseBarcode } from "./barcode";
 

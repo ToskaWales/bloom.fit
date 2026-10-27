@@ -1,5 +1,9 @@
 "use client";
 
+// Admin page (/admin): pick waitlist entries or paste addresses and send invitations.
+// Props come from the server (waitlist rows); sending runs in the sendInvites server action. Not part of the user app.
+// Neighbours: ui.tsx, app/(app)/admin/actions.
+
 import { useActionState } from "react";
 import { sendInvites, type InviteState } from "@/app/(app)/admin/actions";
 import { Field, inputClass, Notice, SubmitButton } from "@/components/ui";

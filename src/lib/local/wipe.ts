@@ -1,12 +1,20 @@
+// Removes everything Bloom keeps on this device (local databases and cached pages)
+// and counts changes that would be lost by doing so. Called on logout and account
+// deletion. The cache name prefix must match VERSION naming in public/sw.js;
+// database names come from db.ts.
 import Dexie from "dexie";
 
+// Local databases are named "bloom-<something>" (see createLocalDb in db.ts).
 const PREFIX = "bloom-";
+// Matches the page cache "pages-<VERSION>" of the service worker (public/sw.js).
 const PAGE_CACHE_PREFIX = "pages-";
 
 const bloomDatabases = async () =>
   (await Dexie.getDatabaseNames()).filter((n) => n.startsWith(PREFIX));
 
-// Changes that exist only on this device (not yet confirmed by the server).
+// Changes that exist only on this device (not yet confirmed by the server), i.e.
+// the outbox size over all local databases. Lets the UI warn before a logout
+// would throw them away.
 export async function unsyncedChanges(): Promise<number> {
   let total = 0;
   for (const name of await bloomDatabases()) {
@@ -22,6 +30,7 @@ export async function unsyncedChanges(): Promise<number> {
   return total;
 }
 
+// // Drops the service worker's cached pages (they embed the signed-in user's data).
 export async function clearPageCache(): Promise<void> {
   if (typeof caches === "undefined") return;
   for (const key of await caches.keys())

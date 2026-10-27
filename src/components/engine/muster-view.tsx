@@ -1,5 +1,9 @@
 "use client";
 
+// Screen /muster: shows patterns around the period that the on-device engine found in her own data.
+// Reads check-ins, workouts etc. from the local database (loadEngineData) and runs the pure analysis locally; no server calls.
+// Neighbours: lib/engine/patterns and texts, use-today.ts. Shows 'no clear pattern' as a normal result, never a verdict.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useToday } from "@/components/daily/use-today";
@@ -24,6 +28,7 @@ export function MusterView() {
   const today = useToday();
   const tracksCycle = cycleMode === "natural" || cycleMode === "irregular";
 
+  // undefined means loading or not applicable; the render below distinguishes both.
   const analysis = useLiveQuery(async (): Promise<
     PatternAnalysis | undefined
   > => {
@@ -84,6 +89,7 @@ export function MusterView() {
   );
 }
 
+// Three outcomes: still collecting data, no clear pattern, or findings. All wording comes from lib/engine/texts.
 function Result({ analysis }: { analysis: PatternAnalysis }) {
   if (analysis.status === "collecting") {
     return (

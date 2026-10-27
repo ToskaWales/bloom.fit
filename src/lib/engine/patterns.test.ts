@@ -1,3 +1,6 @@
+// Pins down the pattern detection, including simulated runs with and without a
+// planted effect. Matters because a false pattern would tell her something untrue
+// about her body: false alarms on pure noise must stay rare.
 import { describe, expect, it } from "vitest";
 import { analyzePatterns } from "./patterns";
 import { simulate, type SimOptions } from "./sim";

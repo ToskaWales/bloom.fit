@@ -1,5 +1,8 @@
 "use client";
 
+// Reusable 1-5 tap scale used by the check-in card. Controlled: the parent owns the value and saves on change.
+// No data access. Neighbours: checkin-card.tsx.
+
 import { useId } from "react";
 
 interface Props {

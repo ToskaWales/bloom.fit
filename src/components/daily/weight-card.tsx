@@ -1,5 +1,9 @@
 "use client";
 
+// Card on the Today screen to enter today's weight and see a smoothed trend. Renders nothing when weight is hidden.
+// Reads and writes bodyweight entries in the local database; shown values follow the unit setting from useLocal.
+// Neighbours: use-daily-data.ts (useWeights), lib/daily/weight (trend), hide-weight-form.tsx.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -62,6 +66,7 @@ export function WeightCard({ today }: { today: string }) {
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium">
           Heute ({weightLabel(units)})
           <input
+            // The key remounts the uncontrolled input when the stored value changes (e.g. after sync), so it never shows a stale number.
             key={todays ? todays.weight_kg : "none"}
             name="weight"
             inputMode="decimal"

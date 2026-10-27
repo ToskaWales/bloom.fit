@@ -1,3 +1,5 @@
+// Guardrail: nutrition wording and components must never judge, set targets, use
+// streaks or show red/green status styling (eating-disorder safety, see CLAUDE.md).
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";

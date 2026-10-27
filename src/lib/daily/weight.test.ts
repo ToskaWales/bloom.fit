@@ -1,3 +1,5 @@
+// Pins down the smoothed weight trend: noise is damped, real change is followed,
+// and gaps are handled. The safety rule relies on this behaviour.
 import { describe, expect, it } from "vitest";
 import { weightTrend } from "./weight";
 

@@ -1,3 +1,7 @@
+// TypeScript shapes of the rows stored in the local database. They mirror the server
+// columns minus the server-owned ones (user_id, created_at); the validation rules
+// that decide what the server accepts live in src/lib/sync/tables.ts, so keep both
+// in step. No behaviour here.
 import type { WireRow } from "@/lib/sync/tables";
 
 export interface WorkoutRow extends WireRow {

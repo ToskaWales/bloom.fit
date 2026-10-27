@@ -1,3 +1,6 @@
+// Collects the local rows the history chart needs (check-ins, weight, cycle events,
+// workout volume) and hands them to the pure builder in src/lib/daily/overview.ts.
+// No chart or UI code here; hidden weight is never even read from the database.
 import { periodDaySet } from "@/lib/daily/cycle";
 import { addDays, localDay } from "@/lib/daily/day";
 import {
@@ -15,6 +18,7 @@ import type {
   WorkoutRow,
 } from "./types";
 
+// [from, to] are local calendar days (YYYY-MM-DD), both included.
 interface Options {
   from: string;
   to: string;

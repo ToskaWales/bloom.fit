@@ -1,3 +1,5 @@
+// Pins down number parsing from typed text (comma or dot): ambiguous input must be
+// refused instead of guessed, so no wrong calorie value is saved silently.
 import { describe, expect, it } from "vitest";
 import { parseDecimal } from "./parse";
 

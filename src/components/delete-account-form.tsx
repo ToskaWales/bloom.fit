@@ -1,5 +1,9 @@
 "use client";
 
+// Settings page (/einstellungen): permanently deletes the account (GDPR erasure).
+// Calls the deleteAccount server action, then wipes this device's local copy; reads no local data.
+// Neighbours: lib/local/wipe (wipeLocalData), step-form.tsx (StepState type), ui.tsx.
+
 import { useActionState, useEffect } from "react";
 import { deleteAccount } from "@/app/(app)/einstellungen/actions";
 import type { StepState } from "@/components/step-form";
@@ -13,6 +17,7 @@ export function DeleteAccountForm() {
   );
 
   // The account is gone on the server; now remove this device's copy too.
+  // Keyed on state.done so it fires once; a failed wipe is ignored so the redirect always happens.
   useEffect(() => {
     if (!state.done) return;
     wipeLocalData()

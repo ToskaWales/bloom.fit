@@ -1,11 +1,16 @@
 "use client";
 
+// Tiny status line ('Alles gesichert', offline, errors, pending count) that doubles as a 'sync now' button.
+// Reads sync state from useLocal and the list of rejected outbox items from the local meta table. Shown on most screens.
+// Neighbours: local-provider.tsx, lib/sync/client (REJECTED_KEY).
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useLocal } from "@/components/local-provider";
 import { REJECTED_KEY } from "@/lib/sync/client";
 
 export function SyncStatus() {
   const { db, status, pending, online, syncNow } = useLocal();
+  // Entries the server refused; they are kept locally and requeued, so make them visible instead of failing silently.
   const rejected = useLiveQuery(async () => {
     if (!db) return 0;
     const raw = (await db.meta.get(REJECTED_KEY))?.value;

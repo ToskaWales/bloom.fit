@@ -1,3 +1,6 @@
+// Pins down which candidate hints buildCandidates offers and with what params.
+// Key guardrail: while a safety notice is active, nothing suggests doing more
+// (no extra rep, no plateau advice, no pattern card).
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { buildCandidates, type EngineInput } from "./index";

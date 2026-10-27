@@ -1,3 +1,5 @@
+// Pins down the barcode endpoint flow with fakes: auth, body size, rate limit and
+// status codes, and that OFF is not called when a check fails.
 import { describe, expect, it, vi } from "vitest";
 import { handleLookup, type LookupDeps } from "./lookup-handler";
 

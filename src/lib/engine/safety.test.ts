@@ -1,3 +1,6 @@
+// Pins down the safety rule: a clearly late period plus a second signal, and that
+// hidden data (weight, intake) is never used. Matters because it must neither miss
+// real cases nor fire on a single weak signal; it only ever suggests talking to a professional.
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { summarizeCycle } from "@/lib/daily/cycle";

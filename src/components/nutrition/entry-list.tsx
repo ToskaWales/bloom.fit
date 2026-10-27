@@ -1,10 +1,15 @@
 "use client";
 
+// List of the food entries logged for one day, grouped by meal, each with a delete button.
+// Gets the rows as props from nutrition-view.tsx and deletes in the local database; no server calls.
+// Neighbours: lib/nutrition/texts (wording), lib/local/nutrition.
+
 import { useLocal } from "@/components/local-provider";
 import { deleteEntry } from "@/lib/local/nutrition";
 import type { FoodLogRow, Meal } from "@/lib/local/types";
 import { entryLine, MEAL_LABEL, NUTRITION_TEXT } from "@/lib/nutrition/texts";
 
+// Display order of meals; null = entries without a meal go last.
 const ORDER: (Meal | null)[] = ["morning", "midday", "evening", "snack", null];
 
 export function EntryList({ logs }: { logs: FoodLogRow[] }) {

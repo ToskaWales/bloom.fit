@@ -1,5 +1,9 @@
 "use client";
 
+// Optional camera barcode scanner for the add-food flow. Reports a valid EAN/UPC code through onCode.
+// Detection runs on the device (native BarcodeDetector or a bundled WebAssembly one); no frames are stored or sent.
+// Neighbours: barcode-lookup.tsx (parent), public/vendor/zxing_reader.wasm, lib/nutrition/barcode.
+
 import { useEffect, useRef, useState } from "react";
 import { secondaryButtonClass } from "@/components/ui";
 import { isValidBarcode } from "@/lib/nutrition/barcode";
@@ -51,6 +55,7 @@ export function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
     onCodeRef.current = onCode;
   });
 
+  // Depends only on `open`: the camera is started on open and always released on close, unmount or when the tab is hidden.
   useEffect(() => {
     if (!open) return;
     let stopped = false;
@@ -109,6 +114,7 @@ export function BarcodeScanner({ onCode }: { onCode: (code: string) => void }) {
       } catch {
         return fail(NUTRITION_TEXT.scannerLoadFailed);
       }
+      // Polls a few times per second instead of every frame to save battery; stops after the first valid code.
       const tick = async () => {
         if (stopped || !video.current) return;
         try {

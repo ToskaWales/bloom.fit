@@ -1,3 +1,5 @@
+// Pins down the readiness comparison with her own baseline (never an absolute
+// scale) and that one outlier alone does not change the level.
 import { describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";
 import { computeReadiness, type ReadinessCheckin } from "./readiness";

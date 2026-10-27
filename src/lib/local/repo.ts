@@ -1,7 +1,12 @@
+// The single door for writing synced rows locally. Every change goes through here
+// so that "update the row" and "queue it for upload" always happen in ONE
+// transaction (no row can change without being queued). Feature logic lives in the
+// neighbouring files (workouts.ts, daily.ts, ...); uploading lives in src/lib/sync/client.ts.
 import type { TableName, WireRow } from "@/lib/sync/tables";
 import type { LocalDb } from "./db";
 
-// Every local write also queues the row for sync, atomically.
+// Every local write also queues the row for sync, atomically. updated_at is
+// stamped here only for local ordering/indexes; the server assigns its own value.
 export async function saveRow(
   db: LocalDb,
   table: TableName,
@@ -14,6 +19,9 @@ export async function saveRow(
   });
 }
 
+// // Deleting means setting deleted_at (a "tombstone"), never removing the row: the
+// // tombstone is what tells the server and the other devices that it is gone.
+// // Unknown ids are ignored.
 export async function softDelete(
   db: LocalDb,
   table: TableName,
@@ -24,6 +32,9 @@ export async function softDelete(
   await saveRow(db, table, { ...row, deleted_at: new Date().toISOString() });
 }
 
+// // Soft-deletes a workout together with all its exercises and sets in one
+// // transaction, so a sync can never see a workout whose children are still alive.
+// // Rows that were already deleted keep their original deleted_at.
 export async function softDeleteWorkout(
   db: LocalDb,
   workoutId: string,

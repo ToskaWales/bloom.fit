@@ -1,5 +1,9 @@
 "use client";
 
+// Hook returning the device's calendar day as YYYY-MM-DD, shared by all daily screens.
+// Hydration-safe: empty string on the server and during hydration, the real day afterwards. No data access.
+// Neighbours: every view under daily/, engine/ and nutrition/.
+
 import { useSyncExternalStore } from "react";
 import { localDay } from "@/lib/daily/day";
 
@@ -15,6 +19,7 @@ function subscribe(callback: () => void) {
   };
 }
 
+// Callers must treat "" as 'not known yet' and skip date-based queries.
 export function useToday(): string {
   return useSyncExternalStore(
     subscribe,

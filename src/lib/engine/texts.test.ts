@@ -1,3 +1,5 @@
+// Guardrail: every sentence the engine can produce must obey the CLAUDE.md wording
+// rules (no phase claims, no kcal numbers, no commands or diagnoses), plus content checks of the cards.
 import { describe, expect, it } from "vitest";
 import type { SuggestionKind } from "@/lib/local/types";
 import type { Candidate } from "./select";

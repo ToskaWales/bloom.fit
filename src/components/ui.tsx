@@ -1,3 +1,7 @@
+// Small shared UI kit (no state, no data): Tailwind class strings plus Field, Notice, Page and SubmitButton.
+// Used by the server-rendered pages and by most forms; keep it presentational only.
+// Neighbours: every *-form.tsx in this folder.
+
 import type { ComponentProps, ReactNode } from "react";
 
 export const buttonClass =
@@ -27,6 +31,7 @@ export function Field({
   );
 }
 
+// error uses role=alert, info uses role=status (emerald background, despite the name 'info').
 export function Notice({
   tone = "error",
   children,
@@ -67,6 +72,7 @@ export function Page({
   );
 }
 
+// Shows pendingLabel (or a generic text) while the form action runs and disables itself against double submits.
 export function SubmitButton(
   props: ComponentProps<"button"> & {
     pending?: boolean;

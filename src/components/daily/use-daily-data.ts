@@ -1,5 +1,9 @@
 "use client";
 
+// Live-query hooks over the local database for cycle events and weights (soft-deleted rows excluded).
+// Used by the cycle and weight cards and screens. Return undefined while the database opens, so UIs can show 'loading'.
+// No server access. Neighbours: local-provider.tsx (useLocal), lib/daily.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useLocal } from "@/components/local-provider";
 import type { CycleEvent } from "@/lib/daily/cycle";
@@ -18,6 +22,7 @@ export function useCycleEvents(): CycleEvent[] | undefined {
   }, [db]);
 }
 
+// Returns [] (not undefined) when weight is hidden, so no component ever sees weight values in that mode.
 export function useWeights(): WeightPoint[] | undefined {
   const { db, hideWeight } = useLocal();
   return useLiveQuery(async () => {

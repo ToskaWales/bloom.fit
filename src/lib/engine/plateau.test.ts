@@ -1,3 +1,5 @@
+// Pins down plateau detection: four recent sessions without a real gain, compared
+// with the weeks right before them. Matters so old records or breaks never create advice.
 import { describe, expect, it } from "vitest";
 import { detectPlateau, type ExerciseSession } from "./plateau";
 

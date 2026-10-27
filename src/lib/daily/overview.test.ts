@@ -1,3 +1,5 @@
+// Pins down how the overview rows are joined per day, and that the weight trend
+// is not carried forward on stale data or when weight is hidden.
 import { describe, expect, it } from "vitest";
 import { buildOverview } from "./overview";
 

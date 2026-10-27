@@ -1,5 +1,10 @@
 "use client";
 
+// Root client provider of the logged-in app (mounted in app/(app)/layout.tsx).
+// Owns the per-user local database (Dexie/IndexedDB), the online flag and the background sync loop, and
+// exposes them with the profile flags (units, cycleMode, hideWeight, nutritionMode) through useLocal().
+// Everything else reads and writes the local database first; the server is only a sync target (lib/sync).
+
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   createContext,
@@ -18,12 +23,15 @@ import { clearPageCache } from "@/lib/local/wipe";
 import { requeueRejected, syncWithLock } from "@/lib/sync/client";
 import type { Units } from "@/lib/workout/units";
 
+// Nutrition is opt-in: "off" stores and shows nothing, "log_no_totals" logs entries but never shows sums.
 export type NutritionMode = "off" | "log" | "log_no_totals";
 
+// How she wants her cycle handled; null until chosen in onboarding. Only natural/irregular show cycle features.
 export type CycleMode = "natural" | "hormonal" | "irregular" | "none" | null;
 
 export type SyncStatus = "idle" | "syncing" | "ok" | "error" | "unauthorized";
 
+// What useLocal() returns. db is null on the server and during hydration, so consumers must handle null.
 interface LocalContextValue {
   db: LocalDb | null;
   userId: string;
@@ -45,6 +53,7 @@ export function useLocal(): LocalContextValue {
   return ctx;
 }
 
+// Fallback polling interval; the real triggers are coming online, returning to the tab and local changes (see below).
 const SYNC_INTERVAL_MS = 60_000;
 
 // One cached database per user, so a shared device never mixes accounts and
@@ -70,6 +79,7 @@ function subscribeOnline(callback: () => void) {
   };
 }
 
+// `enabled` is false until onboarding is finished: the local database works, but nothing is synced yet.
 export function LocalProvider({
   userId,
   units,
@@ -103,6 +113,7 @@ export function LocalProvider({
 
   const pending = useLiveQuery(() => (db ? db.outbox.count() : 0), [db]) ?? 0;
 
+  // The ref guards against overlapping syncs (state would be stale inside the timers); status is for the UI only.
   const syncNow = useCallback(() => {
     if (!db || !enabled || running.current) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
@@ -121,6 +132,7 @@ export function LocalProvider({
       });
   }, [db, enabled, nutritionMode]);
 
+  // Sync triggers: coming back online, returning to the tab, shortly after start (also retries previously rejected items), and every minute as a fallback.
   useEffect(() => {
     const up = () => syncNow();
     const visible = () => document.visibilityState === "visible" && syncNow();

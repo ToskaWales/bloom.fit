@@ -1,5 +1,9 @@
 "use client";
 
+// 'Für dich heute' card on the Today screen: hints from the on-device engine, each with a 'why' and accept/dismiss.
+// Reads stored suggestion rows and exercise names from the local database; reactions are saved locally, no server calls.
+// Neighbours: use-suggestions.ts (refreshes the engine), session-hint.tsx, muster-view.tsx, lib/engine.
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useLocal } from "@/components/local-provider";
 import Link from "next/link";
@@ -12,6 +16,7 @@ import { renderSuggestion, type RenderedSuggestion } from "@/lib/engine/texts";
 import { reactToSuggestion } from "@/lib/local/suggestions";
 import type { CustomExerciseRow, SuggestionRow } from "@/lib/local/types";
 
+// Resolves exercise ids to names (catalog first, then her custom ones).
 export function useExerciseNames() {
   const { db } = useLocal();
   const custom = useLiveQuery(
@@ -27,6 +32,7 @@ export function useExerciseNames() {
   return { name, ready: custom !== undefined };
 }
 
+// Renders nothing when there is nothing to say, instead of an empty or placeholder card. Nutrition-based hints only exist when nutrition is on (the engine reads no food data otherwise), so with nutrition off none appear.
 export function SuggestionsCard({ today }: { today: string }) {
   const { db, units } = useLocal();
   const rows = useSuggestions(today);
@@ -75,6 +81,7 @@ export function SuggestionsCard({ today }: { today: string }) {
   );
 }
 
+// Accepted hints collapse to 'Notiert'; the 'why' list keeps every hint explainable and clearly a suggestion, not advice.
 function SuggestionItem({
   row,
   r,

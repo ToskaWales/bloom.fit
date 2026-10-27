@@ -1,7 +1,12 @@
 "use client";
 
+// Bottom bar with the rest countdown after a set is completed (rendered by session-view.tsx).
+// The parent owns the end time (endsAt, epoch ms) so the timer survives re-renders; no data access.
+// Beeps and vibrates when done, if the device allows it. Neighbours: session-view.tsx.
+
 import { useEffect, useState } from "react";
 
+// One shared AudioContext; browsers allow creating it only after a user gesture.
 let audio: AudioContext | null = null;
 
 // Call from a user gesture (completing a set): browsers only allow audio after one.
@@ -38,6 +43,7 @@ export function RestTimer({
   endsAt: number;
   onChange: (endsAt: number | null) => void;
 }) {
+  // Time is recomputed from endsAt (not counted down) so a throttled background tab still shows the right value.
   const [now, setNow] = useState(() => Date.now());
   const remaining = Math.max(0, Math.ceil((endsAt - now) / 1000));
 
@@ -47,6 +53,7 @@ export function RestTimer({
   }, []);
 
   useEffect(() => {
+    // Fires once when reaching zero, then closes itself after 1.5 s.
     if (remaining > 0) return;
     navigator.vibrate?.([200, 100, 200]);
     beep();

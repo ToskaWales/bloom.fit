@@ -1,3 +1,7 @@
+// Local reads/writes for the daily log: check-in, body weight and cycle events.
+// There is exactly ONE row per (user, kind, day): its id is derived with dailyId()
+// from src/lib/ids.ts, so two offline devices that log the same day update the same
+// row instead of duplicating it. Writes go through repo.ts; engine logic is elsewhere.
 import { dailyId } from "@/lib/ids";
 import type { Symptom } from "@/lib/daily/symptoms";
 import type { LocalDb } from "./db";
@@ -7,6 +11,7 @@ import type { CheckinRow, CycleEventRow, WeightRow } from "./types";
 // The row id is derived from user + day, so it is computed before any database
 // transaction starts (awaiting crypto inside a Dexie transaction would end it).
 
+// Form-friendly (camelCase) view of a check-in; scales are 1-5, null = not answered.
 export interface CheckinValues {
   sleepQuality: number | null;
   sleepHours: number | null;
@@ -17,6 +22,7 @@ export interface CheckinValues {
   note: string | null;
 }
 
+// // The day's check-in, or undefined when none exists or it was deleted.
 export async function getCheckin(
   db: LocalDb,
   userId: string,
@@ -87,6 +93,7 @@ function writeCheckin(db: LocalDb, id: string, day: string, v: CheckinValues) {
   } satisfies CheckinRow);
 }
 
+// // Overwrites the whole day's check-in (use patchCheckin to change single fields).
 export async function saveCheckin(
   db: LocalDb,
   userId: string,
@@ -107,6 +114,7 @@ export async function getWeight(
   return row && !row.deleted_at ? row : undefined;
 }
 
+// // One weight per day: saving again replaces that day's value (and revives a deleted one).
 export async function saveWeight(
   db: LocalDb,
   userId: string,
@@ -136,6 +144,7 @@ export async function removeWeight(
     });
 }
 
+// // One row per (kind, day), so logging the same event twice is harmless.
 export async function saveCycleEvent(
   db: LocalDb,
   userId: string,

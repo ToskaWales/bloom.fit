@@ -1,5 +1,9 @@
 "use client";
 
+// Hand-drawn SVG behind the Verlauf screen: mood lines, optional weight trend, training volume and period shading.
+// Pure presentation of the rows it is given (props only, no database); the table in overview-view.tsx is the text alternative.
+// Neighbours: overview-view.tsx, lib/daily/overview (OverviewRow), CSS variables --series-* and --viz-*.
+
 import { useId, useState } from "react";
 import { SYMPTOM_LABELS, type Symptom } from "@/lib/daily/symptoms";
 import type { OverviewRow } from "@/lib/daily/overview";
@@ -71,6 +75,7 @@ function spread(
   return sorted;
 }
 
+// Panels are stacked vertically with a shared x axis (one column per day); each panel has its own scale on purpose.
 export function OverviewChart({ rows, showWeight, units }: Props) {
   const uid = useId();
   const [active, setActive] = useState<number | null>(null);
@@ -88,6 +93,7 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
   const moodY = (v: number) =>
     moodTop + PANELS.mood - ((v - 1) / 4) * PANELS.mood;
 
+  // Weight scale is padded by 0.5 kg and only used when at least one weight exists (min/max of nothing would be infinite).
   const weights = rows
     .map((r) => r.weightTrend)
     .filter((v): v is number => v !== null);
@@ -118,6 +124,7 @@ export function OverviewChart({ rows, showWeight, units }: Props) {
     moodTop + PANELS.mood,
   );
 
+  // Maps the pointer to the nearest day column; pointer events cover both mouse and touch.
   function onMove(e: React.PointerEvent<SVGRectElement>) {
     const box = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - box.left) / box.width) * PLOT_W;

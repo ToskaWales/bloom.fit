@@ -1,5 +1,9 @@
 "use client";
 
+// Settings page (/einstellungen): the opt-out switch that hides all weight features.
+// Saves via the setHideWeight server action; the setting reaches the app through LocalProvider (hideWeight).
+// Neighbours: clear-cache-on-submit.tsx (same cache reason), daily/weight-card.tsx and daily/overview-view.tsx (honour it).
+
 import { setHideWeight } from "@/app/(app)/einstellungen/actions";
 import { secondaryButtonClass } from "@/components/ui";
 import { clearPageCache } from "@/lib/local/wipe";

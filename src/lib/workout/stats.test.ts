@@ -1,3 +1,5 @@
+// Pins down the 1RM estimate, set volume and summary: which sets count as working
+// sets, and when the estimate is too unreliable to give.
 import { describe, expect, it } from "vitest";
 import { estimateOneRepMax, setVolume, summarize } from "./stats";
 

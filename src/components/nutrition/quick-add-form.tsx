@@ -1,5 +1,9 @@
 "use client";
 
+// Quick manual entry (kcal and protein, optional name and meal) for the nutrition screen, plus the shared MealSelect.
+// Writes one entry to the local database (addQuickEntry); no server calls. Values are parsed from text (decimal comma ok).
+// Neighbours: nutrition-view.tsx, foods-list.tsx (reuses MealSelect), lib/nutrition/parse.
+
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
 import { inputClass, buttonClass } from "@/components/ui";

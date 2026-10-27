@@ -1,3 +1,7 @@
+// Glue between the local database and the pure adaptation engine (src/lib/engine):
+// loads the person's own data, asks the engine for hints and stores today's hints
+// as `suggestions` rows. The rules and wording live in the engine, not here. Runs
+// only on the device; only kind, subject, a few numbers and her reaction are stored.
 import { summarizeCycle } from "@/lib/daily/cycle";
 import { addDays, localDay } from "@/lib/daily/day";
 import type { WeightPoint } from "@/lib/daily/weight";
@@ -63,7 +67,8 @@ const sameParams = (a: SuggestionRow["params"], b: SuggestionRow["params"]) => {
   );
 };
 
-// Best estimated 1RM per exercise and workout, over the last year, from local data.
+// Best estimated 1RM per exercise and workout over the last SESSION_DAYS days,
+// from local data. Warm-ups, unticked sets and bodyweight sets are ignored.
 export async function exerciseSessionsFromDb(
   db: LocalDb,
   today: string,
@@ -127,6 +132,7 @@ export async function exerciseSessionsFromDb(
   return out;
 }
 
+// // Per-database promise chain, used by refreshSuggestions to run one refresh at a time.
 const queues = new WeakMap<LocalDb, Promise<unknown>>();
 
 interface RefreshOptions {
@@ -178,6 +184,7 @@ async function finishedWorkoutDays(
   return days.size;
 }
 
+// // Check-in fields the pattern analysis looks at (performance is added separately).
 const SERIES: { metric: PatternMetric; key: keyof CheckinRow }[] = [
   { metric: "energy", key: "energy" },
   { metric: "motivation", key: "motivation" },
@@ -185,6 +192,7 @@ const SERIES: { metric: PatternMetric; key: keyof CheckinRow }[] = [
   { metric: "hunger", key: "hunger" },
 ];
 
+// // Everything the engine may read, already filtered (no deleted rows, weight/intake only if allowed).
 export interface EngineData {
   checkins: CheckinRow[];
   starts: string[];
@@ -196,6 +204,7 @@ export interface EngineData {
   exerciseSessions: Map<string, ExerciseSession[]>;
 }
 
+// // intake is null (never read) when nutrition is off; weights are [] when hidden.
 export async function loadEngineData(
   db: LocalDb,
   today: string,
@@ -246,6 +255,7 @@ export async function loadEngineData(
   };
 }
 
+// // Builds the per-metric daily series and runs the cycle-pattern analysis.
 export function patternsFrom(data: EngineData, today: string): PatternAnalysis {
   const series = {
     performance: performanceSeries(data.exerciseSessions),
@@ -411,6 +421,7 @@ async function doRefresh(
   });
 }
 
+// // Today's live hints, including ones she already reacted to.
 export async function suggestionsForDay(
   db: LocalDb,
   day: string,
@@ -420,6 +431,8 @@ export async function suggestionsForDay(
   ).filter((r) => !r.deleted_at);
 }
 
+// // Stores her reaction (accepted/dismissed). The server refuses to turn it back
+// // into "shown" (trigger suggestions_keep_reaction), so a stale device cannot undo it.
 export async function reactToSuggestion(
   db: LocalDb,
   id: string,

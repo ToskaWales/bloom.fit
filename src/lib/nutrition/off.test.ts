@@ -1,3 +1,5 @@
+// Pins down mapping of Open Food Facts JSON to per-100 g values: implausible or
+// hostile data is dropped, nothing is invented.
 import { describe, expect, it } from "vitest";
 import { normaliseOffProduct } from "./off";
 

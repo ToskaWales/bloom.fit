@@ -1,5 +1,9 @@
 "use client";
 
+// 'My foods' section on the nutrition screen: favourite, log an amount, delete, and add new foods.
+// Reads foods from the local database (useFoods) and writes entries there; no server calls except through barcode-lookup.tsx.
+// Neighbours: food-form.tsx, quick-add-form.tsx (MealSelect), nutrition-view.tsx. Plain neutral styling, no goals or colours.
+
 import { useState } from "react";
 import { BarcodeLookup } from "@/components/nutrition/barcode-lookup";
 import { FoodForm } from "@/components/nutrition/food-form";
@@ -12,6 +16,7 @@ import type { FoodRow, Meal } from "@/lib/local/types";
 import { NUMBER_HELP, parseDecimal } from "@/lib/nutrition/parse";
 import { NUTRITION_TEXT } from "@/lib/nutrition/texts";
 
+// One summary line per food (kcal and protein, per 100 g or per portion).
 const detail = (f: FoodRow) =>
   `${f.kcal !== null ? `${Math.round(f.kcal)} kcal` : ""}${f.kcal !== null && f.protein_g !== null ? " · " : ""}${f.protein_g !== null ? `${f.protein_g.toLocaleString("de-DE")} g Eiweiß` : ""} ${f.basis === "100g" ? "pro 100 g" : `pro Portion (${f.portion_g} g)`}`;
 
@@ -25,6 +30,7 @@ export function FoodsList({ day }: { day: string }) {
   const [meal, setMeal] = useState<Meal | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Grams for per-100 g foods, a portion count otherwise; the entry stores its own snapshot of the values.
   async function log(food: FoodRow) {
     if (!db) return;
     const parsed = parseDecimal(amount);
@@ -127,6 +133,7 @@ export function FoodsList({ day }: { day: string }) {
           </li>
         ))}
       </ul>
+      {/* While a scanned product waits to be saved, the empty manual form steps aside to avoid two forms at once. */}
       {adding ? (
         <>
           <BarcodeLookup

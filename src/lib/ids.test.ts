@@ -1,3 +1,5 @@
+// Pins down that daily ids are stable per (user, kind, day) and differ otherwise.
+// Offline devices rely on this to converge on one row instead of creating duplicates.
 import { describe, expect, it } from "vitest";
 import { dailyId } from "./ids";
 

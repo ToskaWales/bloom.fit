@@ -1,5 +1,9 @@
 "use client";
 
+// Card on the Today screen: five 1-5 taps (sleep, energy, motivation, hunger) plus optional details.
+// Reads and writes the local check-in for the chosen day (Dexie via lib/local/daily); no server calls, sync happens later.
+// Neighbours: scale-input.tsx, today-view.tsx, engine/suggestions-card.tsx (the engine reads these values).
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { useLocal } from "@/components/local-provider";
@@ -12,6 +16,7 @@ import {
   type CheckinValues,
 } from "@/lib/local/daily";
 
+// Shown for a day without a stored row; nothing is written until she taps something.
 const EMPTY: CheckinValues = {
   sleepQuality: null,
   sleepHours: null,
@@ -23,6 +28,7 @@ const EMPTY: CheckinValues = {
 };
 const SLEEP_HOURS = Array.from({ length: 17 }, (_, i) => 4 + i * 0.5); // 4 – 12 h
 
+// Offline-first: reads are live queries on the local database, writes land there immediately and sync later.
 export function CheckinCard({ today }: { today: string }) {
   const { db, userId, cycleMode } = useLocal();
   // The chosen day is stored, not an offset: an app left open past midnight must not silently switch days.
@@ -30,6 +36,7 @@ export function CheckinCard({ today }: { today: string }) {
   const day = backfillDay ?? today;
   const isToday = backfillDay === null;
 
+  // undefined = database still opening, null = no check-in yet for this day.
   const row = useLiveQuery(
     async () =>
       db ? ((await getCheckin(db, userId, day)) ?? null) : undefined,
@@ -53,6 +60,7 @@ export function CheckinCard({ today }: { today: string }) {
   const update = (patch: Parameters<typeof patchCheckin>[3]) => {
     if (db) void patchCheckin(db, userId, day, patch);
   };
+  // People who chose no cycle tracking never see cycle-related symptoms.
   const showCycleSymptoms = cycleMode !== "none";
 
   return (

@@ -1,3 +1,5 @@
+// Pins down food scaling, input limits and daily totals. Matters because values
+// must be exactly what she entered (missing stays missing) and stay inside database limits.
 import { describe, expect, it } from "vitest";
 import {
   dayTotals,

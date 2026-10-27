@@ -1,5 +1,9 @@
 "use client";
 
+// Login page (/login): passwordless two-step sign-in with an e-mail code.
+// Step 1 requests the code, step 2 verifies it; both are server actions and no local data is read.
+// Neighbours: app/login/actions, ui.tsx.
+
 import { useActionState } from "react";
 import { requestCode, verifyCode, type LoginState } from "@/app/login/actions";
 import { Field, inputClass, Notice, SubmitButton } from "@/components/ui";
@@ -12,6 +16,7 @@ export function LoginForm() {
     idle,
   );
   const [verified, verifyAction, verifying] = useActionState(verifyCode, idle);
+  // Switching to step 2 is derived from the action result; no separate state to keep in sync.
   const email = requested.status === "code_sent" ? requested.email : "";
 
   if (email) {
