@@ -4,6 +4,7 @@ import type { HungerRise } from "./hunger";
 import type { PatternAnalysis } from "./patterns";
 import type { SafetyResult } from "./safety";
 import type { Candidate } from "./select";
+import { round1, round2 } from "@/lib/math";
 
 export interface EngineInput {
   today: string;
@@ -22,9 +23,6 @@ export interface EngineInput {
     lowEnergy: boolean;
   } | null;
 }
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // Everything the engine could say today, before cooldowns and the daily cap.
 // While a safety notice is active it never suggests doing more: no extra rep,

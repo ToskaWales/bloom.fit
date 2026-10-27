@@ -1,3 +1,4 @@
+import { round1 } from "@/lib/math";
 // Pure helpers for food entries. Values are only ever what the person entered
 // or scanned: nothing is estimated, and missing values stay missing.
 
@@ -23,7 +24,6 @@ export interface EntryValues {
 export type Validated<T> =
   { ok: true; value: T } | { ok: false; error: string };
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
 const MAX_AMOUNT_G = 3000;
 const MAX_ENTRY_KCAL = 10000;
 const MAX_ENTRY_G = 1000;

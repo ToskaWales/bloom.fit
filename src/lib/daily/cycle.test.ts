@@ -268,3 +268,14 @@ describe("overdueDays and plausibleCycles", () => {
     expect(plausibleCycles(missed).map((c) => c.length)).toEqual([28, 28, 28]);
   });
 });
+
+describe("median cycle length", () => {
+  it("is a whole number of days: an even count rounds the middle pair (28 and 29 give 29)", () => {
+    const s = summarizeCycle(
+      [start("2026-06-01"), start("2026-06-29"), start("2026-07-28")],
+      "2026-08-01",
+    );
+    expect(s.lengths).toEqual([28, 29]);
+    expect(s.medianLength).toBe(29);
+  });
+});

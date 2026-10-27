@@ -1,3 +1,4 @@
+import { round1 } from "@/lib/math";
 // Turns an Open Food Facts product into plain per-100 g values. Nothing but
 // energy, protein, carbs, fat, name and brand is taken: no images, no scores.
 
@@ -17,8 +18,6 @@ const MAX_KCAL_PER_100G = 900;
 const MAX_G_PER_100G = 100;
 const MACRO_TOLERANCE_G = 2;
 const KJ_PER_KCAL = 4.184;
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 function amount(v: unknown): number | null {
   const n =

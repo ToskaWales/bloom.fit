@@ -1,4 +1,5 @@
 import { addDays, daysBetween, dayRange } from "./day";
+import { median } from "@/lib/math";
 
 export type CycleEventKind =
   "period_start" | "period_end" | "ovulation_test_positive";
@@ -41,11 +42,10 @@ const MIN_CYCLES_FOR_PREDICTION = 3;
 const IRREGULAR_SD_DAYS = 7;
 const MAX_PERIOD_DAYS = 14;
 
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
-};
+// Cycle lengths are whole days: for an even count the middle pair is rounded
+// (28 and 29 give 29), unlike the plain median used for ratings.
+const medianDays = (days: number[]) => Math.round(median(days));
+
 const stdDev = (xs: number[]) => {
   const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
   return Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length);
@@ -82,7 +82,7 @@ function endFor(
 const OUTLIER_FACTOR = 1.6;
 function withoutMissedLogs(lengths: number[]): number[] {
   if (lengths.length < 3) return lengths;
-  const m = median(lengths);
+  const m = medianDays(lengths);
   return lengths.filter((l) => l <= OUTLIER_FACTOR * m);
 }
 
@@ -104,7 +104,8 @@ export function plausibleCycles(events: CycleEvent[]): CycleSpan[] {
     if (length >= MIN_PLAUSIBLE && length <= MAX_PLAUSIBLE)
       spans.push({ start: starts[i - 1], next: starts[i], length });
   }
-  const typical = spans.length >= 3 ? median(spans.map((c) => c.length)) : null;
+  const typical =
+    spans.length >= 3 ? medianDays(spans.map((c) => c.length)) : null;
   return typical === null
     ? spans
     : spans.filter((c) => c.length <= OUTLIER_FACTOR * typical);
@@ -149,7 +150,7 @@ export function summarizeCycle(
     lastStart,
     lengths,
     periodLengths,
-    medianLength: lengths.length ? median(lengths) : null,
+    medianLength: lengths.length ? medianDays(lengths) : null,
     overdueDays: null as number | null,
   };
   if (!lastStart) return { ...base, status: "no_data", prediction: null };
@@ -163,7 +164,7 @@ export function summarizeCycle(
     return { ...base, status: "irregular", prediction: null };
 
   const halfWidth = Math.max(2, Math.ceil(1.5 * sd));
-  const expected = addDays(lastStart, median(lengths));
+  const expected = addDays(lastStart, medianDays(lengths));
   const prediction = {
     expected,
     earliest: addDays(expected, -halfWidth),

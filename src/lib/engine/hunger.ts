@@ -1,5 +1,6 @@
 import { daysBetween } from "@/lib/daily/day";
 import type { DayValue } from "./patterns";
+import { median, round1 } from "@/lib/math";
 
 export interface HungerInput {
   today: string;
@@ -29,13 +30,6 @@ export const MIN_TRAINING_DAYS = 4;
 export const PERF_WINDOW_DAYS = 14;
 export const MIN_PERF_DROP = 0.04;
 export const MIN_PERF_DAYS = 2; // one bad session is not a trend
-
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-};
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // A rise in her own hunger ratings: a signal to notice, never a judgement.
 // Weight and logged intake are deliberately not used here.

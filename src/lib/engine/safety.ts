@@ -1,6 +1,7 @@
 import { addDays, daysBetween } from "@/lib/daily/day";
 import type { CycleSummary } from "@/lib/daily/cycle";
 import { weightTrend, type WeightPoint } from "@/lib/daily/weight";
+import { median } from "@/lib/math";
 
 export interface SafetyInput {
   today: string;
@@ -126,12 +127,6 @@ function overdueFor(cycle: CycleSummary, today: string): number {
     return Math.max(0, daysBetween(cycle.lastStart, today) - LONG_CYCLE_DAYS);
   return 0;
 }
-
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-};
 
 export function evaluateSafety({
   today,

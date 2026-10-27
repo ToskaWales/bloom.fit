@@ -1,14 +1,9 @@
 import type { DayValue } from "./patterns";
 import type { ExerciseSession } from "./plateau";
+import { median } from "@/lib/math";
 
 const MIN_PRIOR_SESSIONS = 3;
 const PRIOR_WINDOW = 8;
-
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-};
 
 // Each session's best estimated 1RM relative to that exercise's own recent level
 // (median of the previous sessions): +0.05 = 5 % above her usual, -0.1 = 10 %

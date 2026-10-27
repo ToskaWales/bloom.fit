@@ -1,4 +1,5 @@
 import { daysBetween } from "@/lib/daily/day";
+import { median, round1 } from "@/lib/math";
 
 export interface ReadinessCheckin {
   day: string;
@@ -35,13 +36,6 @@ const METRICS = [
   { key: "motivation", metric: "motivation" },
   { key: "sleep_quality", metric: "sleep" },
 ] as const;
-
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-};
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // How today's check-in compares with the person's own recent normal (median of
 // the previous 28 days), never with an absolute scale: a "2" can be normal for her.
