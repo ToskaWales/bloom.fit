@@ -1,3 +1,7 @@
+// /bestaetigen?token=...: double-opt-in page for the waitlist. Public. The
+// token comes from the confirmation email; it is passed to the confirm form,
+// which calls the server action confirmWaitlist. Reading searchParams is
+// dynamic, so it sits behind Suspense and the heading stays static.
 import { Suspense } from "react";
 import { ConfirmForm } from "@/components/confirm-form";
 
@@ -15,6 +19,7 @@ async function Content({
   return <ConfirmForm token={value} />;
 }
 
+// The outer page stays static (cacheComponents); only Content reads the URL.
 export default function Page({ searchParams }: PageProps<"/bestaetigen">) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-16">

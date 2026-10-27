@@ -1,8 +1,15 @@
+// POST /api/sync: the offline-first sync endpoint (push local changes, pull
+// remote ones). Signed-in users only; rows are written through the user's own
+// Supabase session, so RLS limits every read/write to their own data.
+// Security order: content type, then auth check, then size caps (1 MB), then
+// schema validation. Never logs row contents because they are health data.
+// Route handler (not a server action) because the service worker/client calls it.
 import { runSync, SyncRequestError } from "@/lib/sync/server";
 import { supabaseSyncDb } from "@/lib/sync/supabase-db";
 import { syncRequestSchema } from "@/lib/sync/tables";
 import { createClient } from "@/lib/supabase/server";
 
+// Hard cap on request size so one client cannot make the server buffer huge payloads.
 const MAX_BODY_BYTES = 1_000_000;
 
 export async function POST(request: Request) {
@@ -14,6 +21,8 @@ export async function POST(request: Request) {
   if (!data.user)
     return Response.json({ error: "unauthorized" }, { status: 401 });
 
+  // Check the declared length first (cheap), then the real length, because the
+  // Content-Length header can be missing or wrong.
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > MAX_BODY_BYTES)
     return Response.json({ error: "too large" }, { status: 413 });

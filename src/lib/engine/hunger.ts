@@ -1,7 +1,12 @@
+// Detects a rise in her own hunger ratings (last 7 days vs. the 4 weeks before).
+// Pure function over check-ins; weight and logged food are deliberately NOT used,
+// and it never produces a calorie number. The result feeds the "hunger_note"
+// candidate built in ./index.ts; wording lives in ./texts.ts.
 import { daysBetween } from "@/lib/daily/day";
 import type { DayValue } from "./patterns";
 import { median, round1 } from "@/lib/math";
 
+/** Inputs for detectHungerRise; `checkins` may contain null hunger (not logged). */
 export interface HungerInput {
   today: string;
   checkins: { day: string; hunger: number | null }[];
@@ -11,6 +16,7 @@ export interface HungerInput {
   performance?: DayValue[];
 }
 
+/** What the hint shows: medians on the 1-5 scale, plus training context. */
 export interface HungerRise {
   recent: number;
   before: number;
@@ -31,8 +37,10 @@ export const PERF_WINDOW_DAYS = 14;
 export const MIN_PERF_DROP = 0.04;
 export const MIN_PERF_DAYS = 2; // one bad session is not a trend
 
-// A rise in her own hunger ratings: a signal to notice, never a judgement.
-// Weight and logged intake are deliberately not used here.
+// Returns a HungerRise when the median hunger of the last 7 days is at least 1
+// point above her own median of the 28 days before, else null. Needs enough
+// values in both periods and regular training (4+ days in 14).
+// A signal to notice, never a judgement. perfDrop is only set on a clear dip.
 export function detectHungerRise({
   today,
   checkins,

@@ -1,14 +1,19 @@
+// Test support: simulates check-in data with an optional planted effect so we can
+// measure how often ./patterns.ts finds real effects and how often it raises a
+// false alarm. Not part of the app flow; uses ./rng.ts for reproducibility.
 // Synthetic data for testing the pattern detection (test support, not shipped
 // in the app bundle: only imported from tests and the evaluation script).
 import { addDays } from "@/lib/daily/day";
 import type { DayValue, PatternMetric } from "./patterns";
 import { mulberry32 } from "./rng";
 
+/** Standard normal random number (Box-Muller) from a uniform generator. */
 export const normal = (rand: () => number) => {
   const u = Math.max(rand(), 1e-12);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand());
 };
 
+/** Settings for simulate(); `effect` plants a real shift, `noise` is the day-to-day spread. */
 export interface SimOptions {
   seed: number;
   cycles: number;
@@ -21,6 +26,7 @@ export interface SimOptions {
   missing?: number;
 }
 
+/** Same shape the pattern analysis takes as input. */
 export interface SimData {
   starts: string[];
   series: Record<PatternMetric, DayValue[]>;
@@ -28,6 +34,7 @@ export interface SimData {
 
 const clampScale = (v: number) => Math.min(5, Math.max(1, Math.round(v)));
 
+/** Builds `cycles` cycles of synthetic period starts and daily series; the same seed gives the same data. */
 export function simulate(o: SimOptions): SimData {
   const rand = mulberry32(o.seed);
   const starts: string[] = [];

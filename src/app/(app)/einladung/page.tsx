@@ -1,3 +1,6 @@
+// /einladung: asks for an invite code. Signed in, but not yet granted access
+// (users with access are sent on to /onboarding). Redeeming happens in the
+// server action in ./actions. Dynamic because it reads the profile.
 import { redirect } from "next/navigation";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page } from "@/components/ui";

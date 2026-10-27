@@ -1,8 +1,12 @@
+// Root layout for every page: <html lang="de">, global CSS and site-wide
+// metadata. It touches no user data and stays static (server component).
+// The optional Plausible script is only added when its env var is set.
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Base for absolute URLs (Open Graph etc.); falls back to the production domain.
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://bloom.fit",
   ),
@@ -12,6 +16,7 @@ export const metadata: Metadata = {
   openGraph: { locale: "de_DE", type: "website", siteName: "Bloom" },
 };
 
+// Colours the browser/installed-app toolbar; keep in sync with manifest.ts.
 export const viewport: Viewport = { themeColor: "#e11d48" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -20,6 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="de" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         {children}
+        {/* Privacy-friendly analytics, loaded only if configured; no cookies. */}
         {plausible && (
           <Script
             defer

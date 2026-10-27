@@ -1,3 +1,7 @@
+// Server action for /einladung: redeem an invite code. Needs a signed-in user
+// who has no access yet. The check itself is the database function
+// redeem_invite (it verifies the hash, expiry and single use), so the code
+// logic cannot be bypassed from the browser.
 "use server";
 
 import { redirect } from "next/navigation";
@@ -11,6 +15,7 @@ export async function redeemCode(
 ): Promise<StepState> {
   const { supabase } = await requireProfile();
   const code = normalizeInviteCode(String(formData.get("code") ?? ""));
+  // 19 = four groups of four characters plus three dashes; cheap check before the database call.
   if (code.length < 19)
     return {
       error: "Bitte gib deinen Einladungscode ein (z. B. ABCD-EFGH-JKLM-NPQR).",

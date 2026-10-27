@@ -1,10 +1,17 @@
+// Finds personal patterns around the period (e.g. energy lower in the 4 days
+// before it) from her own logs. Pure statistics only: no wording (./texts.ts) and
+// no claim about phases in general. Cycle boundaries come from
+// @/lib/daily/cycle (plausibleCycles); ./rng.ts makes the test reproducible.
 import { addDays } from "@/lib/daily/day";
 import { plausibleCycles } from "@/lib/daily/cycle";
 import { mulberry32 } from "./rng";
 
+/** The five measures compared per cycle. Performance is a fraction (see ./performance.ts), the rest are 1-5 scale points. */
 export type PatternMetric =
   "energy" | "motivation" | "sleep" | "hunger" | "performance";
+/** "before": last days of a cycle (before the next period); "start": first days of the period. */
 export type PatternWindow = "before" | "start";
+/** One measurement on one calendar day (YYYY-MM-DD). Several per day are allowed and get averaged. */
 export interface DayValue {
   day: string;
   value: number;
@@ -17,6 +24,7 @@ export interface PatternInput {
   series: Record<PatternMetric, DayValue[]>;
 }
 
+/** Per-cycle numbers behind a finding, so the UI can show every cycle and not just the mean. */
 export interface CycleBreakdown {
   start: string;
   next: string;
@@ -26,6 +34,7 @@ export interface CycleBreakdown {
   restN: number;
 }
 
+/** One pattern that passed every check (size, consistency, permutation test). */
 export interface PatternFinding {
   metric: PatternMetric;
   window: PatternWindow;
@@ -37,6 +46,11 @@ export interface PatternFinding {
   breakdown: CycleBreakdown[];
 }
 
+/**
+ * Result of analyzePatterns. "collecting": not enough usable cycles yet;
+ * "no_pattern": enough data, nothing reliable found (a valid, normal outcome);
+ * "found": findings sorted strongest first (relative to each metric's threshold).
+ */
 export type PatternAnalysis =
   | {
       status: "collecting";
@@ -53,16 +67,21 @@ export type PatternAnalysis =
 // usable cycle, and a permutation test that rules out chance (Bonferroni-corrected, see ALPHA).
 // With ten comparisons per person this keeps false alarms on noise below 5 %
 // (checked by simulation in patterns.test.ts).
+/** Window lengths in days: the last 4 days of a cycle, the first 3 days of a period. */
 export const WINDOW_DAYS: Record<PatternWindow, number> = {
   before: 4,
   start: 3,
 };
+/** A cycle is "usable" with enough observations (MIN_OBS); at least this many are needed to test at all. */
 export const MIN_USABLE_CYCLES = 2;
 // Ten comparisons per person (5 measures x 2 windows): 0.05 / 10, so that chance
 // alone produces a pattern in at most about 5 % of people.
+/** Significance level after the Bonferroni correction: a result needs p < 0.005. */
 export const ALPHA = 0.005;
 // Longer "cycles" are very likely two cycles with a missed log; windows would be wrong.
 export const MAX_PATTERN_CYCLE_DAYS = 45;
+// Smallest average window-vs-rest difference worth reporting: 0.7 points on the
+// 1-5 scale, or 4 % for performance. Starting values, not proven limits.
 const THRESHOLD: Record<PatternMetric, number> = {
   energy: 0.7,
   motivation: 0.7,
@@ -70,6 +89,7 @@ const THRESHOLD: Record<PatternMetric, number> = {
   hunger: 0.7,
   performance: 0.04,
 };
+// Minimum logged days per cycle (inside the window / outside it) for that cycle to count.
 const MIN_OBS: Record<PatternMetric, { window: number; rest: number }> = {
   energy: { window: 2, rest: 6 },
   motivation: { window: 2, rest: 6 },
@@ -87,6 +107,7 @@ const METRICS: PatternMetric[] = [
 const WINDOWS: PatternWindow[] = ["before", "start"];
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
+// Collapses several values on the same day into their mean.
 function perDay(series: DayValue[]): Map<string, number> {
   const sums = new Map<string, { sum: number; n: number }>();
   for (const { day, value } of series) {
@@ -127,8 +148,11 @@ function sampleCycle(
   return { start, next, win, rest };
 }
 
-// Shuffles the window labels inside each cycle: how often does chance alone
-// produce an average difference at least as large as the observed one?
+// Permutation test: shuffle which days count as "window" inside each cycle, keeping
+// the counts, and repeat. The share of shuffles whose average difference is at
+// least as large as the observed one is the p-value (how easily chance alone
+// could produce it). Shuffling within a cycle keeps person- and cycle-level
+// differences out of the comparison. The +1 terms avoid a p-value of exactly 0.
 function permutationP(
   samples: Sample[],
   observed: number,
@@ -153,6 +177,11 @@ function permutationP(
   return (atLeast + 1) / (permutations + 1);
 }
 
+// Pipeline per metric x window: (1) build usable cycles, (2) effect = mean of the
+// per-cycle differences, (3) must exceed THRESHOLD, (4) every cycle must point
+// the same way with at least half that size (one odd cycle vetoes it), (5) the
+// permutation test must beat ALPHA. Only then is it a finding. Seeded, so the
+// same data always gives the same answer. Makes no claim about other women.
 export function analyzePatterns(
   input: PatternInput,
   options: { permutations?: number; seed?: number } = {},

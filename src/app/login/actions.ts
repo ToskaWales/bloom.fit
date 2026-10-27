@@ -1,3 +1,7 @@
+// Server actions for /login: Apple/Google OAuth, email one-time code, sign-out.
+// Public (that is the point), so every input is validated and the answers are
+// written not to reveal whether an email is known or invited.
+// Server actions so the session cookie is set on the server.
 "use server";
 
 import { redirect } from "next/navigation";
@@ -14,6 +18,8 @@ export type LoginState =
 
 const emailSchema = z.email().max(254);
 
+// Starts the redirect to the provider; the PKCE cookie is set on this origin,
+// which is why /auth/callback must use the same site URL.
 async function startOAuth(provider: "google" | "apple") {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -75,6 +81,8 @@ export async function requestCode(
   return { status: "code_sent", email };
 }
 
+// Checks the 6-8 digit code from the email and, on success, signs the user in
+// (the session cookie is set by Supabase) and claims a remembered invite.
 export async function verifyCode(
   _prev: LoginState,
   formData: FormData,

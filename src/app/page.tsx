@@ -1,3 +1,7 @@
+// "/": public landing page with the waitlist form. Reads ?h= (headline
+// variant) and ?src= (link source) for validation experiments; the form posts
+// to the joinWaitlist server action. The static page shell is prerendered,
+// only the part reading searchParams is behind Suspense.
 import { Suspense } from "react";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { HOOKS, pickVariant } from "@/lib/hooks";
@@ -5,6 +9,7 @@ import { HOOKS, pickVariant } from "@/lib/hooks";
 async function Hero({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const params = await searchParams;
   const variant = pickVariant(params.h);
+  // Free text from the URL: trimmed to 64 characters before it is stored.
   const src = typeof params.src === "string" ? params.src.slice(0, 64) : "";
   return (
     <section className="flex flex-col gap-8">

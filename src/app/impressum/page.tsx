@@ -1,3 +1,5 @@
+// /impressum: legal notice. Public, static, no data. Still a draft with
+// placeholders (see the note below).
 export const metadata = { title: "Impressum – Bloom" };
 
 // ENTWURF: Platzhalter in [[…]] ausfüllen und rechtlich prüfen lassen.

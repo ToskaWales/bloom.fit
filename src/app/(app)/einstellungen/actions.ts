@@ -1,3 +1,7 @@
+// Server actions for /einstellungen: cycle mode, product-mail consent,
+// nutrition mode (with its consent), hide-weight, and account deletion.
+// All need a signed-in user and write via their own session (RLS), except
+// deleteAccount, which needs the service role to remove the auth user.
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -74,7 +78,11 @@ export async function deleteAccount(
   ) {
     return { error: "Bitte tippe zur Bestätigung LÖSCHEN." };
   }
-  // Remove personal data that isn't linked by a cascading foreign key.
+  // Order matters: first remove the rows that are NOT deleted by the auth
+  // user's cascade (waitlist/invites are matched by email, not user id). If
+  // that fails we stop and the account stays intact, so the user can retry. Only
+  // then is the auth user deleted, which cascades to all their health data.
+  // Doing it the other way round could leave orphaned personal data behind.
   const admin = createAdminClient();
   if (user.email) {
     const email = user.email.toLowerCase();
@@ -95,10 +103,12 @@ export async function deleteAccount(
       error:
         "Das Löschen hat nicht geklappt. Bitte versuche es später noch einmal.",
     };
+  // The user no longer exists; this just clears the leftover session cookie.
   await supabase.auth.signOut();
   return { done: true };
 }
 
+// Allowed values of profiles.nutrition_mode; anything else from the form is rejected.
 const NUTRITION_MODES = ["off", "log", "log_no_totals"] as const;
 
 export async function setNutritionMode(
@@ -110,6 +120,7 @@ export async function setNutritionMode(
   if (!(NUTRITION_MODES as readonly string[]).includes(mode))
     return { error: "Bitte wähle eine Option." };
 
+  // Turning nutrition on needs a recorded, versioned consent (health data, GDPR Art. 9).
   if (mode !== "off") {
     const { data: active, error: readError } = await supabase
       .from("consents")

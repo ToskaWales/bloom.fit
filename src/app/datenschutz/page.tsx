@@ -1,3 +1,5 @@
+// /datenschutz: privacy policy. Public, static, no data. Still a draft with
+// placeholders (see the note below); keep it in line with what the app stores.
 export const metadata = { title: "Datenschutz – Bloom" };
 
 // ENTWURF: Platzhalter in [[…]] ausfüllen und rechtlich prüfen lassen.

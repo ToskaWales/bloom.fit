@@ -1,7 +1,12 @@
+// Turns lifting history into one comparable "how did training go" number per day,
+// used as the "performance" metric in ./patterns.ts and ./hunger.ts. Does not
+// compute 1RM itself (that is @/lib/workout/stats) and does not judge the values.
 import type { DayValue } from "./patterns";
 import type { ExerciseSession } from "./plateau";
 import { median } from "@/lib/math";
 
+// A session needs at least 3 earlier sessions of the same exercise to have a
+// baseline; the baseline looks at the 8 sessions before it.
 const MIN_PRIOR_SESSIONS = 3;
 const PRIOR_WINDOW = 8;
 

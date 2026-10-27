@@ -1,3 +1,6 @@
+// Turns the engine's building blocks (readiness, plateau, patterns, safety,
+// hunger) into today's list of candidate hints. It does NOT apply cooldowns or
+// the daily cap (./select.ts) and does NOT write wording (./texts.ts).
 import { computeReadiness, type ReadinessCheckin } from "./readiness";
 import { detectPlateau, type ExerciseSession } from "./plateau";
 import type { HungerRise } from "./hunger";
@@ -6,6 +9,7 @@ import type { SafetyResult } from "./safety";
 import type { Candidate } from "./select";
 import { round1, round2 } from "@/lib/math";
 
+/** Everything buildCandidates needs; all data is already loaded, no I/O here. */
 export interface EngineInput {
   today: string;
   checkins: ReadinessCheckin[];
@@ -24,7 +28,8 @@ export interface EngineInput {
   } | null;
 }
 
-// Everything the engine could say today, before cooldowns and the daily cap.
+// Everything the engine could say today, before cooldowns and the daily cap
+// (see select.ts). Order here is irrelevant; select.ts ranks by priority.
 // While a safety notice is active it never suggests doing more: no extra rep,
 // no plateau advice, no pattern card.
 export function buildCandidates({

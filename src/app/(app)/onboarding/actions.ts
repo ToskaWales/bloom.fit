@@ -1,3 +1,8 @@
+// Server actions for the four onboarding steps (goals, cycle, basics,
+// consents). Each one validates its form with zod, saves to the profile via the
+// user's own session (RLS) and redirects to the next step. The step order lives
+// in lib/onboarding/next-step; the database refuses to complete onboarding if
+// earlier steps are missing ("profile incomplete"), so skipping is impossible.
 "use server";
 
 import { redirect } from "next/navigation";
@@ -108,6 +113,8 @@ export async function saveConsents(
         "Ohne Nutzungsbedingungen und die Einwilligung zu Gesundheitsdaten kann Bloom nicht funktionieren.",
     };
   }
+  // Consent rows are append-only history: only missing ones are inserted, so
+  // submitting twice (double click, back button) does not create duplicates.
   const wanted = [
     "terms" as const,
     "health_data" as const,
@@ -143,6 +150,7 @@ export async function saveConsents(
     .eq("id", user.id);
   if (error) {
     return {
+      // Raised by a database trigger when an earlier step was skipped.
       error: /profile incomplete/.test(error.message)
         ? "Bitte schließe zuerst alle vorherigen Schritte ab."
         : "Speichern hat nicht geklappt. Bitte versuche es noch einmal.",

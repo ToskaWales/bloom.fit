@@ -1,6 +1,10 @@
+// Compares today's check-in (energy, motivation, sleep quality) with her own
+// recent normal to say "lower / usual / higher". It is not a score and never
+// uses an absolute scale. Used by ./index.ts; wording is in ./texts.ts.
 import { daysBetween } from "@/lib/daily/day";
 import { median, round1 } from "@/lib/math";
 
+/** A check-in row; null means she did not answer that question. */
 export interface ReadinessCheckin {
   day: string;
   energy: number | null;
@@ -8,12 +12,14 @@ export interface ReadinessCheckin {
   sleep_quality: number | null;
 }
 
+/** One metric's value today next to her own median (baseline), both on the 1-5 scale. */
 export type ReadinessPart = {
   metric: "energy" | "motivation" | "sleep";
   value: number;
   baseline: number;
 };
 
+/** "no_checkin": nothing logged today; "not_enough_data": baseline too short (have/need = values); "ready": level plus the numbers behind it. */
 export type ReadinessResult =
   | { status: "no_checkin" }
   | { status: "not_enough_data"; have: number; need: number }

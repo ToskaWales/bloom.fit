@@ -1,11 +1,16 @@
+// Detects a stalled exercise from its estimated-1RM history. Pure function; the
+// wording ("Stagnation gehoert dazu") lives in ./texts.ts and the cooldown in
+// ./select.ts. Per-session e1rm values come from @/lib/workout/stats.
 import { daysBetween } from "@/lib/daily/day";
 
+/** One workout day for one exercise. */
 export interface ExerciseSession {
   day: string;
   /** Best estimated one-rep max of that session (kg). */
   e1rm: number;
 }
 
+/** What the hint shows: recent block vs. the weeks before (e1rm in kg). */
 export interface Plateau {
   sessions: number;
   weeks: number;
@@ -13,14 +18,17 @@ export interface Plateau {
   earlierBest: number;
 }
 
+// Starting values, not proven limits: 4 sessions within 8 weeks, compared with
+// at least 2 sessions from the 12 weeks before.
 export const PLATEAU_SESSIONS = 4;
 export const PLATEAU_WINDOW_DAYS = 56;
 export const MIN_EARLIER_SESSIONS = 2;
 export const MIN_GAIN = 0.01; // under 1 % better than the weeks before = no progress
 export const EARLIER_WINDOW_DAYS = 84; // the twelve weeks before the recent block, not an old record
 
-// Four recent sessions (all within eight weeks) without a meaningfully better
-// estimated 1RM than anything before them. A decline is reported the same way.
+// Returns a Plateau when the 4 most recent sessions (the first within 8 weeks of
+// today) are not at least 1 % better than the best of the weeks before them,
+// otherwise null. A decline counts as a plateau too.
 export function detectPlateau(
   sessions: ExerciseSession[],
   today: string,

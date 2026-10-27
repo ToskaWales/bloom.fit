@@ -1,3 +1,7 @@
+// /login: sign in with Apple, Google or an email code. Public; signed-in
+// visitors are sent on to /app. The form runs the actions in ./actions. The
+// session check and URL messages read dynamic data, so they sit behind
+// Suspense and the rest of the page stays static.
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
@@ -10,6 +14,7 @@ export const metadata = {
   robots: { index: false },
 };
 
+// Renders nothing; exists only to redirect, as a dynamic part inside Suspense.
 async function RedirectIfSignedIn() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();

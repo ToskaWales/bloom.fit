@@ -1,3 +1,6 @@
+// Server action behind /admin: create and email invite codes. Admin only
+// (requireAdmin runs first). Uses the service-role client because normal users
+// must never be able to read or write the invites table.
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -12,6 +15,7 @@ export type InviteState = {
   error?: string;
 };
 
+// An invite code stops working after two weeks.
 const INVITE_TTL_MS = 14 * 24 * 3600_000;
 
 export async function sendInvites(
@@ -32,6 +36,8 @@ export async function sendInvites(
     return { error: "Keine gültigen E-Mail-Adressen angegeben." };
   if (valid.length > 50) return { error: "Maximal 50 Einladungen auf einmal." };
 
+  // One at a time on purpose: the code is only stored as a hash, and if the
+  // mail fails the row is removed again so the person can be invited later.
   const db = createAdminClient();
   const results: { email: string; ok: boolean }[] = [];
   for (const email of valid) {

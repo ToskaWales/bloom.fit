@@ -1,3 +1,7 @@
+// Chooses which candidate hints are actually shown today: daily cap, priority,
+// cooldowns after dismissal. It keeps the engine calm; it does not decide what is
+// true (./index.ts builds candidates) or how it is worded (./texts.ts). Past
+// suggestions come from local storage (@/lib/local/types).
 import { daysBetween } from "@/lib/daily/day";
 import type {
   SuggestionKind,
@@ -5,11 +9,13 @@ import type {
   SuggestionStatus,
 } from "@/lib/local/types";
 
+/** A hint the engine could show: kind + subject (e.g. exercise id) identify it for cooldowns; params feed texts.ts. */
 export interface Candidate {
   kind: SuggestionKind;
   subject: string;
   params: SuggestionParams;
 }
+/** A hint shown earlier, with how she reacted (status). */
 export interface PastSuggestion {
   kind: SuggestionKind;
   subject: string;
@@ -17,9 +23,12 @@ export interface PastSuggestion {
   status: SuggestionStatus;
 }
 
+/** At most two hints per day, in total. */
 export const MAX_PER_DAY = 2;
+/** Days a dismissed hint of the same kind/subject stays quiet. */
 export const COOLDOWN_DAYS = 14;
 const SAFETY_QUIET_DAYS = 7;
+// Minimum days between two hints of the same kind and subject, whatever she answered.
 const ONCE_PER_DAYS: Partial<Record<SuggestionKind, number>> = {
   plateau: 14,
   pattern: 28,
@@ -32,6 +41,7 @@ const PER_KIND_CAP: Partial<Record<SuggestionKind, number>> = {
   hunger_note: 1,
 };
 
+// Lower number wins when the daily cap forces a choice; safety always first.
 const PRIORITY: Record<SuggestionKind, number> = {
   safety: 0,
   readiness: 1,
@@ -40,7 +50,7 @@ const PRIORITY: Record<SuggestionKind, number> = {
   hunger_note: 4,
 };
 
-// Few, calm hints. A dismissed kind stays quiet for two weeks; a plateau is
+// Returns at most MAX_PER_DAY candidates. Few, calm hints. A dismissed kind stays quiet for two weeks; a plateau is
 // raised once per exercise per two weeks whatever the reaction; a safety notice
 // is never silenced by an earlier dismissal.
 export function selectSuggestions(

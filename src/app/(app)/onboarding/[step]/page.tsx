@@ -1,3 +1,7 @@
+// /onboarding/[step]: one page for the steps ziele, zyklus, basis and
+// einwilligung. Invited users only. The step is a URL param, validated against
+// the known list (unknown = 404). The form components below post to the actions
+// in ../actions, which move on to the next step.
 import { notFound, redirect } from "next/navigation";
 import { StepForm } from "@/components/step-form";
 import { Field, inputClass, Page } from "@/components/ui";
@@ -15,6 +19,7 @@ export const metadata = {
   robots: { index: false },
 };
 
+// Aliases kept short for use in this file; the order is defined in lib/onboarding/next-step.
 const STEPS = STEP_ORDER;
 type Step = OnboardingStep;
 
@@ -242,6 +247,8 @@ export default async function OnboardingStep({
   const { step } = await params;
   if (!STEPS.includes(step as Step)) notFound();
   const { profile } = await requireInvited();
+  // nextStep() is the single source of truth for how far the user got (it
+  // looks at which profile fields are filled in).
   const next = nextStep(profile);
   if (next === null) redirect("/app");
   const index = STEPS.indexOf(step as Step);

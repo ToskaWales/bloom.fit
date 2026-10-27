@@ -1,3 +1,7 @@
+// /admin: invite management for the founder. Admin only (requireAdmin: signed
+// in, confirmed email, on the admin list). Reads the waitlist and invites with
+// the service-role client, which bypasses RLS; that is why the check happens
+// before any query. Sending is done by the server action in ./actions.
 import { InviteForm } from "@/components/invite-form";
 import { Page } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth/dal";

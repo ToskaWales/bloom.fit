@@ -1,3 +1,7 @@
+// Server actions for the public landing page at "/" and the confirmation page
+// at "/bestaetigen". Open to anyone (no login): they write to the waitlist via
+// lib/waitlist. Runs on the server so the database credentials never reach the
+// browser; errors are logged without the email address.
 "use server";
 
 import { getDeps } from "@/lib/waitlist/deps";

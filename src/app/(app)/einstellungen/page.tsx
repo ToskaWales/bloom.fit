@@ -1,3 +1,7 @@
+// /einstellungen: settings (cycle, weight display, nutrition mode, consents,
+// export link, account deletion). Signed in and onboarded. Reads the profile
+// and consents with the user's session; changes go through the server actions
+// in ./actions. Dynamic (reads the session), no static shell needed.
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { ClearCacheOnSubmit } from "@/components/clear-cache-on-submit";
 import { HideWeightForm } from "@/components/hide-weight-form";
@@ -12,6 +16,7 @@ export const metadata = {
   robots: { index: false },
 };
 
+// Shared look of the option boxes (radio/checkbox rows) on this page.
 const radio =
   "flex items-start gap-2 rounded-xl border border-neutral-200 bg-white p-3 text-sm font-normal";
 
@@ -99,6 +104,7 @@ export default async function Settings() {
                 </label>
               ))}
             </fieldset>
+            {/* Consent is only asked when switching nutrition on from "off". */}
             {profile.nutrition_mode === "off" && (
               <label className={radio}>
                 <input

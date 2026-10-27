@@ -1,7 +1,12 @@
+// All user-facing wording of engine hints and pattern findings (German). Kept in
+// one file so texts.test.ts can hold every sentence to the CLAUDE.md guardrails
+// (no phase claims, no orders, no calorie numbers). Decisions are made in
+// ./index.ts and ./select.ts; this file only renders their params.
 import { formatWeight, weightLabel, type Units } from "@/lib/workout/units";
 import type { ReadinessPart } from "./readiness";
 import type { Candidate } from "./select";
 
+/** What rendering needs besides the hint itself (units, name lookup, live readiness numbers). */
 export interface RenderContext {
   units: Units;
   exerciseName: (exerciseId: string) => string;
@@ -11,6 +16,7 @@ export interface RenderContext {
   safetyActive?: boolean;
 }
 
+/** Ready-to-show card: `because` lists the data behind it. */
 export interface RenderedSuggestion {
   title: string;
   body: string;
@@ -19,6 +25,7 @@ export interface RenderedSuggestion {
   acceptLabel?: string;
 }
 
+// Params come from storage and may be missing or malformed: only finite numbers pass.
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
 const fmt = (n: number) => String(Math.round(n * 10) / 10).replace(".", ",");
@@ -38,6 +45,7 @@ function readinessBecause(parts: ReadinessPart[] | undefined): string[] {
   return lines;
 }
 
+// Display names per pattern metric; points = measured in scale points (else a percent).
 const METRIC = {
   energy: { label: "Energie", possessive: "deine Energie", points: true },
   motivation: {
@@ -57,6 +65,7 @@ const METRIC = {
     points: false,
   },
 } as const;
+// Wording for the two windows; keep in sync with WINDOW_DAYS in ./patterns.ts (4 and 3 days).
 const WINDOW = {
   before: "den vier Tagen vor deiner Periode",
   start: "den ersten drei Tagen deiner Periode",
@@ -245,6 +254,7 @@ export function renderSuggestion(
   return null; // anything newer
 }
 
+/** Text pieces for one pattern on the Muster page. */
 export interface FindingText {
   title: string;
   summary: string;

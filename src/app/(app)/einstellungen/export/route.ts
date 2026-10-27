@@ -1,7 +1,15 @@
+// GET /einstellungen/export: downloads all of the signed-in user's data as
+// JSON (GDPR access and portability). Signed in only: the auth check comes
+// first and the answer is not cached. It reads through the user's own session,
+// so RLS makes it impossible to include anyone else's rows.
+// Errors are logged as a message only, never with row contents.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
+// Rows per request.
 const PAGE = 1000; // PostgREST caps responses (1000 rows by default), so read in pages
+// Every user-owned table to export. When you add a table with user data, add it
+// here too, otherwise the export is incomplete.
 const TRAINING_TABLES = [
   "custom_exercises",
   "workouts",
@@ -22,6 +30,7 @@ async function fetchAll(
   table: string,
   userId: string,
 ) {
+  // Stable ordering (created_at, then id) so pages never overlap or skip rows.
   const rows: unknown[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
@@ -37,13 +46,16 @@ async function fetchAll(
   }
 }
 
+// True if any food row came from Open Food Facts (its licence requires attribution).
 const foodsFromOff = (rows: unknown): boolean =>
   Array.isArray(rows) &&
   rows.some((r) => (r as { source?: string }).source === "off");
 
 // Data export (GDPR Art. 15/20): everything stored about the signed-in user,
 // including rows they deleted that haven't been purged yet. Read through RLS, so
-// it can only ever contain their own rows.
+// it can only ever contain their own rows. Soft-deleted rows (deleted_at set)
+// are included on purpose: they are still stored, so the person is entitled to
+// see them, and nothing is filtered out silently.
 export async function GET() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();

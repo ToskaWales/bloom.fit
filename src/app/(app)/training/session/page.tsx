@@ -1,3 +1,6 @@
+// /training/session?id=...: the live workout screen. Signed in and onboarded.
+// Data is read from the on-device database by the client component SessionView
+// (writes go to the local outbox first and sync later via /api/sync).
 import { Suspense } from "react";
 import { SessionView } from "@/components/training/session-view";
 import { requireOnboarded } from "@/lib/auth/dal";
