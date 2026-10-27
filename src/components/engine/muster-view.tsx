@@ -15,7 +15,7 @@ import {
   type PatternFinding,
 } from "@/lib/engine/patterns";
 import { describeFinding } from "@/lib/engine/texts";
-import { loadEngineData, patternsFrom } from "@/lib/local/suggestions";
+import { loadEngineData, patternsFrom } from "@/lib/local/engine-data";
 
 const fmtDay = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString("de-DE", {

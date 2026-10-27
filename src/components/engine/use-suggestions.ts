@@ -9,11 +9,8 @@ import { useEffect } from "react";
 import { useLocal } from "@/components/local-provider";
 import { addDays } from "@/lib/daily/day";
 import { computeReadiness, type ReadinessPart } from "@/lib/engine/readiness";
-import {
-  engineSignature,
-  refreshSuggestions,
-  suggestionsForDay,
-} from "@/lib/local/suggestions";
+import { engineSignature } from "@/lib/local/engine-data";
+import { refreshSuggestions, suggestionsForDay } from "@/lib/local/suggestions";
 import type { CheckinRow, SuggestionRow } from "@/lib/local/types";
 
 // Re-runs the on-device engine whenever the data it reads changes (check-ins,

@@ -8,12 +8,11 @@ import { patchCheckin, saveCheckin, saveCycleEvent, saveWeight } from "./daily";
 import { addQuickEntry, wipeNutrition } from "./nutrition";
 import { saveRow } from "./repo";
 import {
-  engineSignature,
-  exerciseSessionsFromDb,
   reactToSuggestion,
   refreshSuggestions,
   suggestionsForDay,
 } from "./suggestions";
+import { engineSignature, exerciseSessionsFromDb } from "./engine-data";
 import type { SuggestionRow } from "./types";
 import {
   addExercise,
