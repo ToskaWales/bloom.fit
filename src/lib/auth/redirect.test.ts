@@ -1,3 +1,4 @@
+// Pins down the open-redirect guard for the login `next` parameter: only same-site paths survive.
 import { describe, expect, it } from "vitest";
 import { safeNext } from "./redirect";
 

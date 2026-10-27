@@ -1,3 +1,4 @@
+// Pins down templates: saved from a workout (working sets only), pre-filled from the last performance, soft-deleted together with their exercises.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "./db";

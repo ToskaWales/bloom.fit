@@ -24,8 +24,8 @@ const everything = (db: LocalDb) => [
   db.outbox,
 ];
 
-// // Warm-up sets are not counted: a template describes the working sets. The name
-// // is trimmed and cut to 80 characters (the server limit); an empty name throws.
+// Warm-up sets are not counted: a template describes the working sets. The name
+// is trimmed and cut to 80 characters (the server limit); an empty name throws.
 export async function saveWorkoutAsTemplate(
   db: LocalDb,
   workoutId: string,
@@ -109,7 +109,7 @@ export async function startWorkoutFromTemplate(
   });
 }
 
-// // Soft-deletes the template and its exercise rows in one transaction.
+// Soft-deletes the template and its exercise rows in one transaction.
 export async function deleteTemplate(
   db: LocalDb,
   templateId: string,

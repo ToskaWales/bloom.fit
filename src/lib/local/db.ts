@@ -5,17 +5,17 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { TableName, WireRow } from "@/lib/sync/tables";
 
-// // One pending upload: "row `id` of `table` changed and the server has not
-// // confirmed it yet". It stores only a pointer; the current row content is read
-// // at push time, so several edits of one row collapse into one upload.
+// One pending upload: "row `id` of `table` changed and the server has not
+// confirmed it yet". It stores only a pointer; the current row content is read
+// at push time, so several edits of one row collapse into one upload.
 export interface OutboxEntry {
   seq?: number;
   table: TableName;
   id: string;
 }
 
-// // Small key/value store: per-table pull cursors ("cursor:<table>") and the list
-// // of rows the server rejected ("rejected"). Never synced.
+// Small key/value store: per-table pull cursors ("cursor:<table>") and the list
+// of rows the server rejected ("rejected"). Never synced.
 export interface MetaEntry {
   key: string;
   value: string | null;
@@ -38,10 +38,11 @@ export type LocalDb = Dexie & {
   meta: EntityTable<MetaEntry, "key">;
 };
 
-// // One database per signed-in user (callers pass a "bloom-<userId>" style name, see
-// // wipe.ts), so data of different accounts on a shared device never mixes.
-// // Versions only ever ADD stores (never edit an old version), because existing
-// // installations upgrade step by step. Only indexed fields are listed.
+// One database per signed-in user (local-provider.tsx passes "bloom-<userId>"; wipe.ts
+// finds them by that prefix), so data of different accounts on a shared device never mixes.
+// Never edit an existing version(n) block: devices upgrade step by step, so a
+// change means a new version with only the stores/indexes that change. Only indexed
+// fields are listed here; the other columns are stored as-is.
 export function createLocalDb(name = "bloom"): LocalDb {
   const db = new Dexie(name) as LocalDb;
   db.version(1).stores({

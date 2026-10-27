@@ -1,3 +1,6 @@
+// Pins down the device half of sync against the real server logic: the outbox is
+// only cleared after confirmation, local unsynced edits beat pulled copies, soft
+// deletes propagate, and rejected rows stay visible. This is the no-data-loss guarantee.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";

@@ -1,5 +1,8 @@
+// Sends the invitation email through Resend (server only). Only the transport lives
+// here; creating the code and the invite row happens in the admin action, the waitlist's separate mailer is src/lib/waitlist/resend-mailer.ts.
 import "server-only";
 
+// Throws when Resend refuses, so the caller can tell the admin the mail was not sent.
 export async function sendInviteMail(
   email: string,
   code: string,

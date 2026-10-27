@@ -1,3 +1,4 @@
+// Pins down the admin allowlist: case-insensitive match, and closed when nothing is configured (so a missing env var never makes everyone admin).
 import { afterEach, describe, expect, it } from "vitest";
 
 describe("isAdmin", () => {

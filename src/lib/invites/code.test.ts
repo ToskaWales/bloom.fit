@@ -1,3 +1,4 @@
+// Pins down invite code generation, normalisation and hashing. The hash must equal the one computed in SQL, otherwise no invite could ever be redeemed.
 import { describe, expect, it } from "vitest";
 import {
   generateInviteCode,

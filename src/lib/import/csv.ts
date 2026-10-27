@@ -1,5 +1,9 @@
+// Small dependency-free CSV reader for workout exports (Hevy, Strong). It only turns
+// text into rows of header->value; it knows nothing about workouts. Interpreting the
+// rows is parsers.ts, storing them is build.ts.
 // Minimal RFC 4180 CSV reader: quoted fields, "" escapes, newlines inside
 // quotes, BOM, CRLF. The delimiter (comma, semicolon or tab) is detected from the header line.
+// Counts each candidate delimiter in the header line (ignoring quoted text) and picks the most frequent; comma if none.
 function detectDelimiter(text: string): string {
   const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
   let best = ",";
@@ -19,6 +23,8 @@ function detectDelimiter(text: string): string {
   return best;
 }
 
+// Returns one object per data row, keyed by the trimmed header names. Short rows
+// are padded with ""; completely blank lines are skipped.
 export function parseCsv(input: string): Record<string, string>[] {
   const text = input.replace(/^﻿/, "");
   if (!text.trim()) return [];

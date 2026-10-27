@@ -1,3 +1,5 @@
+// Wires the real waitlist implementations from environment variables (server only).
+// Throws early when a variable is missing. Business rules are in service.ts.
 import { createResendMailer } from "./resend-mailer";
 import { createSupabaseRepo } from "./supabase-repo";
 import type { Deps } from "./types";

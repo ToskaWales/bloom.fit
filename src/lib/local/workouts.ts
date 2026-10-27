@@ -21,7 +21,7 @@ const allTables = (db: LocalDb) => [
 const nextPosition = (rows: { position: number }[]) =>
   rows.reduce((max, r) => Math.max(max, r.position), -1) + 1;
 
-// // A workout without ended_at is "running"; finishWorkout sets it.
+// A workout without ended_at is "running"; finishWorkout sets it.
 export async function startWorkout(
   db: LocalDb,
   title: string | null = null,
@@ -62,7 +62,7 @@ export async function addExercise(
   });
 }
 
-// // Soft-deletes the exercise and its sets together.
+// Soft-deletes the exercise and its sets together.
 export async function removeExercise(
   db: LocalDb,
   workoutExerciseId: string,
@@ -133,9 +133,9 @@ export async function removeSet(db: LocalDb, setId: string): Promise<void> {
   }));
 }
 
-// // Sets ended_at and drops sets that were never filled in or ticked off, so
-// // accidental empty rows do not end up in the history. Calling it again keeps the
-// // first ended_at.
+// Sets ended_at and drops sets that were never filled in or ticked off, so
+// accidental empty rows do not end up in the history. Calling it again keeps the
+// first ended_at.
 export async function finishWorkout(
   db: LocalDb,
   workoutId: string,
@@ -168,7 +168,7 @@ export async function finishWorkout(
   });
 }
 
-// // Turns a finished workout back into a running one (undo for "finish").
+// Turns a finished workout back into a running one (undo for "finish").
 export async function reopenWorkout(
   db: LocalDb,
   workoutId: string,

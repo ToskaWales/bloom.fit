@@ -22,7 +22,7 @@ export interface CheckinValues {
   note: string | null;
 }
 
-// // The day's check-in, or undefined when none exists or it was deleted.
+// The day's check-in, or undefined when none exists or it was deleted.
 export async function getCheckin(
   db: LocalDb,
   userId: string,
@@ -93,7 +93,7 @@ function writeCheckin(db: LocalDb, id: string, day: string, v: CheckinValues) {
   } satisfies CheckinRow);
 }
 
-// // Overwrites the whole day's check-in (use patchCheckin to change single fields).
+// Overwrites the whole day's check-in (use patchCheckin to change single fields).
 export async function saveCheckin(
   db: LocalDb,
   userId: string,
@@ -114,7 +114,7 @@ export async function getWeight(
   return row && !row.deleted_at ? row : undefined;
 }
 
-// // One weight per day: saving again replaces that day's value (and revives a deleted one).
+// One weight per day: saving again replaces that day's value (and revives a deleted one).
 export async function saveWeight(
   db: LocalDb,
   userId: string,
@@ -144,7 +144,7 @@ export async function removeWeight(
     });
 }
 
-// // One row per (kind, day), so logging the same event twice is harmless.
+// One row per (kind, day), so logging the same event twice is harmless.
 export async function saveCycleEvent(
   db: LocalDb,
   userId: string,

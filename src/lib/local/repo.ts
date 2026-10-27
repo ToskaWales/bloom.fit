@@ -19,9 +19,9 @@ export async function saveRow(
   });
 }
 
-// // Deleting means setting deleted_at (a "tombstone"), never removing the row: the
-// // tombstone is what tells the server and the other devices that it is gone.
-// // Unknown ids are ignored.
+// Deleting means setting deleted_at (a "tombstone"), never removing the row: the
+// tombstone is what tells the server and the other devices that it is gone.
+// Unknown ids are ignored.
 export async function softDelete(
   db: LocalDb,
   table: TableName,
@@ -32,9 +32,9 @@ export async function softDelete(
   await saveRow(db, table, { ...row, deleted_at: new Date().toISOString() });
 }
 
-// // Soft-deletes a workout together with all its exercises and sets in one
-// // transaction, so a sync can never see a workout whose children are still alive.
-// // Rows that were already deleted keep their original deleted_at.
+// Soft-deletes a workout together with all its exercises and sets in one
+// transaction, so a sync can never see a workout whose children are still alive.
+// Rows that were already deleted keep their original deleted_at.
 export async function softDeleteWorkout(
   db: LocalDb,
   workoutId: string,

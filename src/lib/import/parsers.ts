@@ -1,6 +1,11 @@
+// Turns a Hevy or Strong CSV export into neutral ImportedWorkout objects: detects
+// the format, converts dates and units, and skips unusable rows with a warning
+// (never fails the whole file). It does not touch the database: ids and storage are
+// in build.ts; CSV tokenizing is in csv.ts.
 import { lbsToKg } from "@/lib/onboarding/schema";
 import { parseCsv } from "./csv";
 
+// "unknown" = headers match neither app; the UI then tells her the file is not supported.
 export type ImportFormat = "hevy" | "strong" | "unknown";
 export type ImportedSetType = "normal" | "warmup" | "drop" | "failure";
 
@@ -14,6 +19,7 @@ export interface ImportedExercise {
   name: string;
   sets: ImportedSet[];
 }
+// One workout in app-neutral form. Times are real instants (ISO, UTC) converted from the export's local wall-clock text.
 export interface ImportedWorkout {
   source: "hevy" | "strong";
   /** Raw title + start text from the file: identifies the workout independent of timezone. */
@@ -35,6 +41,7 @@ export interface ParseResult {
 
 type Row = Record<string, string>;
 
+// Decides by header names only (first row); both apps always write these columns.
 export function detectFormat(rows: Row[]): ImportFormat {
   const keys = new Set(Object.keys(rows[0] ?? {}));
   if (keys.has("exercise_title") && keys.has("start_time")) return "hevy";
@@ -104,7 +111,7 @@ export function parseLocalDate(text: string): string | null {
   return same ? date.toISOString() : null;
 }
 
-// "1h 10m", "55m", "1h", "45s" -> milliseconds
+// "1h 10m", "55m", "1h", "45s" -> milliseconds; null when nothing matches.
 export function parseDuration(text: string): number | null {
   const t = text.trim().toLowerCase();
   if (!t) return null;
@@ -140,6 +147,7 @@ function normalizeSet(
   };
 }
 
+// Hevy's set_type values -> ours (Hevy says "dropset", we say "drop"); unknown values count as normal.
 const HEVY_TYPES: Record<string, ImportedSetType> = {
   normal: "normal",
   warmup: "warmup",
@@ -149,6 +157,7 @@ const HEVY_TYPES: Record<string, ImportedSetType> = {
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
+// User-facing (German) notes about what was skipped, so nothing disappears silently.
 function buildWarnings(skippedSets: number, badDates: number): string[] {
   const out: string[] = [];
   if (skippedSets)
@@ -198,6 +207,7 @@ class WorkoutBuilder {
   }
 }
 
+// Hevy: one row per set; rows of the same workout share "title|start_time".
 export function parseHevy(rows: Row[]): ParseResult {
   const builder = new WorkoutBuilder();
   let skippedSets = 0;
@@ -250,6 +260,8 @@ const unitOf = (text: string | undefined): "kg" | "lbs" | null => {
   return t === "kg" ? "kg" : t === "lbs" || t === "lb" ? "lbs" : null;
 };
 
+// Strong: one row per set; the unit comes from a "Weight Unit" column, or, if the
+// file has none, from `units` (null then returns needsUnit so the UI can ask).
 export function parseStrong(
   rows: Row[],
   units: "kg" | "lbs" | null,
@@ -328,6 +340,7 @@ export function parseStrong(
   };
 }
 
+// Entry point: raw file text -> parsed workouts, choosing the parser by header detection.
 export function parseWorkoutFile(
   text: string,
   strongUnits: "kg" | "lbs" | null,

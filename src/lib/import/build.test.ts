@@ -1,3 +1,5 @@
+// Pins down the import into the local database: idempotent re-imports, no resurrection
+// of deleted workouts, user-scoped ids and rows the sync server will accept.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "@/lib/local/db";

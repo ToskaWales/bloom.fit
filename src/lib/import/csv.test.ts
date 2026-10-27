@@ -1,3 +1,5 @@
+// Pins down the CSV reader on the quirks of real exports (quotes, BOM, CRLF,
+// semicolons from German Excel). A wrong parse here silently corrupts imported training history.
 import { describe, expect, it } from "vitest";
 import { parseCsv } from "./csv";
 

@@ -1,3 +1,4 @@
+// Pins down onboarding input validation (goals, cycle date window in the German calendar, weight and units, consents). These are the rules the server enforces on health data.
 import { describe, expect, it } from "vitest";
 import {
   basicsStep,

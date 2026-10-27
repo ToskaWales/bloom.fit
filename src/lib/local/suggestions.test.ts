@@ -1,3 +1,4 @@
+// Pins down how the engine's hints are stored locally: idempotent refresh, her reactions are never overwritten, cooldowns, the safety notice, and that weight/food are only read when allowed.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addDays } from "@/lib/daily/day";

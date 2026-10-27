@@ -1,11 +1,31 @@
-// Bloom service worker: lets the training log open and work offline.
-// - /_next/static assets: cache-first (content-hashed, immutable)
-// - an explicit allowlist of app pages: network-first, falling back to the last
-//   cached copy. Nothing else (settings, admin, data export, API, auth) is cached.
+/*
+ * Bloom service worker: lets the training log open and work offline. It caches
+ * only what is needed to START the app without network; the data itself lives in
+ * IndexedDB (src/lib/local) and is synced by src/lib/sync, not by this file.
+ *
+ * Caching rules
+ *  1. /_next/static/* (and the barcode scanner's WebAssembly file): cache-first.
+ *     These files are content-hashed and never change, so a cached copy is always right.
+ *     The .wasm is not hashed; bumping VERSION below replaces it.
+ *  2. An explicit allowlist of app pages (CACHEABLE_PATHS): network-first. If the
+ *     network answers within NETWORK_TIMEOUT_MS the fresh page is used and cached;
+ *     otherwise the last cached copy is shown. Offline training pages fall back to /training.
+ *  3. Everything else (settings, admin, data export, API, auth, other origins,
+ *     non-GET) is never touched or cached, because it contains personal data
+ *     or must always be live.
+ *
+ * Safety: only plain successful HTML is stored (storable); a redirect to /login
+ * means the session ended, so ALL cached pages are dropped. A "clear-pages" message
+ * does the same on request (on logout the app also deletes the caches directly,
+ * see clearPageCache in src/lib/local/wipe.ts).
+ * Changing VERSION makes the old caches disappear on activate.
+ */
 const VERSION = "v4";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 3000;
+// Pages that may be cached. Exact paths (no prefix match), so e.g. /training/session
+// is allowed but /training/anything-else is not.
 const CACHEABLE_PATHS = [
   "/app",
   "/training",
@@ -15,10 +35,14 @@ const CACHEABLE_PATHS = [
   "/muster",
   "/ernaehrung",
 ];
+// Shown for an uncached /training/* page while offline.
 const OFFLINE_FALLBACK = "/training";
 
+// Take over immediately instead of waiting for all tabs to close, so a fixed
+// worker reaches users quickly.
 self.addEventListener("install", () => self.skipWaiting());
 
+// Delete caches of older versions, then control already-open pages.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
@@ -30,6 +54,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Messages from the page: "clear-pages" (logout) and {type:"warm", paths} (prefetch).
 self.addEventListener("message", (event) => {
   if (event.data === "clear-pages") event.waitUntil(caches.delete(PAGES));
   // The page asks us to fetch a route and the assets it needs, so it opens offline.
@@ -59,6 +84,8 @@ function storable(response) {
   return (response.headers.get("content-type") || "").includes("text/html");
 }
 
+// Prefetches the hashed JS/CSS a cached page refers to, so the page really works
+// offline and not just its HTML.
 async function cacheAssetsOf(html) {
   const urls = new Set();
   for (const m of html.matchAll(/(?:src|href)="(\/_next\/static\/[^"]+)"/g))
@@ -77,6 +104,8 @@ async function cacheAssetsOf(html) {
   );
 }
 
+// Fetches allowlisted pages ahead of time (called while online, signed in).
+// Ignores paths that are not allowlisted, offline errors and redirects.
 async function warm(paths) {
   const cache = await caches.open(PAGES);
   for (const path of paths) {
@@ -93,6 +122,8 @@ async function warm(paths) {
   }
 }
 
+// Network with a time limit, cache as fallback. A slow response is not cancelled:
+// it still updates the cache for next time.
 async function networkFirst(event) {
   const { request } = event;
   const cache = await caches.open(PAGES);
@@ -137,6 +168,7 @@ async function networkFirst(event) {
   }
 }
 
+// Cached copy if present, otherwise fetch once and keep it.
 async function cacheFirst(request) {
   const cache = await caches.open(STATIC);
   const hit = await cache.match(request);

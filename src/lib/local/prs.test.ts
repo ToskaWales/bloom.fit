@@ -1,3 +1,4 @@
+// Pins down personal-record detection against earlier workouts only (never later ones, never deleted ones).
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "./db";

@@ -1,3 +1,4 @@
+// Pins down the waitlist flow with fakes: only hashes are stored, the form never reveals whether an address exists, resends are rate-limited, expired tokens are refused.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { confirmSignup, signup } from "./service";
 import type { Mailer, WaitlistEntry, WaitlistRepo } from "./types";

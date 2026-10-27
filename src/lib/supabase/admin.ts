@@ -1,3 +1,5 @@
+// Service-role Supabase client factory (bypasses RLS). Server-only, for the few jobs
+// that must act without a user session. Normal requests use ./server.ts instead.
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 

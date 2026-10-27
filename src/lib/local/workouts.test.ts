@@ -1,3 +1,4 @@
+// Pins down the live training log operations: ordering, soft deletes, atomic edits and the "last time" lookup that pre-fills sets.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createLocalDb, type LocalDb } from "./db";

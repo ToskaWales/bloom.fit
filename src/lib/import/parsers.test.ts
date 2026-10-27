@@ -1,3 +1,5 @@
+// Pins down how Hevy and Strong exports are interpreted: dates, units, set types,
+// skipped rows and warnings. Wrong numbers here would end up in the user's history, so edge cases are listed explicitly.
 import { describe, expect, it } from "vitest";
 import {
   detectFormat,

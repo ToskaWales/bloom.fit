@@ -1,3 +1,7 @@
+// Writes parsed workouts into the local database (and from there to the server via
+// normal sync). Ids are deterministic and user-scoped, so importing the same file
+// again, or on a second device, adds nothing new. Parsing is parsers.ts, id
+// derivation is src/lib/ids.ts, row writing is local/repo.ts.
 import { matchExercise, normalizeName } from "@/lib/exercises/match";
 import type { LocalDb } from "@/lib/local/db";
 import { saveRows } from "@/lib/local/repo";
@@ -10,9 +14,11 @@ import type {
 import { TABLES, type TableName, type WireRow } from "@/lib/sync/tables";
 import type { ImportedWorkout } from "./parsers";
 
+// Re-exported for existing callers/tests; the implementation lives in src/lib/ids.ts.
 export { deterministicUuid } from "@/lib/ids";
 import { deterministicUuid } from "@/lib/ids";
 
+// Counts for the result message; skippedExisting = workouts that were already imported (or deleted since).
 export interface ImportSummary {
   imported: number;
   skippedExisting: number;
@@ -20,6 +26,7 @@ export interface ImportSummary {
   customExercises: number;
 }
 
+// chunkSize = workouts per database transaction (keeps the UI responsive for big files).
 interface Options {
   chunkSize?: number;
   onProgress?: (processedWorkouts: number, totalWorkouts: number) => void;
@@ -27,6 +34,9 @@ interface Options {
 
 type Item = { table: TableName; row: WireRow };
 
+// Idempotent: a workout whose deterministic id already exists locally (even
+// soft-deleted) is skipped, so re-imports never duplicate or resurrect anything.
+// Exercises not in the catalog become custom exercises, reused by normalised name.
 export async function runImport(
   db: LocalDb,
   userId: string,

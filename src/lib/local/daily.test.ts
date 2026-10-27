@@ -1,3 +1,4 @@
+// Pins down the daily log: one stable row per user and day (so devices converge), quick consecutive edits do not overwrite each other, and everything is queued for sync.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { pushSchemas } from "@/lib/sync/tables";

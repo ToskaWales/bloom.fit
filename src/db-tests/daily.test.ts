@@ -1,3 +1,5 @@
+// Pins down the database rules of check-ins, body weight and cycle events: privacy per user, one active row per day,
+// value validation, the hide_weight setting, purge of old deletes, and per-user ids.
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser } from "./harness";

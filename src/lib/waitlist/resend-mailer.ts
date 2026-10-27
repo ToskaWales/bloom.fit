@@ -1,3 +1,4 @@
+// Mailer implementation for the waitlist confirmation email via Resend. The invite email uses a separate sender: src/lib/invites/mailer.ts.
 import type { Mailer } from "./types";
 
 export function createResendMailer(

@@ -1,3 +1,4 @@
+// Pins down waitlist input handling: email normalisation, required consent, variant fallback, honeypot and source length.
 import { describe, expect, it } from "vitest";
 import { parseSignup } from "./validate";
 

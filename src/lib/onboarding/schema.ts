@@ -1,5 +1,9 @@
+// Zod schemas for each onboarding step (goals, cycle, basics, consent) plus the
+// shared option lists, unit conversion and consent versions. They validate every
+// server action input; the database repeats the key checks. Which step comes next is ./next-step.ts.
 import { z } from "zod";
 
+// Option lists; "Abnehmen" is deliberately not a goal (see CLAUDE.md product guardrails).
 export const GOALS = ["muscle", "recomp", "strength"] as const;
 export const EXPERIENCE = ["lt1y", "1to3y", "gt3y"] as const;
 export const CYCLE_MODES = [
@@ -18,10 +22,12 @@ export const CONSENT_VERSIONS = {
   nutrition: "2026-11-draft",
 } as const;
 
+// Conversions for the pound input: rounded to 0.01 kg / 0.1 lb for display and storage.
 export const lbsToKg = (lbs: number) =>
   Math.round(lbs * 0.45359237 * 100) / 100;
 export const kgToLbs = (kg: number) => Math.round((kg / 0.45359237) * 10) / 10;
 
+// HTML checkboxes send "on" (or nothing); also accepts booleans from tests/JSON.
 const checkbox = z.preprocess(
   (v) => v === "on" || v === true || v === "true",
   z.boolean(),
@@ -49,6 +55,9 @@ const isRealDate = (d: string) => {
   );
 };
 
+// A function (not a constant) so `today` can be injected in tests. The date of the
+// last period is only kept for modes that track periods, must be a real calendar
+// day and lie within the last 366 days (never in the future).
 export function cycleStep(today: Date) {
   const max = berlinDay(today);
   const min = berlinDay(new Date(today.getTime() - 366 * DAY_MS));
@@ -71,8 +80,11 @@ export function cycleStep(today: Date) {
     }));
 }
 
+// Exported so server code and tests share the same definition of "today".
 export { berlinDay };
 
+// Units plus an optional start weight. Weight accepts only plain decimals (no
+// exponent/hex), is converted to kg and must be plausible (30-300 kg).
 export const basicsStep = z
   .object({
     units: z.enum(UNITS),
@@ -102,6 +114,7 @@ export const basicsStep = z
     return { units: v.units, startWeightKg: kg as number | null };
   });
 
+// Terms and health-data consent are required (Art. 9 GDPR); the product mail is optional opt-in.
 export const consentStep = z.object({
   terms: checkbox.refine((v) => v === true),
   healthData: checkbox.refine((v) => v === true),

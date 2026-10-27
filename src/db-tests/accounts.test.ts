@@ -1,3 +1,5 @@
+// Pins down accounts and access: profile creation, the invite gate (invites, redeem_invite, login check), RLS on
+// profiles/consents, server-controlled consent timestamps, onboarding completion rules, and account deletion cascade.
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateInviteCode } from "@/lib/invites/code";

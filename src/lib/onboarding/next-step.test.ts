@@ -1,3 +1,4 @@
+// Pins down the order of onboarding steps and that finished onboarding returns null, so nobody is stuck in or skips the flow.
 import { describe, expect, it } from "vitest";
 import { nextStep } from "./next-step";
 

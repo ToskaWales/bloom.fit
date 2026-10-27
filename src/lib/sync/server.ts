@@ -1,3 +1,8 @@
+// Server half of sync, written against the small SyncDb interface so it can be
+// tested without a database (the real one is supabase-db.ts). Per request: validate
+// and store pushed rows per table, then return everything changed since each
+// cursor. Auth and rate limiting happen in the route (src/app/api/sync/route.ts),
+// the device side is client.ts, the row rules are in tables.ts.
 import {
   MAX_ROWS_TOTAL,
   PULL_LIMIT,
@@ -10,6 +15,7 @@ import {
 } from "./tables";
 
 // Storage seam so the sync logic can be tested without a database.
+// Implementations must scope every call to `userId`; ids are only unique per user.
 export interface SyncDb {
   upsert(
     table: TableName,
@@ -17,6 +23,7 @@ export interface SyncDb {
     rows: Record<string, unknown>[],
   ): Promise<void>;
   // Rows with updated_at >= cursor (or all), oldest first, at most `limit`.
+  // `>=` (not `>`) on purpose: rows sharing the cursor's timestamp are not skipped.
   pull(
     table: TableName,
     userId: string,
@@ -25,15 +32,23 @@ export interface SyncDb {
   ): Promise<WireRow[]>;
 }
 
+// Malformed request as a whole (unknown table, too many rows): the route answers 400.
+// Individual bad rows are NOT errors; they are reported in `rejected`.
 export class SyncRequestError extends Error {}
 
+// How far a pull cursor is held back behind "now" (see nextCursor).
 const SAFETY_WINDOW_MS = 10_000;
 
+// `now` is injectable for tests.
 export interface RunSyncOptions {
   now?: () => Date;
 }
 
-// Pulls are idempotent for clients, so re-delivering rows is harmless; see nextCursor.
+// Handles one sync request: push first, then pull. Pushing validates each row on
+// its own (bad rows go to `rejected`, the rest is stored). If a whole batch fails
+// in the database it is retried row by row, so one poisoned row cannot block the
+// others (or every later sync). Pulls are idempotent for clients, so re-delivering
+// rows is harmless; see nextCursor.
 export async function runSync(
   db: SyncDb,
   userId: string,
@@ -90,6 +105,7 @@ export async function runSync(
   const cursors = {} as SyncResponse["cursors"];
   let hasMore = false;
   for (const table of TABLES) {
+    // one extra row tells us whether another page exists
     const rows = await db.pull(
       table,
       userId,

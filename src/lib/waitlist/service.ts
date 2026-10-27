@@ -1,8 +1,12 @@
+// Waitlist rules: double opt-in signup and confirmation. Knows nothing about HTTP,
+// Supabase or Resend (it uses the Deps seams from types.ts). Input checks are validate.ts, token handling is token.ts.
 import { createToken, hashToken } from "./token";
 import type { Deps } from "./types";
 import { parseSignup } from "./validate";
 
+// Minimum gap between confirmation mails to the same address (stops mail-bombing someone).
 const RESEND_COOLDOWN_MS = 10 * 60_000;
+// How long a confirmation link works (the mail text says 7 days).
 const TOKEN_TTL_MS = 7 * 24 * 3600_000;
 
 export type SignupResult = { ok: true } | { ok: false; error: "invalid" };
@@ -48,6 +52,8 @@ export async function signup(
   return { ok: true };
 }
 
+// Confirms by token. Only the token's hash is stored, so the lookup hashes it.
+// Confirming twice is fine (ok), an unknown token is invalid, an old one expired.
 export async function confirmSignup(
   token: string,
   deps: Deps,

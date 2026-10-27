@@ -1,3 +1,5 @@
+// Pins down the database rules of the training tables (workouts, sets, templates): row level
+// security, per-user ids, server-stamped updated_at for sync, soft delete only, value limits and purge. This is the last line of defence for user data.
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser } from "./harness";

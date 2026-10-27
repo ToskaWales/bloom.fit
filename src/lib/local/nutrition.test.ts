@@ -1,3 +1,4 @@
+// Pins down the local food log: validation without partial writes, soft deletes, barcode de-duplication and normalisation. Nothing here may judge or score intake.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { pushSchemas } from "@/lib/sync/tables";

@@ -1,3 +1,4 @@
+// Pins down that tokens are URL-safe, unique and that the stored hash matches the token.
 import { describe, expect, it } from "vitest";
 import { createToken, hashToken } from "./token";
 

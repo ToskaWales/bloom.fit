@@ -1,3 +1,5 @@
+// Pins down the database rules of engine hints: privacy, one hint per day/kind/subject, params validation,
+// and that a stale device can never undo a reaction (trigger suggestions_keep_reaction).
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser } from "./harness";

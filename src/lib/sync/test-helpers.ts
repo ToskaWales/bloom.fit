@@ -1,3 +1,7 @@
+// Test-only in-memory SyncDb used by the sync tests (server.test.ts, client.test.ts)
+// and the import tests. It imitates the two server behaviours the protocol relies
+// on: ids are unique per user, and updated_at is stamped by the server and strictly
+// increasing (a fake clock), not taken from the client.
 import type { SyncDb } from "./server";
 import type { TableName, WireRow } from "./tables";
 

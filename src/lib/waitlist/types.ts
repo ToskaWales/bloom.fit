@@ -1,3 +1,5 @@
+// Types and the three seams (repository, mailer, clock) of the waitlist feature, so
+// service.ts can be tested with fakes. Real implementations: supabase-repo.ts and resend-mailer.ts, wired in deps.ts.
 export type HookVariant = "a" | "b" | "c";
 
 export interface WaitlistEntry {

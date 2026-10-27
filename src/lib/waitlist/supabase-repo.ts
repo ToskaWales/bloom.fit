@@ -1,3 +1,4 @@
+// WaitlistRepo on the Supabase `waitlist` table using the service-role key (server only; the table has no public access). Maps snake_case columns to the camelCase WaitlistEntry.
 import { createClient } from "@supabase/supabase-js";
 import type { WaitlistEntry, WaitlistRepo } from "./types";
 

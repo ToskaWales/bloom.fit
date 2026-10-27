@@ -1,3 +1,6 @@
+// Decides which onboarding step a person still has to do, from her profile alone.
+// Pure; the page for /onboarding redirects to it, the field rules are in ./schema.ts.
+// German URL slugs of the steps (ziele = goals, zyklus = cycle, basis = basics, einwilligung = consent).
 export type OnboardingStep = "ziele" | "zyklus" | "basis" | "einwilligung";
 
 export const STEP_ORDER: readonly OnboardingStep[] = [

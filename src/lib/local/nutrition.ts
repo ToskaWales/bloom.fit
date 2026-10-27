@@ -56,7 +56,7 @@ async function writeEntry(
   return row;
 }
 
-// // Free-form entry (name plus kcal and/or protein) without a saved food.
+// Free-form entry (name plus kcal and/or protein) without a saved food.
 export async function addQuickEntry(
   db: LocalDb,
   input: QuickEntry & Where,
@@ -79,7 +79,7 @@ export async function addQuickEntry(
   return { ok: true, value: row };
 }
 
-// // Logs `amount` of a saved food; returns an error result when the amount is implausible.
+// Logs `amount` of a saved food; returns an error result when the amount is implausible.
 export async function addFoodEntry(
   db: LocalDb,
   food: FoodRow,
@@ -102,7 +102,7 @@ export async function addFoodEntry(
   return { ok: true, value: await writeEntry(db, where, entry, food.id) };
 }
 
-// // Live entries of one day in the order they were added.
+// Live entries of one day in the order they were added.
 export async function logsForDay(
   db: LocalDb,
   day: string,
@@ -121,9 +121,9 @@ export async function deleteEntry(db: LocalDb, id: string): Promise<void> {
   }));
 }
 
-// // Saves a new food. A barcode that is already stored (in any form) is refused, so
-// // scanning twice does not create duplicates; the server tolerates duplicates from
-// // two offline devices (see docs/ARCHITECTURE.md).
+// Saves a new food. A barcode that is already stored (in any form) is refused, so
+// scanning twice does not create duplicates; the server tolerates duplicates from
+// two offline devices (see docs/ARCHITECTURE.md).
 export async function saveFood(
   db: LocalDb,
   values: FoodValues,
@@ -164,7 +164,7 @@ export async function saveFood(
   return { ok: true, value: row };
 }
 
-// // Favorites first, then alphabetical (German collation).
+// Favorites first, then alphabetical (German collation).
 export async function listFoods(db: LocalDb): Promise<FoodRow[]> {
   return ((await db.foods.toArray()) as FoodRow[])
     .filter((f) => !f.deleted_at)
@@ -219,7 +219,7 @@ export async function recentEntries(
   return out;
 }
 
-// // Re-logs an existing entry (same numbers) on another day/meal.
+// Re-logs an existing entry (same numbers) on another day/meal.
 export async function copyEntryTo(
   db: LocalDb,
   id: string,
@@ -267,7 +267,7 @@ export async function wipeNutrition(db: LocalDb): Promise<void> {
   );
 }
 
-// // Looks up a saved food by barcode, comparing the normalised 13-digit form.
+// Looks up a saved food by barcode, comparing the normalised 13-digit form.
 export async function findFoodByBarcode(
   db: LocalDb,
   barcode: string,

@@ -1,3 +1,4 @@
+// Pins down the data behind the history chart: deleted rows are ignored, hidden weight is never returned, and workouts land on their local calendar day.
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { localDay } from "@/lib/daily/day";

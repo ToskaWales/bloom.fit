@@ -1,3 +1,5 @@
+// Pins down supabase/queries/beta_metrics.sql, the validation metrics query: it counts activation, retention and
+// opt-ins, and must never read health values or identifiers (privacy by design).
 import type { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import path from "node:path";

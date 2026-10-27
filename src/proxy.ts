@@ -41,8 +41,8 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // // getClaims() checks the token signature locally, which is cheap enough for every
-  // // request but is not a server-side validation: dal.ts uses getUser() for that.
+  // getClaims() validates the session token without asking the Auth server on every
+  // request, which is fine for an optimistic redirect; dal.ts uses getUser() for real checks.
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims);
   const { pathname } = request.nextUrl;
@@ -54,7 +54,7 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    // // Carry over any cookies the refresh just set, so the redirect does not lose them.
+    // Carry over any cookies the refresh just set, so the redirect does not lose them.
     const redirect = NextResponse.redirect(url);
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;
@@ -62,7 +62,7 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// // Skip static assets and images: they need no session and must stay fast.
+// Skip static assets and images: they need no session and must stay fast.
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

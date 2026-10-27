@@ -1,3 +1,8 @@
+// Device side of offline sync: push the outbox, pull what changed, repeat until
+// caught up. The protocol in short: every local write also adds the row's id to the
+// outbox (local/repo.ts); a row leaves the outbox only after the server confirmed
+// the push; pulls continue from a per-table cursor. The server half is server.ts,
+// the HTTP route is src/app/api/sync/route.ts, the shapes are in tables.ts.
 import type { LocalDb } from "@/lib/local/db";
 import {
   MAX_ROWS_PER_TABLE,
@@ -6,19 +11,25 @@ import {
   type TableName,
 } from "./tables";
 
+// Outcome of one sync attempt. "unauthorized" means the session expired (sign in again).
 export type SyncResult =
   | { status: "ok"; pushed: number; pulled: number }
   | { status: "unauthorized" }
   | { status: "error"; message: string };
 
+// Injectable fetch, so tests can talk to runSync directly without HTTP.
 export type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 
+// Where the pull cursor of a table is kept in the local `meta` table.
 const cursorKey = (t: TableName) => `cursor:${t}`;
 
 // One round: push everything queued, then pull until caught up.
 // The outbox is only cleared after the server confirmed the push, and a
 // replayed push is harmless (server upserts by id), so a crash or lost
 // response at any point cannot lose or duplicate data.
+// Each loop turn sends up to MAX_ROWS_PER_TABLE queued entries (the current
+// content of each row, once per row even if edited several times) and applies
+// the pulled rows; the loop stops when nothing is queued and the server has no more.
 export async function syncOnce(
   db: LocalDb,
   fetcher: Fetcher = fetch,
@@ -57,6 +68,7 @@ export async function syncOnce(
       const body = (await res.json()) as SyncResponse;
 
       // Confirmed by the server: drop exactly what we sent (later edits have newer seqs).
+      // Rows the server rejected are dropped too; they are remembered in `meta` instead.
       if (sentSeqs.length) await db.outbox.bulkDelete(sentSeqs);
       pushed += seen.size;
       await recordRejected(db, seen, body.rejected ?? []);
@@ -73,6 +85,8 @@ export async function syncOnce(
   }
 }
 
+// Stores pulled rows in one transaction and advances the cursors. A pulled row is
+// skipped while the same row still waits in the outbox (see comment below).
 async function applyPulled(db: LocalDb, body: SyncResponse): Promise<number> {
   let applied = 0;
   await db.transaction(
@@ -98,6 +112,7 @@ async function applyPulled(db: LocalDb, body: SyncResponse): Promise<number> {
   return applied;
 }
 
+// A pushed row the server refused; kept in `meta` under REJECTED_KEY so the UI can warn.
 export interface RejectedRow {
   table: TableName;
   id: string | null;

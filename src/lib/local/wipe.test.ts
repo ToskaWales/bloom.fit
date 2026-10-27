@@ -1,3 +1,4 @@
+// Pins down logout/account-deletion cleanup: unsynced changes are counted before, and every local Bloom database is gone after. Protects the next person on a shared device.
 import "fake-indexeddb/auto";
 import Dexie from "dexie";
 import { describe, expect, it } from "vitest";

@@ -1,3 +1,5 @@
+// Pins down the database rules of nutrition data: opt-in consent enforced in SQL, bounds, soft delete only,
+// revocation clearing data, and the per-user rate limit consume_food_lookup for barcode lookups.
 import type { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser } from "./harness";

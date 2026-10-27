@@ -1,3 +1,6 @@
+// Pins down the server half of sync: validation per row, idempotent upserts, user
+// isolation, cursor and 10 s safety-window behaviour, and the row-by-row fallback.
+// A bug here means lost, duplicated or skipped health data on some device.
 import { describe, expect, it } from "vitest";
 import { runSync, SyncRequestError } from "./server";
 import { memoryDb } from "./test-helpers";

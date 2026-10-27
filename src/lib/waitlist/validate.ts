@@ -1,3 +1,4 @@
+// Input parsing for the waitlist form: normalises the email, requires consent, falls back to variant "a", and detects bots via the hidden honeypot field ("website").
 import { z } from "zod";
 import type { HookVariant } from "./types";
 
