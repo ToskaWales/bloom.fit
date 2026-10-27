@@ -1,3 +1,7 @@
+// Parses numbers typed into form fields, accepting German and English decimals.
+// It only reads text; range checks are in ./calc. Ambiguous input is refused
+// rather than guessed, because a wrong calorie value would silently corrupt a log.
+/** ok with a number (null for an empty field), or not ok for text that is not a clear number. */
 export type Parsed = { ok: true; value: number | null } | { ok: false };
 
 // Reads what a person typed into a number field. An empty field is "no value".
@@ -21,6 +25,7 @@ export function parseDecimal(raw: string): Parsed {
   return Number.isFinite(n) ? { ok: true, value: n } : { ok: false };
 }
 
+/** Shown when any field cannot be read. */
 export const NUMBER_HELP = "Bitte gib Zahlen so ein: 250 oder 1,5.";
 
 // Reads several fields at once; any non-empty field that is not a clear number is an error.

@@ -1,3 +1,7 @@
+// Static exercise catalog (data only): ids are stable keys stored in workouts, so
+// never rename or reuse one. Names are German, aliases cover English and
+// Hevy/Strong spellings for import. Lookup and search logic is in ./match.
+/** Primary muscle group used for filtering and grouping (German keys, labels in MUSCLE_LABELS). */
 export type MuscleGroup =
   | "brust"
   | "ruecken"
@@ -878,6 +882,7 @@ const ROWS: Row[] = [
   ],
 ];
 
+/** All built-in exercises, in the order of ROWS (grouped by body part). */
 export const CATALOG: readonly CatalogExercise[] = ROWS.map(
   ([id, name, muscle, equipment, ...aliases]) => ({
     id,
@@ -889,8 +894,10 @@ export const CATALOG: readonly CatalogExercise[] = ROWS.map(
 );
 
 const byId = new Map(CATALOG.map((e) => [e.id, e]));
+/** The catalog entry for a stable id, or undefined for custom exercises. */
 export const getCatalogExercise = (id: string) => byId.get(id);
 
+/** German display names for each muscle group. */
 export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
   brust: "Brust",
   ruecken: "Rücken",

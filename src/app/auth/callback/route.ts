@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   // Same origin the OAuth flow was started from (PKCE cookie lives there);
-  // behind a proxy request.nextUrl.origin may be internal, hence the env var.
+  // the env var wins so the redirect never lands on an internal host name.
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
   const code = searchParams.get("code");
   if (!code) return NextResponse.redirect(`${origin}/login?error=1`);

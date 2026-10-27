@@ -1,13 +1,20 @@
+// Descriptive statistics of her own logged periods: cycle lengths, a next-period
+// window (only for regular cycles), period length. Deliberately NO phase names or
+// phase calendar: position in the cycle is one input among several. Consumed by
+// @/lib/engine (patterns.ts, safety.ts) and the cycle screens; day maths is in ./day.
 import { addDays, daysBetween, dayRange } from "./day";
 import { median } from "@/lib/math";
 
+/** Only the period start is needed for statistics; end and ovulation test are optional extras. */
 export type CycleEventKind =
   "period_start" | "period_end" | "ovulation_test_positive";
+/** One logged cycle event on a calendar day (YYYY-MM-DD). */
 export interface CycleEvent {
   kind: CycleEventKind;
   day: string;
 }
 
+/** How much we can say about the cycle; the UI picks neutral wording per status. */
 export type CycleStatus =
   | "no_data"
   | "not_enough_data"
@@ -17,11 +24,13 @@ export type CycleStatus =
   | "overdue"
   /** The last logged start is too old to say anything about today. */
   | "stale";
+/** Window for the next period start (earliest..latest around the median-based expected day), never a single promise. */
 export interface CyclePrediction {
   expected: string;
   earliest: string;
   latest: string;
 }
+/** Result of summarizeCycle. lengths are the trusted cycle lengths in days (missed logs removed). */
 export interface CycleSummary {
   status: CycleStatus;
   /** Day of the current cycle (1 = first day of the last period), null if unknown or stale. */
@@ -35,11 +44,15 @@ export interface CycleSummary {
   overdueDays: number | null;
 }
 
-// Gaps outside this range are most likely a missed log, not a real cycle.
+// Starting values, not medical limits (all in days unless noted).
+// Gaps outside 18..60 are most likely a missed log, not a real cycle.
 const MIN_PLAUSIBLE = 18;
 const MAX_PLAUSIBLE = 60;
+// A prediction needs three trusted cycles; a spread (standard deviation) above 7
+// days counts as irregular and gets no prediction.
 const MIN_CYCLES_FOR_PREDICTION = 3;
 const IRREGULAR_SD_DAYS = 7;
+// A period lasting 14+ days is not one period (used to merge duplicate taps and to pair ends).
 const MAX_PERIOD_DAYS = 14;
 
 // Cycle lengths are whole days: for an even count the middle pair is rounded
@@ -86,6 +99,7 @@ function withoutMissedLogs(lengths: number[]): number[] {
   return lengths.filter((l) => l <= OUTLIER_FACTOR * m);
 }
 
+/** One complete cycle: period start to the next period start, `length` in days. */
 export interface CycleSpan {
   start: string;
   next: string;
@@ -93,7 +107,8 @@ export interface CycleSpan {
 }
 
 // Complete cycles (start to the next start) that can be trusted: implausible
-// gaps and missed logs are dropped, exactly as in summarizeCycle.
+// gaps and missed logs are dropped, as in summarizeCycle. Used by the pattern
+// analysis (@/lib/engine/patterns), which needs the dates and not just lengths.
 export function plausibleCycles(events: CycleEvent[]): CycleSpan[] {
   const starts = normalizeStarts(
     events.filter((e) => e.kind === "period_start").map((e) => e.day),
@@ -114,6 +129,8 @@ export function plausibleCycles(events: CycleEvent[]): CycleSpan[] {
 // Descriptive statistics of the user's own logged cycles. Deliberately no phase
 // names: cycle position is one input among several, and effects differ a lot
 // between women. A next-period estimate is only offered for regular cycles.
+// The window is the median length +/- max(2, 1.5 x spread) days, so irregular
+// users get a wider window and very irregular ones get none.
 export function summarizeCycle(
   events: CycleEvent[],
   today: string,

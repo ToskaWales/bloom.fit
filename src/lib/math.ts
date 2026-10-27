@@ -1,4 +1,6 @@
 // Small numeric helpers shared by the engine, the cycle logic and the nutrition code.
+// Only generic maths lives here: anything that knows about days, kcal or sets
+// belongs in daily/, nutrition/ or workout/.
 
 /** The middle value of a non-empty list (mean of the two middle values for an even count). */
 export function median(values: number[]): number {

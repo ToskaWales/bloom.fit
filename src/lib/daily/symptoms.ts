@@ -1,3 +1,7 @@
+// The fixed list of symptoms she can tag on a check-in, with German labels.
+// Stored as the English keys; only SYMPTOM_LABELS is user-facing. Keep neutral:
+// no medical claims and no link to a cycle phase.
+/** Allowed symptom keys as stored in check-ins. */
 export const SYMPTOMS = [
   "cramps",
   "headache",
@@ -10,6 +14,7 @@ export const SYMPTOMS = [
 ] as const;
 export type Symptom = (typeof SYMPTOMS)[number];
 
+/** Display text per key; the Record type forces a label for every new symptom. */
 export const SYMPTOM_LABELS: Record<Symptom, string> = {
   cramps: "Krämpfe",
   headache: "Kopfschmerzen",

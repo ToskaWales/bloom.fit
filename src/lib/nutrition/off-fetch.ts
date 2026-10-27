@@ -1,15 +1,22 @@
+// Server-side call to Open Food Facts for one barcode, with hard limits
+// (fixed host, timeout, size cap, no redirects). Parsing the JSON is ./off;
+// the endpoint around it is ./lookup-handler. The browser never calls OFF.
 import { isValidBarcode } from "./barcode";
 import { normaliseOffProduct, type OffFood } from "./off";
 
+/** The only host this module will ever call. */
 export const OFF_HOST = "world.openfoodfacts.org";
-const TIMEOUT_MS = 4000;
-const MAX_BYTES = 200_000;
+const TIMEOUT_MS = 4000; // milliseconds before the lookup is given up
+const MAX_BYTES = 200_000; // largest accepted response body (bytes)
+// Ask only for the fields we use: less data in, less to trust.
 const FIELDS = "product_name,product_name_de,brands,nutriments";
 
+/** ok with a food, or a reason the handler maps to an HTTP status. */
 export type FetchOffResult =
   | { ok: true; food: OffFood }
   | { ok: false; reason: "invalid" | "not_found" | "unusable" | "upstream" };
 
+// Reads the body but gives up (null) once it exceeds MAX_BYTES.
 async function readLimited(res: Response): Promise<string | null> {
   if (!res.body) return "";
   const reader = res.body.getReader();

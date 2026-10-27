@@ -1,7 +1,10 @@
+// Turns an Open Food Facts product JSON into plain per-100 g values. Takes only
+// energy, protein, carbs, fat, name and brand: no images, no scores. Everything
+// from outside is treated as untrusted and range-checked. Fetching is
+// ./off-fetch; the values later become a saved food (./calc).
 import { round1 } from "@/lib/math";
-// Turns an Open Food Facts product into plain per-100 g values. Nothing but
-// energy, protein, carbs, fat, name and brand is taken: no images, no scores.
 
+/** A product as we keep it: per 100 g, null where OFF has no usable value. */
 export interface OffFood {
   name: string;
   brand: string | null;
@@ -11,14 +14,18 @@ export interface OffFood {
   fatG: number | null;
 }
 
+/** not_found: no such product; unusable: neither kcal nor protein could be read. */
 export type OffResult =
   { ok: true; food: OffFood } | { ok: false; reason: "not_found" | "unusable" };
 
+// Implausible values from the (crowd-sourced) database are dropped, not corrected.
+// 900 kcal per 100 g is about pure fat; macros may sum to 100 g plus 2 g rounding.
 const MAX_KCAL_PER_100G = 900;
 const MAX_G_PER_100G = 100;
 const MACRO_TOLERANCE_G = 2;
 const KJ_PER_KCAL = 4.184;
 
+// A non-negative number from a number or a plain numeric string ("1,5" ok), else null.
 function amount(v: unknown): number | null {
   const n =
     typeof v === "number"
@@ -29,6 +36,7 @@ function amount(v: unknown): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+// Free text from outside: strips control and invisible direction characters, collapses whitespace, caps length.
 function text(v: unknown, max: number): string {
   if (typeof v !== "string") return "";
   return v
@@ -42,6 +50,11 @@ function text(v: unknown, max: number): string {
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
+/**
+ * Maps the raw JSON to an OffFood. kcal falls back to kJ / 4.184; if the macros
+ * do not add up to a plausible 100 g they are all dropped. Needs kcal or protein,
+ * otherwise "unusable". Prefers the German product name.
+ */
 export function normaliseOffProduct(json: unknown): OffResult {
   if (!isRecord(json) || json.status !== 1 || !isRecord(json.product))
     return { ok: false, reason: "not_found" };

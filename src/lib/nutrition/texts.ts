@@ -1,10 +1,11 @@
+// All fixed German wording of the nutrition screens, kept in one file so the
+// wording test (./texts.test.ts) can hold it to the CLAUDE.md rules: no judging,
+// no targets, no streaks, no colour talk. Numbers come from ./calc (DayTotals).
 import type { DayTotals } from "./calc";
-
-// All wording of the nutrition screens lives here so one test can hold it to
-// the rules in CLAUDE.md: no judging, no targets, no streaks, no colour talk.
 
 const de = (n: number) => n.toLocaleString("de-DE");
 
+/** Meal slots by time of day. */
 export const MEAL_LABEL = {
   morning: "Morgens",
   midday: "Mittags",
@@ -12,6 +13,7 @@ export const MEAL_LABEL = {
   snack: "Zwischendurch",
 } as const;
 
+/** Fixed sentences (screen titles, hints, barcode and camera messages). Add new ones here so the wording test sees them. */
 export const NUTRITION_TEXT = {
   title: "Ernährung",
   intro:
@@ -86,6 +88,7 @@ export function totalsLine(t: DayTotals, day?: string, today?: string): string {
   return `${when}: ${parts.join(" · ")}`;
 }
 
+/** One entry as "60 g · 250 kcal · 12 g Eiweiß", leaving out unknown values. */
 export function entryLine(e: {
   kcal: number | null;
   protein_g: number | null;
@@ -98,7 +101,7 @@ export function entryLine(e: {
   return parts.join(" · ");
 }
 
-// Every fixed sentence, for the wording test.
+// Every fixed sentence plus sample generated ones, for the wording test.
 export function allNutritionTexts(): string[] {
   return [
     ...Object.values(NUTRITION_TEXT),

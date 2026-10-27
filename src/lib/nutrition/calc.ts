@@ -1,7 +1,11 @@
+// Pure helpers for food entries: scaling a food to an eaten amount, input limits,
+// and daily totals. Values are only ever what the person entered or scanned:
+// nothing is estimated, no targets or judgement. Parsing typed text is ./parse,
+// scanned products are ./off; wording of the screens is ./texts.
 import { round1 } from "@/lib/math";
-// Pure helpers for food entries. Values are only ever what the person entered
-// or scanned: nothing is estimated, and missing values stay missing.
+// Missing values stay missing (null), they are never filled in.
 
+/** A saved food. Values are per 100 g or per portion, depending on `basis`. */
 export interface FoodValues {
   name: string;
   basis: "100g" | "portion";
@@ -12,6 +16,7 @@ export interface FoodValues {
   fatG: number | null;
 }
 
+/** One logged meal entry: values already scaled to the amount eaten, with the name copied so later edits to the food do not change history. */
 export interface EntryValues {
   nameSnapshot: string;
   amountG: number | null;
@@ -21,9 +26,12 @@ export interface EntryValues {
   fatG: number | null;
 }
 
+/** Result of a validation: the cleaned value, or a short German message for the form. */
 export type Validated<T> =
   { ok: true; value: T } | { ok: false; error: string };
 
+// Plausibility limits, not nutrition advice. They mirror the database checks, so
+// something accepted here is never rejected later on sync (units: g, kcal).
 const MAX_AMOUNT_G = 3000;
 const MAX_ENTRY_KCAL = 10000;
 const MAX_ENTRY_G = 1000;
@@ -40,7 +48,8 @@ const within = (n: number | null, min: number, max: number) =>
 type Amount = { grams: number } | { portions: number };
 
 // Scales a food to what was eaten: grams for per-100 g foods, portions for
-// per-portion foods. Returns null for an unusable amount.
+// per-portion foods (1 to 50). Returns null for an unusable amount or a result
+// outside the limits.
 export function entryFromFood(
   food: FoodValues,
   amount: Amount,
@@ -81,12 +90,14 @@ export function entryFromFood(
   return entry;
 }
 
+/** A fast entry without a saved food: just a name and kcal and/or protein. */
 export interface QuickEntry {
   name: string;
   kcal: number | null;
   proteinG: number | null;
 }
 
+/** Trims the name, needs kcal or protein, and checks plausible ranges. */
 export function validateQuickEntry(input: QuickEntry): Validated<QuickEntry> {
   const name = input.name.trim();
   if (name.length > 80) return { ok: false, error: "Der Name ist zu lang." };
@@ -106,6 +117,7 @@ export function validateQuickEntry(input: QuickEntry): Validated<QuickEntry> {
   };
 }
 
+/** Validates a food before saving: name, portion size for per-portion foods, and kcal/macro ranges. */
 export function validateFood(input: FoodValues): Validated<FoodValues> {
   const name = input.name.trim();
   if (name.length < 1 || name.length > 80)
@@ -138,6 +150,7 @@ export function validateFood(input: FoodValues): Validated<FoodValues> {
   };
 }
 
+/** Sums for one day, as a plain statement of what was entered (never compared with a target). */
 export interface DayTotals {
   kcal: number;
   proteinG: number;
@@ -146,6 +159,7 @@ export interface DayTotals {
   hasKcal: boolean;
 }
 
+/** Adds up the entries of a day, ignoring soft-deleted ones (deleted_at set). */
 export function dayTotals(
   logs: {
     kcal: number | null;

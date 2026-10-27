@@ -1,8 +1,13 @@
+// Framework-free logic of the barcode lookup endpoint: checks login, body size,
+// barcode and rate limit, then asks Open Food Facts. The Next.js route only wires
+// real dependencies into it. Product fetching is ./off-fetch, mapping is ./off,
+// barcode checks are ./barcode. Never logs or echoes the barcode.
 import { z } from "zod";
 import { cleanBarcode, normaliseBarcode } from "./barcode";
 import type { FetchOffResult } from "./off-fetch";
 import type { OffFood } from "./off";
 
+/** Everything with side effects, injected so tests can use fakes. */
 export interface LookupDeps {
   getUser: () => Promise<{ id: string } | null>;
   /** Permission and rate limit, decided in the database. */
@@ -10,6 +15,7 @@ export interface LookupDeps {
   fetchProduct: (code: string) => Promise<FetchOffResult>;
 }
 
+// Same shape as the project's ApiResponse; always sent with no-store caching.
 type Body = { success: boolean; data?: { food: OffFood }; error?: string };
 const reply = (body: Body, status: number) =>
   Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -39,7 +45,9 @@ async function readBody(request: Request): Promise<string | null> {
 }
 
 // The request flow without any framework: easy to test with fakes. Nothing
-// here ever logs or echoes the barcode.
+// here ever logs or echoes the barcode. Status codes: 415 wrong content type,
+// 401 not signed in, 400 bad input, 403 lookup not enabled, 429 rate limit,
+// 404 unknown product, 422 product without usable values, 502 upstream failure.
 export async function handleLookup(
   request: Request,
   deps: LookupDeps,

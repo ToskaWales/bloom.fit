@@ -1,13 +1,19 @@
+// Smoothed weight trend from raw weigh-ins. Only describes the numbers; whether a
+// change matters is decided elsewhere (@/lib/engine/safety) and the UI avoids
+// judgement. Day maths is in ./day; the overview chart (./overview) shows the trend.
 import { daysBetween } from "./day";
 
+/** One weigh-in: kg on a calendar day. */
 export interface WeightPoint {
   day: string;
   kg: number;
 }
+/** A weigh-in plus the smoothed trend value at that day (kg, 2 decimals). */
 export interface WeightTrendPoint extends WeightPoint {
   trend: number;
 }
 
+// About a week: older weigh-ins fade out with this time constant (starting value).
 const TIME_CONSTANT_DAYS = 7;
 
 // Exponentially smoothed trend that respects gaps: after a long break the next

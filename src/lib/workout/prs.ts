@@ -1,8 +1,14 @@
+// Detects personal records (heaviest weight, best estimated 1RM) among the sets
+// of the current workout. Pure function; the formula and the notion of a
+// "working set" come from ./stats. No wording or celebration lives here.
 import { estimateOneRepMax, type SetLike } from "./stats";
 
+/** "weight": heaviest load so far; "e1rm": best estimated 1RM so far. */
 export type PrKind = "weight" | "e1rm";
+/** A set of the current workout, with an id to attach the record to. */
 export type PrSet = SetLike & { id: string };
 
+// Counts for records: completed, not deleted, no warm-up, weight and reps present.
 const usable = (s: SetLike) =>
   s.completed &&
   !s.deleted_at &&
@@ -12,7 +18,8 @@ const usable = (s: SetLike) =>
   s.reps != null &&
   s.reps >= 1;
 
-// Personal records of the current sets against everything done earlier.
+// Returns the record kinds per set id. Compares the current sets against everything done earlier
+// (and against each other, in order: a later set must beat an earlier one).
 // `current` must be in the order the sets were performed. Without any earlier
 // history there is no baseline, so nothing is flagged (a first time isn't a "record").
 export function findPRs(

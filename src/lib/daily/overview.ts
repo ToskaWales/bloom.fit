@@ -1,6 +1,10 @@
+// Joins check-ins, weight trend, workout volume and period days into one row per
+// day for the overview chart. Display data only: no interpretation (that is
+// @/lib/engine). Weight trend comes from ./weight, period days from ./cycle.
 import { dayRange, daysBetween } from "./day";
 import { weightTrend, type WeightPoint } from "./weight";
 
+/** A check-in as stored; null means not answered. */
 export interface CheckinPoint {
   day: string;
   energy: number | null;
@@ -11,6 +15,7 @@ export interface CheckinPoint {
   symptoms: string[];
 }
 
+/** One chart row. weightKg is the raw weigh-in of that day, weightTrend the smoothed value (null when stale); volumeKg is 0 on rest days. */
 export interface OverviewRow {
   day: string;
   period: boolean;
@@ -35,9 +40,10 @@ interface Input {
   periodDays: Set<string>;
 }
 
+// A trend value older than this many days is not shown (nothing recent behind it).
 const TREND_FRESH_DAYS = 14;
 
-// One row per day in the window, joining everything the overview chart shows.
+// One row per day from..to (both included), joining everything the overview chart shows.
 export function buildOverview({
   from,
   to,
